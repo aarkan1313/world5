@@ -11,12 +11,12 @@
 | # | Spec | Status | Code | Notes |
 |---|---|---|---|---|
 | 00 | SPEC_TEMPLATE | draft | n/a | Template for all specs; updated post-self-audit with tier vocab + cross-spec contract reminders |
-| 01 | MODULE_LAYOUT | draft | none | `engine/` + `demo/` + `pipeline/` three-dir contract; consumed by Phase 0 |
-| 02 | CONTRIBUTING_LIFECYCLE | draft | none | Spec → plan → build-note → state cycle; 8 rules |
+| 01 | MODULE_LAYOUT | draft | **scaffold shipped (Phase 0)** | Directory tree + plugin.cfg + project.godot + pyproject.toml all live at commit `f73b4f8` |
+| 02 | CONTRIBUTING_LIFECYCLE | draft | none (process realized) | Spec → plan → build-note → state cycle; first build-note shipped in Phase 0 close |
 | 03 | PILLARS | draft | n/a | Quality > Performance > Architecture > Time |
-| 04 | GODOT_ROOT_ALLOWLIST | draft | none | Preflight `godot_root_check.py` not built yet |
-| 05 | DOC_ARCHITECTURE | draft | partial | This doc tree is the first realization of spec 05 |
-| 06 | TEST_INFRASTRUCTURE | draft | none | `verify` CLI with `--fastest`/`--fast`/default/`--full` tiers; not built |
+| 04 | GODOT_ROOT_ALLOWLIST | draft | none | Preflight `godot_root_check.py` not built yet (Phase 2). Allowlist enforced manually during Phase 0 |
+| 05 | DOC_ARCHITECTURE | draft | **realized in Phase 0** | Top-level + per-tier docs scaffold per spec 05 shipped at `f73b4f8` |
+| 06 | TEST_INFRASTRUCTURE | draft | none | `verify` CLI with `--fastest`/`--fast`/default/`--full` tiers; not built (Phase 2) |
 
 ## Tier 0 cross-cutting (07-18 + 08a + X_FRAME_BUDGET)
 

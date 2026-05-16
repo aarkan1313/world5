@@ -10,12 +10,14 @@
 
 ## One-paragraph current focus
 
-**Phase 0 (repo setup) is the next sprint.** Mechanical scaffolding —
-create `engine/` + `demo/` + `pipeline/` + `tests/` directory trees per
-spec 01 module layout, write `engine/plugin.cfg`, decide + implement
-`demo/addons/world5/` → `engine/` link mechanism, first commit on
-`main`. No lint scripts or preflight yet (those land in Phase 2). See
-[`roadmap/phase_0_repo_setup.md`](roadmap/phase_0_repo_setup.md).
+**Phase 2 (foundation build — Tier 0 primitives) is the next sprint.**
+Build the cross-cutting primitives in code: Job system + Spatial index
++ Async asset streaming + Streaming budget + Change broadcast +
+Content addressing + GPU/CPU contract + Logging + Quality tiers +
+World contract + Doc-health preflight + Godot-root allowlist
+preflight + `verify` CLI. Order: test infra first, then everything
+else has tests from day 1. ~8-15 sessions estimated. Phase 0
+shipped + pushed (commit `f73b4f8`).
 
 ## Phase status
 
@@ -23,8 +25,8 @@ spec 01 module layout, write `engine/plugin.cfg`, decide + implement
 |---|---|---|---|
 | Phase 1 — Spec layer | ✅ done | (47 specs in `specs/`) | ~30 |
 | Phase 1.5 — Audits | ✅ done | AUDIT_FINDINGS + SELF_AUDIT_FINDINGS | ~2 |
-| **Phase 0 — Repo setup** | 🚧 next | [phase_0_repo_setup.md](roadmap/phase_0_repo_setup.md) | 1 |
-| Phase 2 — Foundation build (Tier 0) | pending | (write when starting) | 8-15 |
+| Phase 0 — Repo setup | ✅ done | [phase_0_repo_setup.md](roadmap/phase_0_repo_setup.md) | 1 (shipped commit `f73b4f8`) |
+| **Phase 2 — Foundation build (Tier 0)** | 🚧 next | (write at start) | 8-15 |
 | Phase 3 — Renderer research sprint | pending | spec 15 brief | 3-5 |
 | Phase 4 — Terrain MVP (one biome) | pending | (write when starting) | 5-10 |
 | Phase 4.5 — **Calibration sprint** | pending | (write when starting) | 2-3 |

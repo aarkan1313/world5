@@ -8,9 +8,10 @@
 
 ## One-sentence summary
 
-**Phase 1 (spec layer) complete + audited + fixed.** 47 specs across 5
-tiers exist. Outside audit + self-audit + fix passes done. No engine
-code exists yet. Ready for Phase 0 repo setup.
+**Phase 0 (repo scaffold) shipped + pushed to GitHub.** 47 specs +
+directory tree + plugin.cfg + project.godot + pipeline package +
+docs scaffold live at github.com/aarkan1313/world5.git on `main`
+(commit `f73b4f8`). Ready for Phase 2 foundation build.
 
 ## Per-tier state
 
@@ -25,23 +26,39 @@ code exists yet. Ready for Phase 0 repo setup.
 
 ## What exists right now
 
+- **W5 git repo** at `D:/assets/world 5/` with remote
+  `github.com/aarkan1313/world5.git` on `main` (commit `f73b4f8`)
 - 47 spec docs in `specs/` (all status `draft`; outside-audited + self-audited)
 - 3 audit / review docs: REVIEW_BRIEF.md, AUDIT_FINDINGS.md,
   SELF_AUDIT_FINDINGS.md
 - 1 system inventory: SYSTEM_INVENTORY.md
 - 1 orchestrator guide: ORCHESTRATOR_PLANNING_GUIDE.md
-- Doc-tree scaffold: this STATE.md + ROADMAP.md + README.md +
+- Doc-tree scaffold: STATE.md + ROADMAP.md + README.md +
   CONTRIBUTING.md + state/ + roadmap/ + reference/pitfalls/
+- **Directory tree per spec 01**: `engine/` + `demo/` + `pipeline/` +
+  `tests/` + `tools/` with all subdirs scaffolded (empty dirs marked
+  with .gitkeep)
+- **`engine/plugin.cfg`** + `engine/plugin.gd` (autoloads commented
+  for Phase 2)
+- **`engine/README.md`** + `engine/CHANGELOG.md` (Keep-a-Changelog) +
+  `engine/LICENSE` placeholder
+- **`demo/project.godot`** (Godot 4.5+ Forward+) + `demo/README.md`
+- **`pipeline/pyproject.toml`** editable-install package + `pipeline/world5/`
+  importable Python module (version 0.0.1) + `pipeline/README.md`
+- **Per-machine addon junction** at `demo/addons/world5` → `engine/`
+  (created via Windows Junction since user lacks Developer Mode /
+  admin; junction is in .gitignore as per-machine artifact)
+- `.gitignore` + `.gitattributes` + `.godotignore.template`
 
 ## What does NOT exist yet
 
-- Any engine code (`engine/scripts/`, `engine/scenes/`, etc.)
-- Any pipeline code (`pipeline/`)
-- Any tests (`engine/tests/`, top-level `tests/`)
-- The `engine/`, `demo/`, `pipeline/` directory trees themselves
-- `engine/plugin.cfg`
-- The addon-link mechanism between `demo/addons/world5/` and `engine/`
-- Any build-notes (no shipped work yet)
+- Any engine system code (Tier 0 primitives, vertical systems) —
+  Phase 2 builds these
+- Any pipeline system code beyond the `world5` package skeleton
+- Any tests
+- Any lint scripts (`godot_root_check`, `doc_health`, `logging_lint`)
+- `python -m world5.verify` CLI
+- Any build-notes (Phase 0 build-note is the FIRST one — coming next)
 - Any plans (no system has moved to plan stage yet)
 
 ## What's blocked
@@ -68,14 +85,14 @@ key open questions, where each system's W4.1 reference lives).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
-- 2026-05-16 (today): self-audit + fix pass + Phase 0 prep
+- 2026-05-16: **Phase 0 shipped + pushed to GitHub** (commit
+  `f73b4f8`); repo at github.com/aarkan1313/world5.git
+- 2026-05-16: self-audit + fix pass (~129 distinct fixes)
 - 2026-05-16: outside audit (`AUDIT_FINDINGS.md`)
 - 2026-05-16: post-audit fix pass — 2 new specs
   (X_FRAME_BUDGET, 08a_GPU_CPU_CONTRACT); ~30 spec revisions
 - 2026-05-16: Phase 1 spec writing complete (45 specs initially,
   later 47 with audit additions)
-- 2026-05-16: project kickoff, W4.1 retrospective + tech stack audit
-  written
 
 ## How to update this doc
 

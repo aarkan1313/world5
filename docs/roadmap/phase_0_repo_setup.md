@@ -1,13 +1,33 @@
 # Phase 0 — Repo Setup
 
-> Phase: Phase 0 (next, mechanical scaffolding only)
-> Status: 🚧 ready to start
-> Estimated sessions: 1
+> Phase: Phase 0
+> Status: ✅ done (2026-05-16; commit `f73b4f8`; pushed to
+> github.com/aarkan1313/world5.git on `main`)
+> Actual sessions: 1
 > Owner: agent + user joint
 >
 > Goal: create the directory contract per spec 01 + `engine/plugin.cfg`
 > + addon-link mechanism + first commit. No lint scripts, no preflight
 > code, no system implementation. Just structure that Phase 2 builds on.
+
+## Outcome
+
+All scope items shipped in one commit (144 files, 16,181 lines).
+Repo lives at github.com/aarkan1313/world5.git. Parent `D:/assets/.git`
+no longer tracks `world 5/` (now in parent .gitignore at commit
+`5f06ce3d`).
+
+Deviations from plan:
+- Addon link: planned symlink (`mklink /D`); user lacked admin +
+  Developer Mode, so fell back to **Windows Junction** (also valid,
+  no admin needed, Godot treats as regular dir). Documented in
+  spec 18 fallback.
+- Pre-existing `worldgen5/` dir was discovered at world 5/ root
+  (user scratch); added to .gitignore, not touched.
+- Added `.gitattributes` (not in original checklist) to lock LF line
+  endings repo-wide.
+
+Build-note follow-up: TBD — first build-note in `docs/build-notes/`.
 
 ## Scope (what's in)
 
