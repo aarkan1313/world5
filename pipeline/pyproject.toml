@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "world5-pipeline"
+version = "0.0.1"
+description = "W5 (World 5) Python pipeline — engine-agnostic content tools for terrain kernels, texture generation, TRELLIS 3D, LOD bake, decoration bake, nav export, world contract validation."
+authors = [{ name = "W5 contributors" }]
+license = { text = "TBD" }
+requires-python = ">=3.12"
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Topic :: Multimedia :: Graphics :: 3D Modeling",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Development Status :: 1 - Planning",
+]
+
+dependencies = [
+    # Core dependencies pinned in Phase 2 when systems start consuming them.
+    # Phase 0 ships an empty package skeleton; pip install -e ./pipeline works
+    # but doesn't import anything yet.
+    "numpy>=1.26",
+    "pillow>=10.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.1",
+    "ruff>=0.5",
+]
+texture = [
+    # Filled in Phase 5 when texture pipeline ports from W4.
+]
+trellis = [
+    # Filled in Phase 7+ when TRELLIS subjects ship.
+]
+lod = [
+    # Filled in Phase 7+ when LOD bake ports from W4.
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["world5*"]
+
+[tool.setuptools.package-dir]
+world5 = "world5"

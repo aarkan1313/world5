@@ -1,0 +1,31 @@
+# W5 line-ending policy: LF everywhere in repo. Git converts on
+# checkout per platform if user has core.autocrlf=true.
+
+* text=auto eol=lf
+
+# Binary files (no normalization)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.glb binary
+*.gltf binary
+*.fbx binary
+*.usd binary
+*.usdz binary
+*.tres binary
+*.scn binary
+*.tscn text eol=lf
+*.gd text eol=lf
+*.gdshader text eol=lf
+*.glsl text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.cfg text eol=lf
+*.toml text eol=lf
+
+# Lockfiles
+*.import binary

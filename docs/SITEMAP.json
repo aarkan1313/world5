@@ -1,0 +1,120 @@
+{
+  "version": 1,
+  "generated_at": "2026-05-16",
+  "generated_by": "hand-authored (Phase 0 scaffold); pipeline/docs/build_sitemap.py will auto-regen post-Phase 2",
+  "project": "W5",
+  "doc_root": "docs/",
+  "sections": {
+    "entry": [
+      "README.md",
+      "STATE.md",
+      "ROADMAP.md",
+      "CONTRIBUTING.md"
+    ],
+    "review_and_audit": [
+      "REVIEW_BRIEF.md",
+      "AUDIT_PROMPT.md",
+      "AUDIT_FINDINGS.md",
+      "SELF_AUDIT_FINDINGS.md"
+    ],
+    "navigation_aids": [
+      "SYSTEM_INVENTORY.md",
+      "ORCHESTRATOR_PLANNING_GUIDE.md",
+      "SITEMAP.json"
+    ],
+    "state": [
+      "state/state_meta.md",
+      "state/state_core.md",
+      "state/state_world.md",
+      "state/state_output.md"
+    ],
+    "roadmap": [
+      "roadmap/phase_0_repo_setup.md"
+    ],
+    "specs_meta": [
+      "specs/00_SPEC_TEMPLATE.md",
+      "specs/01_MODULE_LAYOUT.md",
+      "specs/02_CONTRIBUTING_LIFECYCLE.md",
+      "specs/03_PILLARS.md",
+      "specs/04_GODOT_ROOT_ALLOWLIST.md",
+      "specs/05_DOC_ARCHITECTURE.md",
+      "specs/06_TEST_INFRASTRUCTURE.md"
+    ],
+    "specs_tier_0": [
+      "specs/07_JOB_SYSTEM.md",
+      "specs/08_SPATIAL_INDEX.md",
+      "specs/08a_GPU_CPU_CONTRACT.md",
+      "specs/09_ASYNC_ASSET_STREAMING.md",
+      "specs/10_STREAMING_BUDGET.md",
+      "specs/11_CHANGE_BROADCAST.md",
+      "specs/12_CONTENT_ADDRESSING.md",
+      "specs/13_QUALITY_TIERS.md",
+      "specs/14_WORLD_CONTRACT.md",
+      "specs/15_RENDERER_RESEARCH_BRIEF.md",
+      "specs/16_LOGGING_AND_ERROR_CONVENTIONS.md",
+      "specs/17_VERSIONING_AND_MIGRATION.md",
+      "specs/18_PLUGIN_INSTALL_AND_DEV_LOOP.md",
+      "specs/X_FRAME_BUDGET.md"
+    ],
+    "specs_tier_1_core": [
+      "specs/19_KERNEL_SYSTEM.md",
+      "specs/20_TERRAIN_BACKEND.md",
+      "specs/21_TERRAIN_RENDERER.md",
+      "specs/22_BIOME_CATALOG.md",
+      "specs/23_MATERIALS_PBR.md",
+      "specs/24_GROUND_VARIETY.md",
+      "specs/25_TEXTURE_PIPELINE.md",
+      "specs/26_TRELLIS_3D_PIPELINE.md",
+      "specs/27_LOD_BAKE.md",
+      "specs/28_DECORATION.md",
+      "specs/29_FOLIAGE.md",
+      "specs/30_ATMOSPHERE.md",
+      "specs/31_LIGHTING_GI.md",
+      "specs/32_CAMERA_VIEW.md",
+      "specs/33_NAV_EXPORT.md",
+      "specs/34_AUDIO_HOOKS.md"
+    ],
+    "specs_tier_2_world": [
+      "specs/35_WATER.md",
+      "specs/36_WEATHER.md",
+      "specs/37_CAVES_INTERIORS.md",
+      "specs/38_RUNTIME_DEFORMATION.md",
+      "specs/39_PERSISTENCE_AND_AUTHOR_OVERRIDES.md",
+      "specs/40_IMPOSTORS.md",
+      "specs/41_ROADS_PATHS.md"
+    ],
+    "specs_tier_3_output": [
+      "specs/42_BAKE_RECIPES.md",
+      "specs/43_PLUGIN_PACKAGING.md",
+      "specs/44_FORKABILITY_VALIDATION.md"
+    ],
+    "plans": [],
+    "build_notes": [],
+    "workflows": [],
+    "reference": [
+      "reference/pitfalls/pitfalls_INDEX.md"
+    ],
+    "handoffs": [],
+    "historical": []
+  },
+  "blocked_specs": [
+    {
+      "spec": "specs/21_TERRAIN_RENDERER.md",
+      "blocked_on": "specs/15_RENDERER_RESEARCH_BRIEF.md output (15a_RENDERER_DECISION.md)",
+      "unblocks_at": "Phase 3"
+    },
+    {
+      "spec": "specs/24_GROUND_VARIETY.md",
+      "blocked_on": "specs/15_RENDERER_RESEARCH_BRIEF.md output",
+      "unblocks_at": "Phase 3"
+    }
+  ],
+  "spec_count": 47,
+  "spec_status_summary": {
+    "draft": 47,
+    "reviewed": 0,
+    "shipped": 0
+  },
+  "current_phase": "Phase 0 — Repo setup",
+  "next_actions_doc": "roadmap/phase_0_repo_setup.md"
+}

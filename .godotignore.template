@@ -1,0 +1,14 @@
+# .godotignore.template — copy to .godotignore inside any directory
+# that Godot should not scan/import.
+#
+# Per spec 04 GODOT_ROOT_ALLOWLIST: pipeline scratch, candidate
+# directories, model weights, etc. must NOT live inside the Godot
+# project root (engine/ or demo/). They go in pipeline/ or tools/.
+#
+# This template is for when small dirs INSIDE engine/ or demo/ should
+# be hidden from Godot's import scan (e.g. an internal _scratch/ dir
+# used during a single sprint). Drop a copy as `.godotignore` in any
+# such dir.
+#
+# (Don't ship .godotignore in directories that ARE supposed to be
+# imported; this template is just a starting point.)
