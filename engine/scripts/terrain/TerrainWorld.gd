@@ -297,6 +297,71 @@ func _load_world_bundle(bundle_path: String) -> void:
 			Log.warn("terrain_world", "surface_slots.json failed to load",
 				{"path": slots_cfg})
 
+	# --- spec 24 Layer 1 (siblings + 3-tap stochastic UV) ---
+	#
+	# Phase 5.5 wire-up: read material_variants.json (sibling manifest),
+	# build the Texture2DArray for the first slot, bind on every ring.
+	# Single-slot binding matches the shader's current Phase 5.5 contract
+	# (one active slot); Phase 6 multi-biome work widens this to
+	# per-slot windows.
+	var mv_cfg: String = bundle_path + "material_variants.json"
+	if FileAccess.file_exists(mv_cfg):
+		var mv: MaterialVariants = MaterialVariants.from_file(mv_cfg)
+		if mv != null and mv.slots.size() > 0:
+			var materials_root: String = bundle_path + "materials"
+			var sta: SiblingTextureArray = SiblingTextureArray.build(
+				mv, materials_root, "albedo")
+			if sta.layer_count() > 0:
+				# Bind the first slot's window. (Phase 6 will pick per
+				# fragment; Phase 5.5 demo is single-biome single-slot.)
+				var first_slot: Dictionary = mv.slots[0]
+				var window: Dictionary = sta.window_for(
+					String(first_slot.get("biome", "")),
+					String(first_slot.get("slot", "")))
+				for ring in _rings:
+					var rmat: Material = ring.mesh_instance.material_override
+					if rmat is ShaderMaterial:
+						_material_pipeline.bind_sibling_array(
+							rmat as ShaderMaterial, sta.texture,
+							int(window.get("start", 0)),
+							int(window.get("count", 0)))
+
+	# --- spec 24 Layer 2 (detail overlays) ---
+	#
+	# detail_array.json lives per-biome under materials/biome_<biome>/.
+	# For single-biome walking demo we bind the first biome we find.
+	# Phase 6 multi-biome will need to pick the biome dynamically.
+	if mv_cfg != "" and FileAccess.file_exists(mv_cfg):
+		var materials_dir: String = bundle_path + "materials"
+		if DirAccess.dir_exists_absolute(
+				ProjectSettings.globalize_path(materials_dir)):
+			var d: DirAccess = DirAccess.open(materials_dir)
+			if d != null:
+				d.list_dir_begin()
+				var entry: String = d.get_next()
+				while entry != "":
+					if d.current_is_dir() and entry.begins_with("biome_"):
+						var biome: String = entry.substr(len("biome_"))
+						var da_cfg: String = "%s/%s/detail_array.json" % [
+							materials_dir, entry]
+						if FileAccess.file_exists(da_cfg):
+							var da: DetailArray = DetailArray.from_file(da_cfg)
+							if da != null and da.tile_count() > 0:
+								var dta: DetailTextureArray = DetailTextureArray.build(
+									da, materials_dir, "albedo")
+								if dta.layer_count() > 0:
+									for ring in _rings:
+										var rmat2: Material = ring.mesh_instance.material_override
+										if rmat2 is ShaderMaterial:
+											_material_pipeline.bind_detail_array(
+												rmat2 as ShaderMaterial,
+												dta.texture, dta.layer_count())
+									# Only bind the first biome that has
+									# detail (single-biome walking demo)
+									break
+					entry = d.get_next()
+				d.list_dir_end()
+
 	# Kernel config (TR-SPEC-S5 fix — was hard-coded defaults)
 	var kernel_cfg: String = bundle_path + "kernels/noise_stack.json"
 	if FileAccess.file_exists(kernel_cfg):

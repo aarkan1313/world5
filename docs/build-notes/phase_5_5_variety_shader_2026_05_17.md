@@ -201,7 +201,37 @@ Full verify: 5/5 green stable in 46.8s.
   integration step). They return empty-but-non-null arrays when
   no textures are bound so the unbound path stays the default.
 
+## Phase 5.5 TerrainWorld wire-up (same-day, third pass)
+
+The 5.5 extension built loaders + binders + tool but left a real gap:
+**nothing called the loaders at world load**. TerrainWorld was still
+the Phase 4.6 version that only bound macro_albedo + surface_slots.
+
+This pass closes the loop. `TerrainWorld._load_world_bundle()` now:
+
+1. Reads `material_variants.json` → builds SiblingTextureArray →
+   binds the first slot's window on every ring's ShaderMaterial
+2. Walks `materials/biome_*/` dirs → for each, reads
+   `detail_array.json` → builds DetailTextureArray → binds on every
+   ring (first biome with detail wins; single-biome walking demo)
+
+Both paths use the empty-array-on-no-textures contract from
+SiblingTextureArray/DetailTextureArray, so the current scaffold
+(walking demo, no PBR images yet) stays visually identical until the
+moment textures arrive.
+
+**End-to-end now**: drop textures → `python -m world5.textures.promote
+--world worlds/walking_demo --biome alpine --slot ground --base TAG
+--siblings ...` → re-run walking_demo → Layer 1+2 fragment paths
+fire automatically. Zero engine code changes between texture-drop
+and visible render.
+
+Integration test added at
+`engine/tests/integration/test_terrain_world_material_binding.gd`
+covers 4 cases: bundle-with-textures flips has_siblings + has_detail
+true on every ring; empty manifest keeps them false; missing
+manifest doesn't crash.
+
 ## Doc cap status
 
-~225 lines (under 350 build-note cap; extension content justified by
-the new code surface area).
+~260 lines (under 350 build-note cap).

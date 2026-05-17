@@ -92,7 +92,9 @@ matching the plan's schema example. Corrected across all consumers.
   the file moves, preflight gates the result
 - Phase 5.1 (W4 `tx_*.py` port) still held — parallel chat working
   in W4 pipeline. Re-evaluate next session once their changes land
-- TerrainWorld integration of SiblingTextureArray + DetailTextureArray
-  loaders (currently the binders are wired but nothing calls
-  build() at world-load time — pure runtime-glue step, no shader
-  changes needed)
+- ~~TerrainWorld integration of SiblingTextureArray + DetailTextureArray
+  loaders~~ ✅ shipped same-day (third pass): `_load_world_bundle()`
+  now drives the loaders + binders end-to-end. 4 integration tests
+  cover bound + unbound + missing-manifest paths. When textures land
+  + promote.py runs, Layer 1+2 fire automatically with zero engine
+  code changes.

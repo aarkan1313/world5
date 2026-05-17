@@ -136,6 +136,14 @@ sweep runs against the most-evolved spec set).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
+- 2026-05-17 (Phase 5.5 TerrainWorld wire-up):
+  TerrainWorld._load_world_bundle now calls MaterialVariants +
+  DetailArray loaders, assembles Texture2DArrays via
+  SiblingTextureArray + DetailTextureArray, binds them on every
+  ring shader material. End-to-end pipeline complete: when textures
+  land + promote.py runs + walking_demo starts → terrain auto-renders
+  with Layer 1+2 active, no further code edits. 4 integration tests
+  added covering bound, unbound, and missing-manifest paths.
 - 2026-05-17 (Phase 5.5 runtime glue + promote tool):
   DetailArray + SiblingTextureArray + DetailTextureArray loaders
   (manifest → Texture2DArray). promote.py CLI (net-new W5 tool;
