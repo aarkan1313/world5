@@ -8,13 +8,13 @@
 
 ## One-sentence summary
 
-**Phase 5.1 closed: W5 texture pipeline is now first-class.**
-11 tx_*.py modules + 3 drivers ported from W4 into
-`pipeline/world5/textures/` with relative-package imports + W5-
-layout path rebases. 15/15 modules import; 6/6 CLIs respond to
-`--help`. The texture team's external chain at `D:/tmp/` no longer
-required for fresh-dev pipeline runs. Audit items 4.9.c, S5/S6/S7
-are now unblocked. Verify 5/5 layers green stable in 59.8s.
+**Phase 4.9.c closed — Phase 4.9 fully done.** Walking demo ships
+`macro_albedo.json` + alpine purpose-preset PNG; renderer's
+"bundle missing macro_albedo.json" warning is gone, far-field reads
+as a broad snowfield instead of olive fallback. Preflight gained
+`macro_albedo_*` checks. Pytest 143 passed; verify 5/5 layers green
+stable in 61.0s. Next: Phase 5.4.b (sibling tune + detail overlays
++ per-biome YAMLs) — directly attacks tile-to-tile + chunk-to-chunk.
 
 ## Per-tier state
 
@@ -70,7 +70,12 @@ are now unblocked. Verify 5/5 layers green stable in 59.8s.
   - C2 ✅: BiomeCatalog + bind_all_slots() + w5_slot_weight() +
     fragment loop over slot_count. Mid + rock textures now reach
     the GPU on slopes + cliffs that match their catalog selectors
-  - C3 ⏸: sibling_blend_freq tune deferred to Phase 5.6 (needs
+  - S2 ✅ (4.9.c): macro_albedo.json + alpine purpose-preset PNG
+    shipped in walking_demo bundle. Renderer's "bundle missing
+    macro_albedo.json" warning gone. Far-field reads as alpine
+    snowfield, not olive fallback. macro_albedo_* preflight checks
+    added (+4 tests; pytest now 143 passed)
+  - C3 ⏸: sibling_blend_freq tune deferred to Phase 5.4.b (needs
     eye-height walking with real textures to calibrate)
 
 **Tier 1 materials scaffold (Phase 5 entry)** — directory layout +
@@ -158,6 +163,19 @@ sweep runs against the most-evolved spec set).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
+- 2026-05-17 (Phase 4.9.c closed — Phase 4.9 fully done):
+  walking_demo now ships `macro_albedo.json` at world root +
+  `materials/biome_alpine/ground/macro_albedo.png` via
+  `tx_macro_terrain --purpose-candidates --promote-purpose`.
+  tx_macro_terrain updated to read W5 `material_kit` (in addition
+  to W4 `kit_dir`); also fixes manifest_path parent-dir creation
+  bug. materials_manifests preflight gained `_check_macro_albedo`
+  (+4 TDD tests; relaxed pre-existing tests from "issues == []" to
+  "errors == []"). `.gitignore` adds `engine/worlds/**/captures/`
+  for derived authoring artifacts. Verify 5/5 green stable in
+  61.0s; pytest now 143 passed (was 139). Build note
+  phase_4_9_c_macro_albedo_2026_05_17.md. Closes audit S2;
+  Phase 4.9 done end-to-end.
 - 2026-05-17 (Phase 5.1 closed): 11 tx_*.py + 3 drivers ported
   from W4 with relative-package imports. tx_macro_terrain rebased
   onto W5 layout (DEFAULT_WORLD = engine/worlds/walking_demo).

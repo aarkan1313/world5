@@ -10,18 +10,19 @@
 
 ## One-paragraph current focus
 
-**Phase 5.1 closed.** 11 tx_*.py modules + 3 driver CLIs ported
-from W4 to `pipeline/world5/textures/` with relative-package
-imports + W5-layout path rebases. 15/15 modules import; 6/6 CLIs
-respond to `--help`. Verify still 5/5 green stable. The W5 texture
-pipeline is now first-class — fresh devs can run `python -m
-world5.textures.diversity` + `tx_macro_terrain` + `promote` without
-depending on the texture team's external chain at `D:/tmp/`.
-**Next**: either Phase 4.9.c (macro_albedo for walking_demo via the
-now-ported `tx_macro_terrain.py`; ~1 session; fixes the olive
-horizon band) OR Phase 5.4.b (sibling_blend_freq tune + detail
-overlays; 3-4 sessions; fixes tile-to-tile repeat at eye height).
-Both directly attack the user-flagged visual issues. User picks.
+**Phase 4.9.c closed — Phase 4.9 is fully done.** Walking demo now
+ships `macro_albedo.json` at world root + alpine purpose-preset PNG
+under `materials/biome_alpine/ground/`. The renderer's "bundle
+missing macro_albedo.json" warning is gone; far-field reads as a
+broad alpine snowfield instead of olive-grey fallback. Also: ported
+`tx_macro_terrain.py` updated to read W5 `material_kit` (in addition
+to W4 `kit_dir`), preflight gained `macro_albedo_*` checks (+4
+tests; pytest now 143 passed), `captures/` dirs gitignored. Verify
+5/5 layers green stable in 61.0s. **Next**: Phase 5.4.b directly
+attacks the user-flagged tile-to-tile + chunk-to-chunk visual
+issues: tune `sibling_blend_freq` per tier (audit C3) + author 5-7
+alpine detail overlays (audit S3) + port W4 per-biome YAMLs to
+`pipeline/biomes/` (audit S7). 3-4 sessions.
 
 ## Phase status
 
@@ -38,10 +39,10 @@ Both directly attack the user-flagged visual issues. User picks.
 | Phase 4.6 — Walking demo | ✅ done (4.9 closed multi-page binding + slot selection gaps) | [phase_4_6_walking_demo.md](roadmap/phase_4_6_walking_demo.md) | 1 session |
 | Phase 4.7 — Autoload rename refactor | ✅ done | [phase_4_7_autoload_rename.md](roadmap/phase_4_7_autoload_rename.md) | 1 session |
 | Phase 4.8 — Local RD refactor | ✅ done | [phase_4_8_local_rd_refactor.md](roadmap/phase_4_8_local_rd_refactor.md) | 1 session |
-| **Phase 4.9 — Renderer correctness (audit-driven)** | ✅ done (4.9.a + b + d shipped; 4.9.c deferred to 5.1) | [phase_4_9_close_2026_05_17.md](build-notes/phase_4_9_close_2026_05_17.md) | 1 session |
-| **Phase 5 — Ground texture pipeline** | 🚧 5.5 + 5.4 shipped (4.9 closed core gaps); 5.1 held; 5.6 pending | [25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md) | 5-10 |
-| Phase 5.5 — Variety shader Layer 1+2 | ✅ done (4.9.b finished slot selection); sibling_blend_freq tune pending (C3 → 5.6) | [phase_5_5_variety_shader.md](roadmap/phase_5_5_variety_shader.md) | 1 session |
-| Phase 5.4 — First biome (alpine) | ⚠️ shipped; macro_albedo (S2) + detail/ (S3) blocked on 5.1; slot selection now active | [build-notes/phase_5_4_first_biome_2026_05_17.md](build-notes/phase_5_4_first_biome_2026_05_17.md) | 1 session (incl brown-band fix) |
+| **Phase 4.9 — Renderer correctness (audit-driven)** | ✅ done (4.9.a + b + c + d all shipped) | [phase_4_9_close_2026_05_17.md](build-notes/phase_4_9_close_2026_05_17.md) + [phase_4_9_c_macro_albedo_2026_05_17.md](build-notes/phase_4_9_c_macro_albedo_2026_05_17.md) | 1 session |
+| **Phase 5 — Ground texture pipeline** | 🚧 5.5 + 5.4 + 5.1 shipped (4.9 closed core gaps); 5.4.b + 5.6 + 5.7 pending | [25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md) | 5-10 |
+| Phase 5.5 — Variety shader Layer 1+2 | ✅ done (4.9.b finished slot selection); sibling_blend_freq tune pending (C3 → 5.4.b) | [phase_5_5_variety_shader.md](roadmap/phase_5_5_variety_shader.md) | 1 session |
+| Phase 5.4 — First biome (alpine) | ✅ done (4.9.c closed S2 macro_albedo; slot selection active via 4.9.b) | [build-notes/phase_5_4_first_biome_2026_05_17.md](build-notes/phase_5_4_first_biome_2026_05_17.md) | 1 session (incl brown-band fix) |
 | Phase 5.1 — W4 module port | ✅ done (11 tx_*.py + 3 drivers ported; 15/15 import; 6/6 CLIs --help) | [phase_5_1_module_port_2026_05_17.md](build-notes/phase_5_1_module_port_2026_05_17.md) | 1 session |
 | Phase 5.4.b — Detail overlays + sibling_blend_freq tune | pending (depends on 5.1) | — | 3-4 |
 | Phase 5.6 — Calibration on real hardware | pending | — | 1-2 |

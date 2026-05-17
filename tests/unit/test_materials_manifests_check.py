@@ -52,12 +52,17 @@ def _run(world: Path) -> list:
 # --- non-failures ---
 
 
+def _errors(issues: list) -> list:
+    return [i for i in issues if i.severity.value == "error"]
+
+
 def test_missing_manifest_is_not_an_error(tmp_path: Path) -> None:
-    """Pre-Phase-5.4 walking demo legitimately has no manifest."""
+    """Pre-Phase-5.4 walking demo legitimately has no manifest.
+    (May warn about missing macro_albedo.json — that's expected too.)"""
     world = tmp_path / "world"
     world.mkdir()
     issues = _run(world)
-    assert issues == []
+    assert _errors(issues) == []
 
 
 def test_world_path_none_is_noop(tmp_path: Path) -> None:
@@ -70,7 +75,7 @@ def test_empty_slots_no_error(tmp_path: Path) -> None:
     world.mkdir()
     _write_manifest(world, _valid_base_manifest())
     issues = _run(world)
-    assert issues == []
+    assert _errors(issues) == []
 
 
 def test_existing_albedo_passes(tmp_path: Path) -> None:
@@ -85,7 +90,7 @@ def test_existing_albedo_passes(tmp_path: Path) -> None:
     ]
     _write_manifest(world, m)
     issues = _run(world)
-    assert issues == [], f"expected no issues; got {issues}"
+    assert _errors(issues) == [], f"expected no errors; got {_errors(issues)}"
 
 
 # --- material_variants failures ---
@@ -236,6 +241,60 @@ def test_detail_weight_out_of_range(tmp_path: Path) -> None:
     }))
     codes = [i.code for i in _run(world)]
     assert "materials_manifests.detail_weight_out_of_range" in codes
+
+
+# --- macro_albedo (spec 23 §line 43-47; audit S2) ---
+
+
+def test_missing_macro_albedo_json_is_warning(tmp_path: Path) -> None:
+    """Bundle without macro_albedo.json warns (spec 23 wants it
+    REQUIRED for visibility > 2km, but renderer gracefully falls back
+    so this is a warning, not an error)."""
+    world = tmp_path / "world"
+    world.mkdir()
+    _write_manifest(world, _valid_base_manifest())
+    codes = [i.code for i in _run(world)]
+    assert "materials_manifests.macro_albedo_json_missing" in codes
+
+
+def test_macro_albedo_json_present_no_warning(tmp_path: Path) -> None:
+    world = tmp_path / "world"
+    world.mkdir()
+    _write_manifest(world, _valid_base_manifest())
+    _write_image(world / "materials" / "biome_alpine" / "ground" / "macro_albedo.png")
+    (world / "macro_albedo.json").write_text(json.dumps({
+        "world_min_xz": [-1024.0, -1024.0],
+        "world_max_xz": [1024.0, 1024.0],
+        "texture": "res://materials/biome_alpine/ground/macro_albedo.png",
+    }))
+    codes = [i.code for i in _run(world)]
+    assert "materials_manifests.macro_albedo_json_missing" not in codes
+    assert "materials_manifests.macro_albedo_texture_missing" not in codes
+
+
+def test_macro_albedo_texture_missing_is_error(tmp_path: Path) -> None:
+    """Manifest points at a texture file that doesn't exist = broken
+    promote state; renderer logs a warn and uses fallback color."""
+    world = tmp_path / "world"
+    world.mkdir()
+    _write_manifest(world, _valid_base_manifest())
+    (world / "macro_albedo.json").write_text(json.dumps({
+        "world_min_xz": [-1024.0, -1024.0],
+        "world_max_xz": [1024.0, 1024.0],
+        "texture": "res://materials/biome_alpine/ground/macro_albedo.png",
+    }))
+    # Note: no macro_albedo.png written
+    codes = [i.code for i in _run(world)]
+    assert "materials_manifests.macro_albedo_texture_missing" in codes
+
+
+def test_macro_albedo_json_unparseable_is_error(tmp_path: Path) -> None:
+    world = tmp_path / "world"
+    world.mkdir()
+    _write_manifest(world, _valid_base_manifest())
+    (world / "macro_albedo.json").write_text("{not json")
+    codes = [i.code for i in _run(world)]
+    assert "materials_manifests.macro_albedo_json_unparseable" in codes
 
 
 def test_real_walking_demo_passes(tmp_path: Path) -> None:

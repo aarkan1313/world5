@@ -212,10 +212,74 @@ def _check_detail_arrays(world: Path) -> list[Issue]:
     return issues
 
 
+def _resolve_res_path(world: Path, res_path: str) -> Path | None:
+    """Resolve a 'res://...' path against the world bundle. We don't
+    have project.godot here, so use a best-effort heuristic: strip
+    'res://' and try (a) world-bundle-relative, (b) engine-root-
+    relative if the path starts with 'worlds/'. Returns None if the
+    input isn't a res:// path."""
+    if not res_path.startswith("res://"):
+        return None
+    stripped = res_path.removeprefix("res://")
+    if stripped.startswith("worlds/"):
+        # Engine root is world.parent.parent (engine/worlds/<name>)
+        return world.parent.parent / stripped
+    return world / stripped
+
+
+def _check_macro_albedo(world: Path) -> list[Issue]:
+    """Spec 23 §line 43-47: macro_albedo.json is REQUIRED for any world
+    configured with visibility_ship_distance_m > 2km. Audit S2.
+
+    We can't reliably read the world's visibility config here, so we
+    warn (not error) when macro_albedo.json is absent — renderer logs
+    + falls back to a uniform color. Error when the manifest declares
+    a texture that's missing on disk (broken promote)."""
+    issues: list[Issue] = []
+    macro_path = world / "macro_albedo.json"
+    if not macro_path.exists():
+        issues.append(Issue(
+            severity=Severity.WARNING,
+            code="materials_manifests.macro_albedo_json_missing",
+            message=("macro_albedo.json missing at world root; renderer "
+                     "will fall back to uniform color at distance "
+                     "(spec 23 §Layer 3)"),
+            path=str(macro_path),
+        ))
+        return issues
+    parsed, err = _load_json(macro_path)
+    if err is not None:
+        issues.append(Issue(
+            severity=Severity.ERROR,
+            code="materials_manifests.macro_albedo_json_unparseable",
+            message=err,
+            path=str(macro_path),
+        ))
+        return issues
+    assert parsed is not None
+    texture_ref = str(parsed.get("texture", ""))
+    if texture_ref == "":
+        return issues
+    tex_path = _resolve_res_path(world, texture_ref)
+    if tex_path is None:
+        return issues  # unknown path scheme; can't verify
+    if not tex_path.exists():
+        issues.append(Issue(
+            severity=Severity.ERROR,
+            code="materials_manifests.macro_albedo_texture_missing",
+            message=(f"macro_albedo.json references texture that doesn't "
+                     f"exist on disk: {texture_ref}"),
+            path=str(tex_path),
+            details={"manifest": str(macro_path), "ref": texture_ref},
+        ))
+    return issues
+
+
 def run(repo_root: Path, world_path: Path | None, tier: str) -> list[Issue]:
     if world_path is None:
         return []  # repo-only mode; nothing to check
     issues: list[Issue] = []
     issues.extend(_check_material_variants(world_path))
     issues.extend(_check_detail_arrays(world_path))
+    issues.extend(_check_macro_albedo(world_path))
     return issues

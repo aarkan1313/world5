@@ -104,17 +104,21 @@ rebuilding from scratch.
 - **Fix**: amend ROADMAP + spec 21 perf bar to reflect the real
   extrapolation honestly; flag 3060 viability as open question
 
-### S2 — Walking demo macro_albedo missing → far-field uses fallback_color
+### S2 — Walking demo macro_albedo missing → far-field uses fallback_color [✅ closed 2026-05-17 Phase 4.9.c]
 
 - **Spec violation**: spec 23 line 43-47 "REQUIRED for any world
   configured with visibility_ship_distance_m > 2km"
-- **Root cause**: `engine/worlds/walking_demo/` has no
-  `macro_albedo.png` or `.json` at the world root. Logs warn
+- **Root cause**: `engine/worlds/walking_demo/` had no
+  `macro_albedo.png` or `.json` at the world root. Logs warned
   "bundle missing macro_albedo.json" on every load
-- **Effort**: 1 session (run `tx_macro_terrain.py --purpose-candidates`
-  for alpine + commit)
-- **Note**: ported `tx_macro_terrain.py` to W5 first (currently in
-  W4 only, port held per Phase 5.1)
+- **Fixed by**: Phase 4.9.c ran `tx_macro_terrain
+  --purpose-candidates --promote-purpose` after porting the script
+  in Phase 5.1 + bumping it to read W5 `material_kit` (in addition
+  to W4 `kit_dir`). Wrote `engine/worlds/walking_demo/macro_albedo.json`
+  (world-root manifest, AABB ±4 km) + promoted alpine purpose-preset
+  PNG. Far-field now reads as broad snowfield. Build note
+  `phase_4_9_c_macro_albedo_2026_05_17.md`. Also added preflight
+  `macro_albedo_*` checks (+4 tests)
 
 ### S3 — Walking demo detail/ overlays empty → spec 24 Layer 2 inactive
 

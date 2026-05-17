@@ -291,12 +291,24 @@ def derive_macro_albedo(
 
 
 def _catalog_ground_layers(catalog_path: Path) -> Iterable[tuple[str, Path, Path]]:
+    # W5 catalogs (spec 22) use `material_kit`, world-bundle-relative.
+    # W4 catalogs used `kit_dir`, GODOT_ROOT-relative. Accept both during
+    # transition; resolve W5 form against the catalog's parent (world bundle).
     catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    world_bundle = catalog_path.parent
     for biome in catalog.get("biomes", []):
         name = str(biome["name"])
-        kit_dir = str(biome["kit_dir"])
-        src = _res_path_to_disk(f"res://{kit_dir}/ground/albedo.png")
-        out = _res_path_to_disk(f"res://{kit_dir}/ground/macro_albedo.png")
+        kit = biome.get("material_kit") or biome.get("kit_dir")
+        if kit is None:
+            print(f"[tx_macro_terrain] skip {name}: no material_kit/kit_dir")
+            continue
+        kit_str = str(kit).rstrip("/")
+        if biome.get("material_kit") is not None:
+            src = world_bundle / kit_str / "ground" / "albedo.png"
+            out = world_bundle / kit_str / "ground" / "macro_albedo.png"
+        else:
+            src = _res_path_to_disk(f"res://{kit_str}/ground/albedo.png")
+            out = _res_path_to_disk(f"res://{kit_str}/ground/macro_albedo.png")
         yield name, src, out
 
 
@@ -451,6 +463,7 @@ def main(argv: list[str] | None = None) -> int:
         "promote_purpose": bool(args.promote_purpose),
     }
     manifest_path = args.sheet.with_suffix(".json")
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     _make_sheet(entries, args.sheet)
     if compare_entries:
