@@ -10,14 +10,14 @@
 
 ## One-paragraph current focus
 
-**Phase 3 (renderer research sprint) is the next sprint.** Per spec
-15: survey 5 candidate renderer primitives (clipmap, virtual
-texturing, mesh shaders/meshlets, nanite-style, hybrid), produce a
-decision doc (`docs/specs/15a_RENDERER_DECISION.md`) that commits W5
-to one primitive, validate via a 1km × 1km prototype that hits 60fps
-on RTX 3060. Fallback to clipmap if sprint inconclusive (F1) or
-prototype fails perf gate (F2/F3). ~3-5 sessions estimated. Phase 2
-shipped — 13 Tier 0 systems + 224 tests passing.
+**Phase 4 (terrain MVP) is the next sprint.** Spec 15a renderer
+decision committed: **clipmap** (3 of 5 candidates eliminated by
+Godot 4.5 capability survey; clipmap proven via prototype at
+~0.7 ms/frame on RTX 5090 Laptop). Spec 21 (Terrain Renderer) +
+spec 24 (Ground Variety) now unblock. Phase 4 builds the production
+multi-ring clipmap with per-page streaming + LOD morph zones +
+multi-biome material blend, validates with one biome demo.
+~5-10 sessions estimated.
 
 ## Phase status
 
@@ -27,8 +27,9 @@ shipped — 13 Tier 0 systems + 224 tests passing.
 | Phase 1.5 — Audits | ✅ done | AUDIT_FINDINGS + SELF_AUDIT_FINDINGS | ~2 |
 | Phase 0 — Repo setup | ✅ done | [phase_0_repo_setup.md](roadmap/phase_0_repo_setup.md) | 1 (commit `f73b4f8`) |
 | Phase 2 — Foundation build (Tier 0) | ✅ done | [phase_2_foundations.md](roadmap/phase_2_foundations.md) | 1 (commits `bcb1d62` → `cb46ffc`) |
-| **Phase 3 — Renderer research sprint** | 🚧 next | spec 15 brief | 3-5 |
-| Phase 4 — Terrain MVP (one biome) | pending | (write when starting) | 5-10 |
+| Phase 2 audit + fix | ✅ done | SELF_AUDIT_PHASE_2_FINDINGS | 1 (commits `17fce3d` → `d6d6c94`) |
+| Phase 3 — Renderer research sprint | ✅ done | [phase_3_renderer_research.md](roadmap/phase_3_renderer_research.md) + spec 15a | 1 (came in under 3-5 estimate) |
+| **Phase 4 — Terrain MVP (one biome)** | 🚧 next | (write at start) | 5-10 |
 | Phase 4.5 — **Calibration sprint** | pending | (write when starting) | 2-3 |
 | Phase 5 — Ground texture pipeline | pending | (write when starting) | 5-10 |
 | Phase 6 — Second biome | pending | (write when starting) | 3-5 |

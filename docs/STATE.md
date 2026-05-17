@@ -8,12 +8,13 @@
 
 ## One-sentence summary
 
-**Phase 2 (Tier 0 foundation build) shipped.** 13 Tier 0 systems
-live in code (Log, World5, QualityTiers, Job, JobScheduler, GpuJob,
-GpuResourceTracker, SpatialIndex, AssetStream, StreamingBudget,
-ChangeBroadcast, ContentAddress, WorldContract). 224 tests pass via
-`verify --full` in 4.6s. All Tier 0 autoloads register cleanly.
-Ready for Phase 3 (renderer research sprint per spec 15).
+**Phase 3 (renderer research sprint) shipped.** Decision:
+**clipmap** per spec 15a — 3 of 5 candidates F3-eliminated by
+Godot 4.5 capability survey (mesh shaders not exposed, nanite-style
+design-phase only, VT requires extensions). Prototype renders
+130k-tri 1km × 1km in ~0.7 ms on RTX 5090 Laptop (extrapolated
+2-3 ms on RTX 3060; fits X_FRAME_BUDGET). 242 tests pass via
+`verify --full`. Ready for Phase 4 (terrain MVP).
 
 ## Per-tier state
 
@@ -87,6 +88,13 @@ key open questions, where each system's W4.1 reference lives).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
+- 2026-05-16: **Phase 3 shipped** — clipmap renderer committed in
+  spec 15a; working prototype at
+  `engine/examples/renderer_research_prototype/`; 130k-tri scene
+  at 0.7 ms/frame on RTX 5090 Laptop. Spec 21 + spec 24 unblock.
+- 2026-05-16: Phase 2 self-audit + critical fix pass — 42 findings
+  documented; all 5 criticals actioned (2 real bugs fixed, 2
+  refuted by measurement, 1 reclassified); pitfall meta-3 added
 - 2026-05-16: **Phase 2 shipped** (`cb46ffc`) — all 13 Tier 0
   systems in code; 224 tests pass; autoloads register; preflight
   green; real-GPU layer working
