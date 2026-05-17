@@ -105,16 +105,28 @@ func _process(_delta: float) -> void:
 	# 1. Snap rings to camera (per-ring cell-aligned)
 	_dispatch.update(_rings, cam_pos)
 
-	# 2. Compute morph factor per ring + push to material
+	# 2. Phase 4.10.a (W4 PITFALLS #11 fix): bind per-ring morph
+	# geometry so the vertex shader computes per-vertex morph factor.
+	# Pre-fix: single per-ring morph_factor uniform was driven by
+	# camera-to-ring-CENTER distance — all vertices got the same value,
+	# outer-edge vertices never morphed when camera was near center →
+	# visible cliff at ring boundary. Now the shader does its own math.
+	#
+	# Outermost ring has no parent to morph toward — pass half_extent=0
+	# so the shader's morph is a no-op (m stays 0). Inner rings morph
+	# toward the (single-step coarser via 2× cell snap) approximation.
+	var outermost: int = _rings.size() - 1
 	for i in range(_rings.size()):
 		var ring: ClipmapRing = _rings[i]
 		var half_extent: float = float(ring_vertex_grid - 1) * ring.cell_size_m * 0.5
-		var morph: float = _dispatch.compute_morph_factor(
-			cam_xz, ring.snapped_center, half_extent, morph_band_fraction,
-		)
 		var mat: Material = ring.mesh_instance.material_override
 		if mat is ShaderMaterial:
-			_material_pipeline.set_morph_factor(mat as ShaderMaterial, morph)
+			if i == outermost:
+				_material_pipeline.set_ring_morph(mat as ShaderMaterial,
+					ring.snapped_center, 0.0, 0.0)
+			else:
+				_material_pipeline.set_ring_morph(mat as ShaderMaterial,
+					ring.snapped_center, half_extent, morph_band_fraction)
 
 	# 3. Residency update — dirty-check: only re-diff when camera crossed
 	# a page boundary (TR-SPEC-S6 + TR-PERF-S1 fix). At rest with no
@@ -495,15 +507,19 @@ func _update_ring_height_array(ring_idx: int, page_xz: Vector2,
 		floor(raw_min.x / page_extent_m) * page_extent_m,
 		floor(raw_min.y / page_extent_m) * page_extent_m,
 	)
-	# If min_xz drifted (ring snapped), drop old pages — their layer
-	# indices are now wrong relative to the new window.
-	if aligned_min != rha.min_xz and rha.layer_count() > 0:
-		# Discard everything; pages will be re-added as residency
-		# re-streams. Cheap because we hold images by reference.
-		rha = RingHeightArray.new()
-		rha.configure(ring_extent_m, page_extent_m)
-		_ring_height_arrays[ring_idx] = rha
-	rha.set_min_corner(aligned_min)
+	# Phase 4.10.b (W4 PITFALLS #14 fix): on ring snap, REBASE the
+	# existing array to the new min_xz instead of dropping everything.
+	# Pages still in the new window keep their image content + get
+	# remapped to new local coords; out-of-window pages are evicted.
+	# Pre-fix: full drop forced every page to re-stream from scratch
+	# → "rings visible while walking" symptom.
+	if aligned_min != rha.min_xz:
+		if rha.layer_count() > 0:
+			rha.rebase(aligned_min)
+		else:
+			rha.set_min_corner(aligned_min)
+	else:
+		rha.set_min_corner(aligned_min)
 
 	# Build the normalized height image for this page
 	var n: int = int(sqrt(page.height_cpu.size()))

@@ -37,7 +37,9 @@ func make_ring_material(_ring_index: int,
 	# the composer binds real assets
 	mat.set_shader_parameter("height_scale", 50.0)
 	mat.set_shader_parameter("height_offset", 0.0)
-	mat.set_shader_parameter("morph_factor", 0.0)
+	mat.set_shader_parameter("ring_center_xz", Vector2(0.0, 0.0))
+	mat.set_shader_parameter("ring_half_extent_m", 1.0)
+	mat.set_shader_parameter("morph_band_frac", 0.16)
 	# grid_n drives the parent-ring UV snap for LOD morph (OA-C1).
 	mat.set_shader_parameter("grid_n", float(grid_n))
 	mat.set_shader_parameter("macro_aabb",
@@ -128,9 +130,35 @@ func bind_macro_albedo(mat: ShaderMaterial, macro: MacroAlbedo) -> void:
 	mat.set_shader_parameter("macro_aabb", macro.uniform_aabb())
 
 
-## Set the LOD-morph factor (0 = current LOD, 1 = morphed to next).
-func set_morph_factor(mat: ShaderMaterial, factor: float) -> void:
-	mat.set_shader_parameter("morph_factor", clamp(factor, 0.0, 1.0))
+## Phase 4.10.a (W4 PITFALLS #11 fix). Bind per-ring morph geometry
+## so the vertex shader can compute per-vertex morph factor from the
+## vertex's distance to the ring's outer edge.
+##
+## - ring_center_xz: world XZ of the ring's current snapped center
+## - half_extent_m: half the ring's world extent (ring covers
+##   ±half_extent on each axis from center)
+## - band_frac: fraction of half_extent that the morph band occupies
+##   (0.16 = morph starts at 84% of the half-extent)
+##
+## Pass `ring_half_extent_m = 0.0` (or band_frac = 0.0) on the
+## outermost ring — no parent to morph toward. The shader's morph
+## becomes a no-op (m stays 0) so own-ring height renders directly.
+func set_ring_morph(mat: ShaderMaterial, center_xz: Vector2,
+		half_extent_m: float, band_frac: float = 0.16) -> void:
+	mat.set_shader_parameter("ring_center_xz", center_xz)
+	mat.set_shader_parameter("ring_half_extent_m", max(0.0, half_extent_m))
+	mat.set_shader_parameter("morph_band_frac",
+		clamp(band_frac, 0.0, 0.5))
+
+
+## Legacy single-scalar morph setter. Phase 4.10.a deprecates this in
+## favor of set_ring_morph(). Kept for the time being so any test or
+## scene that still calls it doesn't crash; new code should use
+## set_ring_morph().
+func set_morph_factor(_mat: ShaderMaterial, _factor: float) -> void:
+	# No-op: shader no longer reads `morph_factor` uniform. Per-vertex
+	# morph computed from ring_center_xz + ring_half_extent_m + band.
+	pass
 
 
 ## Bind a Texture2DArray of sibling textures + the start/count window

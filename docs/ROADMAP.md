@@ -10,20 +10,19 @@
 
 ## One-paragraph current focus
 
-**Phase 5.4.b partial closed: sibling tune (C3) + per-biome YAMLs
-(S7).** `terrain_sibling_blend_freq` now a per-tier knob in
-`quality_tiers.json` (low 0.20 → cinematic 0.40); high tier ships
-0.30 (was 0.10) — 3× finer noise wavelength = visible tile repeat
-broken at standing eye height. New `MaterialPipeline.bind_sibling_blend_freq`
-+ TerrainWorld wire-up + 2 TDD tests. `pipeline/biomes/alpine.yaml`
-+ `forest.yaml` ported from W4 (51 + 21 candidates) — fresh devs
-can run `python -m world5.textures.diversity --biome alpine` end-
-to-end inside the W5 repo. Verify 5/5 green stable in 60.0s.
-**Remaining 5.4.b.3** (detail overlay authoring; audit S3): 2-3
-sessions of ComfyUI batches; deferred (heavy + doesn't block).
-**Next** (user picks): Phase 5.4.b.3 (visible Layer 2 detail
-variation) OR Phase 6 (forest second biome — texture team already
-shipped 28 forest candidates) OR Phase 5.7 (erosion sprint).
+**Phase 4.10 closed — 3 W4 PITFALLS lifted into W5.** User screenshots
+showed three artifacts after 5.4.b shipped: (1) elevation cliff at
+ring boundary, (2) visible 20m blocky brightness patches, (3) "rings
+visible while moving". Per user redirect, looked up `D:/assets/world 4/docs/reference/PITFALLS.md`
+and matched each to a documented W4 failure mode + fix: PITFALLS #11
+(morph zones — fixed via per-vertex morph + ring_center + ring_half_extent
+uniforms), PITFALLS #14 (full-ring regen on snap — fixed via new
+`RingHeightArray.rebase` that retains in-window pages), PITFALLS #31-class
+(redundant `0.85 + 0.30 * nv` brightness modulator → killed; macro
+albedo + siblings provide all needed variation now). Verify 5/5
+green in 58.3s. **Next** (user picks): Phase 5.4.b.3 (detail
+overlays via ComfyUI batches) OR Phase 6 (forest second biome) OR
+Phase 5.7 (erosion sprint, plan written).
 
 ## Phase status
 
@@ -41,6 +40,7 @@ shipped 28 forest candidates) OR Phase 5.7 (erosion sprint).
 | Phase 4.7 — Autoload rename refactor | ✅ done | [phase_4_7_autoload_rename.md](roadmap/phase_4_7_autoload_rename.md) | 1 session |
 | Phase 4.8 — Local RD refactor | ✅ done | [phase_4_8_local_rd_refactor.md](roadmap/phase_4_8_local_rd_refactor.md) | 1 session |
 | **Phase 4.9 — Renderer correctness (audit-driven)** | ✅ done (4.9.a + b + c + d all shipped) | [phase_4_9_close_2026_05_17.md](build-notes/phase_4_9_close_2026_05_17.md) + [phase_4_9_c_macro_albedo_2026_05_17.md](build-notes/phase_4_9_c_macro_albedo_2026_05_17.md) | 1 session |
+| **Phase 4.10 — Clipmap correctness (W4 PITFALLS lifted)** | ✅ done (4.10.a + b + c — cliff + ring chase + brightness modulator) | [phase_4_10_close_2026_05_17.md](build-notes/phase_4_10_close_2026_05_17.md) + [phase_4_10_clipmap_correctness.md](roadmap/phase_4_10_clipmap_correctness.md) | 1 session |
 | **Phase 5 — Ground texture pipeline** | 🚧 5.5 + 5.4 + 5.1 shipped (4.9 closed core gaps); 5.4.b + 5.6 + 5.7 pending | [25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md) | 5-10 |
 | Phase 5.5 — Variety shader Layer 1+2 | ✅ done (4.9.b finished slot selection); sibling_blend_freq tune pending (C3 → 5.4.b) | [phase_5_5_variety_shader.md](roadmap/phase_5_5_variety_shader.md) | 1 session |
 | Phase 5.4 — First biome (alpine) | ✅ done (4.9.c closed S2 macro_albedo; slot selection active via 4.9.b) | [build-notes/phase_5_4_first_biome_2026_05_17.md](build-notes/phase_5_4_first_biome_2026_05_17.md) | 1 session (incl brown-band fix) |

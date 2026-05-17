@@ -141,6 +141,75 @@ func test_build_texture_array_empty_returns_null() -> void:
 	assert_null(tex)
 
 
+# --- rebase (Phase 4.10.b — PITFALLS #14 fix) ---
+
+
+func test_rebase_keeps_in_window_pages() -> void:
+	# When the ring snaps to a new min_xz, pages still inside the new
+	# window must keep their image content; their local coords get
+	# remapped relative to new_min_xz. Pre-fix: full RingHeightArray
+	# drop + re-stream from scratch ("rings visible while walking").
+	var rha: RingHeightArray = RingHeightArray.new()
+	rha.configure(510.0, 256.0)  # pages_per_side = 3
+	rha.set_min_corner(Vector2(-512.0, -512.0))
+	var img_a: Image = _solid_height_image(8, 0.30)
+	var img_b: Image = _solid_height_image(8, 0.70)
+	# Two pages at world coords (-256, -512) → local (1, 0) and
+	# (-256, -256) → local (1, 1) under the original min.
+	rha.add_page(Vector2(-256.0, -512.0), img_a)
+	rha.add_page(Vector2(-256.0, -256.0), img_b)
+	assert_eq(rha.layer_count(), 2)
+	# Snap right by one page (256m): new min = (-256, -512).
+	# Page (-256, -512) is now at local (0, 0); page (-256, -256) is
+	# now at local (0, 1). Both still in the [0, 3) window → both keep.
+	rha.rebase(Vector2(-256.0, -512.0))
+	assert_eq(rha.layer_count(), 2,
+		"both pages still in new window — must be retained")
+	assert_eq(rha.min_xz, Vector2(-256.0, -512.0),
+		"min_xz must update to the new corner")
+	# Layer indices must reflect new local coords.
+	# (-256, -512) → local (0, 0) → layer 0
+	assert_eq(rha.layer_for_page_coord(Vector2(-256.0, -512.0)), 0)
+	# (-256, -256) → local (0, 1) → layer 0*3 + 0 = wait, py * pps + px = 1*3+0 = 3
+	assert_eq(rha.layer_for_page_coord(Vector2(-256.0, -256.0)), 3)
+
+
+func test_rebase_drops_out_of_window_pages() -> void:
+	# When the ring snaps far enough that a page is no longer in the
+	# new window, that page must be evicted.
+	var rha: RingHeightArray = RingHeightArray.new()
+	rha.configure(510.0, 256.0)  # pages_per_side = 3
+	rha.set_min_corner(Vector2(-512.0, -512.0))
+	var img: Image = _solid_height_image(8, 0.5)
+	# Pages at the corners of the original window.
+	rha.add_page(Vector2(-512.0, -512.0), img)  # local (0, 0)
+	rha.add_page(Vector2(0.0, 0.0), img)        # local (2, 2)
+	assert_eq(rha.layer_count(), 2)
+	# Snap by 2 pages right + 2 pages up: new min = (0, 0).
+	# Page (-512, -512) is now at local (-2, -2) → out of window → drop
+	# Page (0, 0) is now at local (0, 0) → kept
+	rha.rebase(Vector2(0.0, 0.0))
+	assert_eq(rha.layer_count(), 1,
+		"out-of-window page must be evicted")
+	assert_eq(rha.layer_for_page_coord(Vector2(0.0, 0.0)), 0)
+	assert_eq(rha.layer_for_page_coord(Vector2(-512.0, -512.0)), -1,
+		"out-of-window page must report not-resident")
+
+
+func test_rebase_to_same_min_is_noop() -> void:
+	# Rebasing to the current min_xz must leave everything as-is.
+	var rha: RingHeightArray = RingHeightArray.new()
+	rha.configure(510.0, 256.0)
+	rha.set_min_corner(Vector2(-512.0, -512.0))
+	var img: Image = _solid_height_image(8, 0.5)
+	rha.add_page(Vector2(-256.0, -512.0), img)
+	var pre_count: int = rha.layer_count()
+	var pre_layer: int = rha.layer_for_page_coord(Vector2(-256.0, -512.0))
+	rha.rebase(Vector2(-512.0, -512.0))  # same min
+	assert_eq(rha.layer_count(), pre_count)
+	assert_eq(rha.layer_for_page_coord(Vector2(-256.0, -512.0)), pre_layer)
+
+
 # --- helpers ---
 
 func _solid_height_image(n: int, value: float) -> Image:

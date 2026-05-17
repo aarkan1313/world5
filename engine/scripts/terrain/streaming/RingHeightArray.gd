@@ -71,6 +71,56 @@ func set_min_corner(world_min_xz: Vector2) -> void:
 	min_xz = world_min_xz
 
 
+## Phase 4.10.b (W4 PITFALLS #14 fix). Rebase the page grid to a new
+## min_xz WITHOUT dropping existing in-window pages.
+##
+## Pre-fix: TerrainWorld._update_ring_height_array would
+## `rha = RingHeightArray.new()` whenever the ring snapped, forcing
+## every page to re-stream from scratch. That produced visible "ring
+## chasing" / placeholder-ground flashes while walking. Per W4
+## PITFALLS #14: "A one-cell clipmap scroll should reuse almost all
+## existing samples".
+##
+## Algorithm: for each currently-resident page, compute its NEW local
+## coord under new_min_xz. If still in [0, pages_per_side), keep at
+## the new local key. Otherwise drop. Update self.min_xz.
+##
+## Pages are keyed by world-space anchor (px = local_x * page_extent
+## + old_min_xz.x); we recover the world anchor + recompute the new
+## local coord.
+func rebase(new_min_xz: Vector2) -> void:
+	if new_min_xz == min_xz:
+		return
+	# Capture current world anchors before mutating min_xz.
+	# Each key is "lx:ly" relative to OLD min_xz; world anchor =
+	# (lx * page_extent + old_min_xz.x, ly * page_extent + old_min_xz.y).
+	var old_min: Vector2 = min_xz
+	var entries: Array = []  # [{world_xz: Vector2, img: Image}, ...]
+	for key in _images_by_local_coord:
+		var parts: PackedStringArray = String(key).split(":")
+		if parts.size() != 2:
+			continue
+		var lx: int = int(parts[0])
+		var ly: int = int(parts[1])
+		var world_xz: Vector2 = Vector2(
+			float(lx) * page_extent_m + old_min.x,
+			float(ly) * page_extent_m + old_min.y,
+		)
+		entries.append({"world_xz": world_xz, "img": _images_by_local_coord[key]})
+	# Switch to the new grid origin + re-key everything.
+	_images_by_local_coord.clear()
+	min_xz = new_min_xz
+	for entry in entries:
+		var w: Vector2 = entry["world_xz"]
+		var new_local: Vector2i = _local_coord(w)
+		if new_local.x < 0 or new_local.y < 0:
+			continue
+		if new_local.x >= pages_per_side or new_local.y >= pages_per_side:
+			continue
+		var new_key: String = "%d:%d" % [new_local.x, new_local.y]
+		_images_by_local_coord[new_key] = entry["img"]
+
+
 func layer_count() -> int:
 	return _images_by_local_coord.size()
 

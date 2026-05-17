@@ -8,13 +8,13 @@
 
 ## One-sentence summary
 
-**Phase 5.4.b partial closed: sibling tune (C3) + per-biome YAMLs
-(S7).** `terrain_sibling_blend_freq` per-tier knob added (high
-ships 0.30 — 3× finer noise than the old 0.10 default → tile
-repeat at standing eye height broken up). `pipeline/biomes/
-alpine.yaml` + `forest.yaml` ported from W4. Verify 5/5 green
-stable in 60.0s. Remaining 5.4.b.3 (detail overlay ComfyUI batches;
-audit S3) deferred. Next: 5.4.b.3 OR Phase 6 forest OR Phase 5.7
+**Phase 4.10 closed — 3 W4 PITFALLS lifted into W5** (per user
+redirect to W4 reference docs). 4.10.a per-vertex morph (PITFALLS
+#11) eliminates ring-boundary cliff; 4.10.b `RingHeightArray.rebase`
+(PITFALLS #14) eliminates "rings visible while moving"; 4.10.c kills
+the redundant `0.85 + 0.30 * nv` brightness modulator (PITFALLS #31
+class) that read as 20m blocky patches. Verify 5/5 green in 58.3s.
+Next: 5.4.b.3 detail overlays OR Phase 6 forest OR Phase 5.7
 erosion sprint.
 
 ## Per-tier state
@@ -164,6 +164,20 @@ sweep runs against the most-evolved spec set).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
+- 2026-05-17 (Phase 4.10 closed — W4 PITFALLS lifted):
+  User screenshots after 5.4.b showed (1) elevation cliff at ring
+  boundary, (2) 20m blocky brightness patches, (3) "rings visible
+  while moving". User redirect to `D:/assets/world 4/docs/reference/PITFALLS.md`
+  let us diagnose each as a documented W4 failure mode rather than
+  re-deriving from scratch. 3 fixes shipped: 4.10.a per-vertex morph
+  via new `ring_center_xz` + `ring_half_extent_m` + `morph_band_frac`
+  uniforms (PITFALLS #11); 4.10.b `RingHeightArray.rebase` retains
+  in-window pages on snap instead of dropping all (PITFALLS #14);
+  4.10.c killed redundant `0.85 + 0.30 * nv` brightness modulator
+  (PITFALLS #31 class). +3 TDD tests. Verify 5/5 green in 58.3s.
+  Build note phase_4_10_close_2026_05_17.md. Memory saved at
+  `w5-clipmap-w4-pitfalls-apply` so future W5 terrain debugging
+  starts with W4 PITFALLS lookup.
 - 2026-05-17 (Phase 5.4.b partial closed — C3 + S7):
   `terrain_sibling_blend_freq` added per-tier in quality_tiers.json
   (low 0.20 → cinematic 0.40; high 0.30 was 0.10).

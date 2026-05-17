@@ -114,7 +114,17 @@ uniform float detail_strength : hint_range(0.0, 1.0) = 0.5;
 // sample at the parent-ring-aligned UV (rounded to even cells).
 // Blending the two heights smooths the LOD transition so ring
 // boundaries don't visibly pop (OA-C1 fix from 2026-05-17 audit).
-uniform float morph_factor : hint_range(0.0, 1.0) = 0.0;
+//
+// Phase 4.10.a (W4 PITFALLS #11 fix): morph is now per-vertex. Pre-
+// fix `morph_factor` was a single per-ring uniform driven by camera-
+// to-ring-CENTER distance, so all vertices got the same factor and
+// the outer-edge vertices never morphed when camera was near center
+// → visible cliff at ring boundary. Per-vertex math: each vertex
+// computes its own morph from its world-XZ distance to the ring's
+// outer edge.
+uniform vec2 ring_center_xz = vec2(0.0, 0.0);
+uniform float ring_half_extent_m = 1.0;
+uniform float morph_band_frac : hint_range(0.0, 0.5) = 0.16;
 // Grid size in vertices per side (matches ring_vertex_grid in
 // TerrainWorld; used to compute parent-ring UV snap).
 uniform float grid_n = 256.0;
@@ -187,10 +197,21 @@ void vertex() {
     float h_parent = has_height_array
         ? w5_sample_height(parent_world_xz, UV)
         : texture(height_map, w5_parent_uv(UV, grid_n)).r;
-    // Morph: 0 = own ring, 1 = parent ring. Smooth blend hides LOD
-    // boundary; ClipmapDispatch drives morph_factor toward 1 as the
-    // vertex approaches the ring's outer edge.
-    float h = mix(h_self, h_parent, morph_factor);
+    // Phase 4.10.a per-vertex morph (W4 PITFALLS #11). Chebyshev
+    // distance from THIS vertex to ring center; band starts at
+    // ring_half_extent * (1 - morph_band_frac) and ends at
+    // ring_half_extent. Inside the band, morph linearly ramps 0 → 1.
+    // Outermost ring has no parent → ring_half_extent_m == 0 (or any
+    // value with morph_band_frac == 0) → morph stays at 0 always.
+    vec2 to_center = vertex_world_xz - ring_center_xz;
+    float cheb = max(abs(to_center.x), abs(to_center.y));
+    float band_start = ring_half_extent_m * (1.0 - morph_band_frac);
+    float band_width = ring_half_extent_m - band_start;
+    float m = 0.0;
+    if (band_width > 0.001 && cheb > band_start) {
+        m = clamp((cheb - band_start) / band_width, 0.0, 1.0);
+    }
+    float h = mix(h_self, h_parent, m);
     // Heightmap stored as [0,1] normalized fraction → world height
     VERTEX.y = (h - 0.5) * 2.0 * height_scale + height_offset;
     // World XZ unchanged by Y displacement; cache for fragment.
@@ -240,9 +261,15 @@ void fragment() {
     vec3 macro_col = texture(macro_albedo, mu).rgb;
     float macro_strength = dot(macro_col, vec3(1.0)) > 0.001 ? 0.85 : 0.0;
 
-    // Variation: small modulation by world-noise so adjacent fragments
-    // differ slightly even when sampling the same macro pixel
-    float nv = w5_world_noise(world_xz, 0.05);
+    // Phase 4.10.c (W4 PITFALLS #31 fix): the Phase 4 brightness
+    // modulator `0.85 + 0.30 * nv` at noise freq 0.05 (= 20m
+    // wavelength, ±15% brightness) produced visible 20m-scale blocky
+    // patches on near-uniform surfaces (e.g. alpine snow). Macro
+    // albedo + sibling textures now provide all needed variation;
+    // this redundant modulator just added user-flagged "tile to tile
+    // strangeness". Removed. If a future demo wants very-large-scale
+    // brightness modulation, do it via authored macro_albedo content,
+    // not a noise modulator in shader.
     vec3 base = mix(fallback_color, macro_col, macro_strength);
 
     // --- Layer 1 (Phase 5.5 + 4.9.b): siblings + per-fragment slot selection ---
@@ -302,7 +329,7 @@ void fragment() {
         base = mix(base, det.rgb, detail_strength * det.a);
     }
 
-    ALBEDO = base * (0.85 + 0.30 * nv);
+    ALBEDO = base;
     ROUGHNESS = 0.85;
     METALLIC = 0.0;
 }
