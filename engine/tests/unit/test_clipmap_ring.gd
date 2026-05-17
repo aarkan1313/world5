@@ -4,10 +4,21 @@ extends GutTest
 
 
 var _geom: ClipmapGeometry
+var _rings_to_free: Array = []
 
 
 func before_each() -> void:
 	_geom = ClipmapGeometry.new()
+	_rings_to_free = []
+
+
+func after_each() -> void:
+	# Free MeshInstance3D's that tests created (they own RD instance
+	# dependencies that leak otherwise)
+	for r in _rings_to_free:
+		if is_instance_valid(r.mesh_instance):
+			r.mesh_instance.free()
+	_rings_to_free.clear()
 
 
 func _make_ring(level: int = 0, grid_n: int = 16,
@@ -15,6 +26,7 @@ func _make_ring(level: int = 0, grid_n: int = 16,
 	var meshes: Array = _geom.build(level + 1, grid_n, inner_cell_m)
 	var ring: ClipmapRing = ClipmapRing.new()
 	ring.configure(meshes[level], level, inner_cell_m * pow(2.0, level))
+	_rings_to_free.append(ring)
 	return ring
 
 

@@ -4,10 +4,19 @@ extends GutTest
 
 
 var _geom: ClipmapGeometry
+var _rings_to_free: Array = []
 
 
 func before_each() -> void:
 	_geom = ClipmapGeometry.new()
+	_rings_to_free = []
+
+
+func after_each() -> void:
+	for r in _rings_to_free:
+		if is_instance_valid(r.mesh_instance):
+			r.mesh_instance.free()
+	_rings_to_free.clear()
 
 
 func _make_rings(ring_count: int = 4, grid_n: int = 16,
@@ -18,6 +27,7 @@ func _make_rings(ring_count: int = 4, grid_n: int = 16,
 		var ring: ClipmapRing = ClipmapRing.new()
 		ring.configure(meshes[r], r, inner_cell * pow(2.0, r))
 		rings.append(ring)
+		_rings_to_free.append(ring)
 	return rings
 
 

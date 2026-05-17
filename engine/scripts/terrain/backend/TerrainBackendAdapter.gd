@@ -36,12 +36,12 @@ func _init() -> void:
 func shutdown() -> void:
 	if _backend != null:
 		_backend.shutdown()
+		_backend = null
 
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_PREDELETE:
-		if _backend != null:
-			shutdown()
+		shutdown()
 
 
 ## Submit a page-generation request. Returns the JobScheduler job id.
