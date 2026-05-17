@@ -309,10 +309,17 @@ Foundational for many games.
 caves (caves system covers that).
 
 ### Weather
-Rain / snow / wind / accumulation. Climate kernel (regional gating from
-elevation + latitude + distance-from-water). Visual effects + gameplay
+Rain / snow / wind / accumulation. Visual effects + gameplay
 hooks (slippery surfaces, reduced visibility). Builds on atmosphere
-schema.
+schema. **Climate input**: spec 22 currently provides three flat
+scalars per biome (temperature / humidity / wind). A per-location
+ClimateKernel (regional gating from elevation + latitude +
+distance-from-water) is a Phase 11 deliverable inside the weather
+sprint — it consumes terrain backend + spec 19 kernel infrastructure.
+Until Phase 11, weather reads flat per-biome climate; mountaintop +
+valley share temperature. (Outside-audit OA-S1 2026-05-17: previously
+this section claimed the kernel as if implemented; corrected to
+deferred.)
 
 **Non-goals**: long-term seasonal cycles (covered by climate via
 configuration, not runtime simulation); tornados / hurricanes / extreme

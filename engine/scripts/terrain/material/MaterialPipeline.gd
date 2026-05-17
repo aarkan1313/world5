@@ -23,7 +23,8 @@ var _shader: Shader = null
 ## Construct a fresh ShaderMaterial for the given ring index.
 ## Independent materials per ring so each can hold its own morph
 ## factor + heightmap (Phase 4.4.d composer wires them).
-func make_ring_material(_ring_index: int) -> ShaderMaterial:
+func make_ring_material(_ring_index: int,
+		grid_n: int = 256) -> ShaderMaterial:
 	if _shader == null:
 		_shader = load(SHADER_PATH)
 	var mat: ShaderMaterial = ShaderMaterial.new()
@@ -33,6 +34,8 @@ func make_ring_material(_ring_index: int) -> ShaderMaterial:
 	mat.set_shader_parameter("height_scale", 50.0)
 	mat.set_shader_parameter("height_offset", 0.0)
 	mat.set_shader_parameter("morph_factor", 0.0)
+	# grid_n drives the parent-ring UV snap for LOD morph (OA-C1).
+	mat.set_shader_parameter("grid_n", float(grid_n))
 	mat.set_shader_parameter("macro_aabb",
 		Vector4(-1024.0, -1024.0, 1024.0, 1024.0))
 	mat.set_shader_parameter("fallback_color",

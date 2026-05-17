@@ -254,7 +254,8 @@ func _build_modules() -> void:
 	for i in range(meshes.size()):
 		var ring: ClipmapRing = ClipmapRing.new()
 		ring.configure(meshes[i], i, inner_cell_size_m * pow(2.0, i))
-		var mat: ShaderMaterial = _material_pipeline.make_ring_material(i)
+		var mat: ShaderMaterial = _material_pipeline.make_ring_material(
+			i, ring_vertex_grid)
 		ring.mesh_instance.material_override = mat
 		add_child(ring.mesh_instance)
 		_rings.append(ring)

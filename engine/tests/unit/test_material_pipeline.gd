@@ -51,6 +51,36 @@ func test_bind_height_texture() -> void:
 		50.0, 1e-5)
 
 
+func test_shader_consumes_morph_factor() -> void:
+	# OA-C1 audit fix: morph_factor was declared as a uniform but
+	# never sampled in the shader body — declared-but-unused. This
+	# test guards against regression by asserting the shader source
+	# actually references morph_factor in vertex() (not just declares
+	# it). Pure text check; doesn't need GPU.
+	var f: FileAccess = FileAccess.open(
+		"res://addons/world5/shaders/terrain_clipmap.gdshader",
+		FileAccess.READ)
+	assert_not_null(f, "shader file readable")
+	var src: String = f.get_as_text()
+	f.close()
+	# Count references — declaration is one, body uses must be > 0.
+	var count: int = src.count("morph_factor")
+	assert_gt(count, 1,
+		"morph_factor must be USED in shader body, not just declared (saw %d ref(s))" % count)
+
+
+func test_shader_consumes_grid_n_for_morph() -> void:
+	# OA-C1 follow-up: grid_n uniform drives parent-ring UV snap that
+	# the morph blend samples. Same regression-guard pattern.
+	var f: FileAccess = FileAccess.open(
+		"res://addons/world5/shaders/terrain_clipmap.gdshader",
+		FileAccess.READ)
+	var src: String = f.get_as_text()
+	f.close()
+	assert_gt(src.count("grid_n"), 1,
+		"grid_n must be USED in shader body for parent-ring UV snap")
+
+
 func test_per_ring_materials_are_independent() -> void:
 	var p: MaterialPipeline = MaterialPipeline.new()
 	var m0: ShaderMaterial = p.make_ring_material(0)

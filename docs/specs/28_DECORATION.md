@@ -175,7 +175,7 @@ re-walking every instance per pass.
 ```json
 {
   "schema_version": 1,
-  "zones": [
+  "overrides": [
     {
       "name": "altar_grove",
       "bounds": {"x0": -300, "z0": -300, "x1": -200, "z1": -200},
@@ -287,3 +287,7 @@ no procedural in that bounds), `hybrid` (procedural + overrides),
   M4: previous size omitted alignment pad). Committed foliage-decoration
   placement seam (audit S8): each runs own placement, coordinates via
   shared spatial index + `placement_exclusion` broadcast.
+- 2026-05-17: outside audit (OA-C4) — fixed envelope key `"zones"` →
+  `"overrides"` to actually match spec 39 (the rename was only the
+  filename; the JSON example still showed `"zones"` so a consumer
+  reading spec 28 alone would have produced invalid input).

@@ -329,7 +329,30 @@ Per spec 15:
     with margin for one ring; full 8-ring production rig (Phase 4)
     needs LOD optimization to stay in budget on 3060 — see
     prototype README for full extrapolation
-- [ ] User has reviewed + signed off (next)
+- [x] User has reviewed + signed off (Phase 4 in progress as of 2026-05-17)
+
+## Validity envelope + F2 fallback trigger
+
+The 5090 Laptop → 3060 extrapolation is FLOP-ratio-based. Clipmap is
+geometry-throughput limited (rasterizer, not FLOP), so the ratio
+applies poorly. Phase 4.5 calibration sprint replaces this paper
+number with measured perf on real 3060 hardware (OA-S2 audit fix).
+
+**F2 trigger threshold** (added 2026-05-17): if Phase 4.5
+calibration measures the full 6-ring production renderer at high
+tier exceeding **1.5 ms per frame on RTX 3060**, the F2 fallback
+engages. F2 = drop default ring_count from 6 to 4 at high tier,
+forcing 5090 / 3070+ machines into ultra tier to opt back into 6
+rings. If F2 itself measures > 2.0 ms, the entire spec 15a clipmap
+decision is re-opened (the only other Godot-4.5-viable primitive is
+"raymarched terrain in fragment shader" which has worse visual
+ceiling per spec 15 candidate analysis).
+
+**Why 1.5 ms not 2.0 ms**: spec 21:97 reserves 2.0 ms for terrain at
+high tier; the 0.5 ms gap is buffer for the cache + residency layers
++ shader uniform updates per frame that the prototype didn't
+include. If measured rendering alone uses the whole 2.0 ms,
+non-rendering composer work blows the budget.
 - [x] No open question in this doc would change the recommendation
       (3 of 5 candidates F3-eliminated; remaining 2 differ only on
       v0.2+ upgrade path)

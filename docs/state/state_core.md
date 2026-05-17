@@ -10,7 +10,7 @@
 
 | # | Spec | Status | Code | Notes |
 |---|---|---|---|---|
-| 19 | KERNEL_SYSTEM | draft | none | 3 kernels in v1: NoiseStack + Erosion + DemFeature. ErosionKernel exposes drainage/flow_direction/flow_accumulation (post-self-audit) for water + roads consumers. World-size cap 10km × 10km for full pre-bake erosion |
+| 19 | KERNEL_SYSTEM | draft | [NoiseStackKernel only](../../engine/scripts/terrain/kernels/NoiseStackKernel.gd) | **Phase 4.3 shipped NoiseStack config wrapper only** (not the full kernel system per spec — no Kernel ABC, no KernelComposer, GpuTerrainBackend hard-types NoiseStackKernel). The Kernel ABC + dispatch land in the phase that adds ErosionKernel (pre-bake; spec 19 sprint 2). OA-C3 audit 2026-05-17 |
 | 20 | TERRAIN_BACKEND | draft | none | GPU-only in v1; `TerrainPageRequest`/`TerrainPageResult` contract; capability vocabulary enumerated (post-self-audit). Runtime overlay layer (R32F sparse per-chunk) documented for deformation |
 | 21 | TERRAIN_RENDERER | draft | [21_TERRAIN_RENDERER_PLAN.md](../plans/21_TERRAIN_RENDERER_PLAN.md) | Unblocked 2026-05-17 by spec 15a (clipmap). Module decomposition expanded with per-module responsibilities + parameter defaults. Frame budget: 2.0 ms at high tier |
 | 22 | BIOME_CATALOG | draft | none | Hybrid auto-biome + splat overrides. Climate is per-XZ via climate_base + climate_rules (post-audit C5) |

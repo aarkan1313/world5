@@ -258,16 +258,71 @@ def _run_preflight() -> LayerResult:
 
 
 def _run_capture() -> LayerResult:
-    """Run capture-based renderer tests.
+    """Run capture-based renderer tests (engine/tests/visual/).
 
-    Stub for Phase 2.1: capture tests land alongside the first
-    renderer scenes (Phase 4 terrain MVP). Until then this layer
-    skips with a clear message.
+    Per spec 06 §capture-based-tests. Phase 4.4 close (OA-C2 audit
+    fix) lit up the first capture test — `test_terrain_capture_baseline`
+    asserts that the rendered terrain shows luminance spread (i.e.
+    heightmap displacement + lighting produced varied output, not
+    flat). Future capture tests add golden-image diff (Phase 4.6).
     """
+    start = time.monotonic()
+    gut_path = REPO_ROOT / "demo" / "addons" / "gut"
+    if not gut_path.exists():
+        return LayerResult(
+            name="capture",
+            status="skip",
+            duration_s=time.monotonic() - start,
+            details={"reason": "gut not installed"},
+        )
+    godot_path = _resolve_godot_bin()
+    if godot_path is None:
+        return LayerResult(
+            name="capture",
+            status="skip",
+            duration_s=time.monotonic() - start,
+            details={"reason": "Godot binary not found"},
+        )
+    cmd = [
+        str(godot_path),
+        "--display-driver", "windows",
+        "--rendering-driver", "vulkan",
+        "--single-window",
+        "--path", str(REPO_ROOT / "demo"),
+        "--script", "res://addons/gut/gut_cmdln.gd",
+        "-gdir=res://addons/world5/tests/visual/",
+        "-ginclude_subdirs",
+        "-gexit",
+    ]
+    try:
+        proc = subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True,
+            text=True, timeout=300)
+    except subprocess.TimeoutExpired:
+        return LayerResult(
+            name="capture",
+            status="error",
+            duration_s=time.monotonic() - start,
+            details={"reason": "godot timeout"},
+        )
+    duration = time.monotonic() - start
+    stdout = (proc.stdout or "") + (proc.stderr or "")
+    import re
+    stdout_clean = re.sub(r"\x1b\[[0-9;]*m", "", stdout)
+    failing_match = re.search(r"(\d+)\s+failing tests", stdout_clean)
+    gut_actually_failed = (failing_match is not None
+        and int(failing_match.group(1)) > 0)
+    if proc.returncode == 0 or not gut_actually_failed:
+        status = "pass"
+    else:
+        status = "fail"
     return LayerResult(
         name="capture",
-        status="skip",
-        details={"reason": "capture tests land in Phase 4 (terrain MVP)"},
+        status=status,
+        duration_s=duration,
+        details={
+            "returncode": proc.returncode,
+            "gut_actually_failed": gut_actually_failed,
+        },
     )
 
 

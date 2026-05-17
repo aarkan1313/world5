@@ -86,10 +86,21 @@ reference within tolerance.
 real-device test; parity test passes; integration test wires
 backend ↔ JobScheduler ↔ StreamingBudget.
 
-## Phase 4.3 — Kernel system (NoiseStack first)
+## Phase 4.3 — NoiseStack kernel config (NOT full kernel system)
 
-**Goal**: same fBm function in Python + GPU compute; readback matches
-within tolerance.
+**OA-C3 amendment 2026-05-17**: Phase 4.3 shipped NoiseStackKernel as
+a config-only RefCounted wrapper, NOT the full kernel system spec 19
+describes. The Kernel ABC + KernelComposer + polymorphic dispatch
+land in the phase that introduces the second kernel (ErosionKernel,
+pre-bake). GpuTerrainBackend currently hard-types `request.kernel:
+NoiseStackKernel`; adding Erosion requires a backend refactor pass
++ a second GLSL pipeline branch + extending the cross-impl parity
+harness. That refactor is in scope for whichever phase produces
+ErosionKernel (likely Phase 5 alongside the texture pipeline, since
+both are pre-bake operations).
+
+**Goal of the work that DID ship**: same fBm function in Python +
+GPU compute; readback matches within 1e-4 m tolerance.
 
 | # | File | Purpose | Test |
 |---|---|---|---|
