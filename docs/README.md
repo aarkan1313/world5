@@ -79,7 +79,8 @@ docs/
 │   (created after each shipped piece of work)
 ├── workflows/                   ← recurring task recipes
 │   ├── running_tests.md         ← verify CLI + tiers
-│   └── godot_rendering_modes.md ← headless vs real-GPU
+│   ├── godot_rendering_modes.md ← headless vs real-GPU
+│   └── subagent_review_prompt.md ← read-only review template
 ├── reference/
 │   ├── pitfalls/                ← per-tier pitfalls
 │   │   └── pitfalls_INDEX.md

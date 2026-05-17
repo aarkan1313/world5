@@ -35,7 +35,8 @@
     ],
     "workflows": [
       "workflows/running_tests.md",
-      "workflows/godot_rendering_modes.md"
+      "workflows/godot_rendering_modes.md",
+      "workflows/subagent_review_prompt.md"
     ],
     "specs_meta": [
       "specs/00_SPEC_TEMPLATE.md",

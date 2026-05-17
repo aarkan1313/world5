@@ -58,6 +58,7 @@ For all gut tests with subdirs: `-gdir=res://addons/world5/tests/ -ginclude_subd
 |---|---|
 | [running_tests.md](workflows/running_tests.md) | The 4-tier verify CLI; pytest + gut + real GPU + preflight + capture layers |
 | [godot_rendering_modes.md](workflows/godot_rendering_modes.md) | `--headless` vs `--display-driver windows`; when to use which; the RenderingDevice gotcha |
+| [subagent_review_prompt.md](workflows/subagent_review_prompt.md) | Read-only review subagent prompt template; for parallel multi-lens audits before phase close |
 
 (More recipes land as workflows surface during build.)
 
