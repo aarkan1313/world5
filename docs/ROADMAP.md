@@ -10,14 +10,14 @@
 
 ## One-paragraph current focus
 
-**Phase 2 (foundation build — Tier 0 primitives) is the next sprint.**
-Build the cross-cutting primitives in code: Job system + Spatial index
-+ Async asset streaming + Streaming budget + Change broadcast +
-Content addressing + GPU/CPU contract + Logging + Quality tiers +
-World contract + Doc-health preflight + Godot-root allowlist
-preflight + `verify` CLI. Order: test infra first, then everything
-else has tests from day 1. ~8-15 sessions estimated. Phase 0
-shipped + pushed (commit `f73b4f8`).
+**Phase 3 (renderer research sprint) is the next sprint.** Per spec
+15: survey 5 candidate renderer primitives (clipmap, virtual
+texturing, mesh shaders/meshlets, nanite-style, hybrid), produce a
+decision doc (`docs/specs/15a_RENDERER_DECISION.md`) that commits W5
+to one primitive, validate via a 1km × 1km prototype that hits 60fps
+on RTX 3060. Fallback to clipmap if sprint inconclusive (F1) or
+prototype fails perf gate (F2/F3). ~3-5 sessions estimated. Phase 2
+shipped — 13 Tier 0 systems + 224 tests passing.
 
 ## Phase status
 
@@ -25,9 +25,9 @@ shipped + pushed (commit `f73b4f8`).
 |---|---|---|---|
 | Phase 1 — Spec layer | ✅ done | (47 specs in `specs/`) | ~30 |
 | Phase 1.5 — Audits | ✅ done | AUDIT_FINDINGS + SELF_AUDIT_FINDINGS | ~2 |
-| Phase 0 — Repo setup | ✅ done | [phase_0_repo_setup.md](roadmap/phase_0_repo_setup.md) | 1 (shipped commit `f73b4f8`) |
-| **Phase 2 — Foundation build (Tier 0)** | 🚧 in progress | [phase_2_foundations.md](roadmap/phase_2_foundations.md) | 8-15 |
-| Phase 3 — Renderer research sprint | pending | spec 15 brief | 3-5 |
+| Phase 0 — Repo setup | ✅ done | [phase_0_repo_setup.md](roadmap/phase_0_repo_setup.md) | 1 (commit `f73b4f8`) |
+| Phase 2 — Foundation build (Tier 0) | ✅ done | [phase_2_foundations.md](roadmap/phase_2_foundations.md) | 1 (commits `bcb1d62` → `cb46ffc`) |
+| **Phase 3 — Renderer research sprint** | 🚧 next | spec 15 brief | 3-5 |
 | Phase 4 — Terrain MVP (one biome) | pending | (write when starting) | 5-10 |
 | Phase 4.5 — **Calibration sprint** | pending | (write when starting) | 2-3 |
 | Phase 5 — Ground texture pipeline | pending | (write when starting) | 5-10 |

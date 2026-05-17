@@ -1,13 +1,22 @@
 # Phase 2 — Foundation Build (Tier 0 Primitives)
 
-> Phase: Phase 2 (foundation; everything depends on this)
-> Status: 🚧 in progress
-> Estimated sessions: 8-15
+> Phase: Phase 2
+> Status: ✅ done (2026-05-16; commits `bcb1d62` → `cb46ffc`; pushed)
+> Actual sessions: 1 (single sitting; ~12 commits)
+> Estimated: 8-15 sessions — finished much faster than estimated
+> because each sub-phase reused the cross-impl pattern locked in 2.3
 > Owner: agent + user joint
 >
 > Goal: build the Tier 0 cross-cutting primitives in code. Every Tier
 > 1+ vertical system depends on these. Build with test coverage from
 > day 1 so every later system has a working `verify` to lean on.
+
+## Outcome
+
+All 12 sub-phases (+ 2 user-prompted additions: real-GPU tests, USAGE
+docs) shipped. Final tally: 224 tests pass via `verify --full` in
+4.6s on dev hardware. See `docs/build-notes/phase_2_foundations_2026_05_16.md`
+for the full per-sub-phase breakdown + lessons.
 
 ## Scope (what's in)
 

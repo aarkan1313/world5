@@ -16,26 +16,26 @@
 | 03 | PILLARS | draft | n/a | Quality > Performance > Architecture > Time |
 | 04 | GODOT_ROOT_ALLOWLIST | draft | none | Preflight `godot_root_check.py` not built yet (Phase 2). Allowlist enforced manually during Phase 0 |
 | 05 | DOC_ARCHITECTURE | draft | **realized in Phase 0** | Top-level + per-tier docs scaffold per spec 05 shipped at `f73b4f8` |
-| 06 | TEST_INFRASTRUCTURE | draft | none | `verify` CLI with `--fastest`/`--fast`/default/`--full` tiers; not built (Phase 2) |
+| 06 | TEST_INFRASTRUCTURE | draft | **shipped (Phase 2.1)** | `verify` CLI with all 4 tiers active; pytest + gut + real-GPU + preflight + capture layers. 224 tests pass <5s |
 
 ## Tier 0 cross-cutting (07-18 + 08a + X_FRAME_BUDGET)
 
 | # | Spec | Status | Code | Notes |
 |---|---|---|---|---|
-| 07 | JOB_SYSTEM | draft | none | Wraps WorkerThreadPool; publishes `active_jobs` to streaming budget |
-| 08 | SPATIAL_INDEX | draft | none | Grid backing; Python + GDScript parity; per-workload cell sizes (spec 13) |
-| 08a | GPU_CPU_CONTRACT | draft | none | Post-audit; 5 rules + `GpuJob` + `GpuResourceTracker` |
-| 09 | ASYNC_ASSET_STREAMING | draft | none | Wraps `ResourceLoader.load_threaded_*`; publishes to `asset_cache_mb` budget |
-| 10 | STREAMING_BUDGET | draft | none | Shared accountant; per-tier ceilings from spec 13 |
-| 11 | CHANGE_BROADCAST | draft | none | Pub/sub with sync/async/job dispatch; metadata schemas defined post-self-audit |
-| 12 | CONTENT_ADDRESSING | draft | none | `FileInput` sentinel for file inputs (post-self-audit); 20 GB GC cap default |
-| 13 | QUALITY_TIERS | draft | none | 5 tiers (low/medium/high/ultra/cinematic; `cinematic` renamed from `ultra_far`) |
-| 14 | WORLD_CONTRACT | draft | none | Modular per-system preflight; validates world bundles |
-| 15 | RENDERER_RESEARCH_BRIEF | draft | n/a | Brief, not a system; output is spec 15a decision doc |
-| 16 | LOGGING_AND_ERROR_CONVENTIONS | draft | none | 5 levels; structured + JSON; lint enforced |
-| 17 | VERSIONING_AND_MIGRATION | draft | none | Semver; migration scripts for MAJOR/breaking-MINOR; no retro-edits |
-| 18 | PLUGIN_INSTALL_AND_DEV_LOOP | draft | none | 3 install methods; mklink prereq documented |
-| X | FRAME_BUDGET | draft | none | Post-audit; engine reserves 8 ms of 16.6 ms at high tier; per-system table sums exactly to 8.0 |
+| 07 | JOB_SYSTEM | draft | **shipped (Phase 2.4)** | Job + JobScheduler autoload; priority queue + deps + await + cancel + shutdown drain; publishes `active_jobs` |
+| 08 | SPATIAL_INDEX | draft | **shipped (Phase 2.6)** | Python + GDScript; uniform grid; query_radius/rect/nearest k-NN; cross-impl parity tested |
+| 08a | GPU_CPU_CONTRACT | draft | **shipped (Phase 2.5)** | GpuJob extends Job; routed via `RenderingServer.call_on_render_thread`. GpuResourceTracker autoload |
+| 09 | ASYNC_ASSET_STREAMING | draft | **shipped (Phase 2.7)** | AssetStream autoload; request/await/cache/LRU; request_mesh adapter for GLB→Mesh extraction |
+| 10 | STREAMING_BUDGET | draft | **shipped (Phase 2.8)** | StreamingBudget autoload; per-tier ceilings; get_top_publishers; Job + AssetStream wired |
+| 11 | CHANGE_BROADCAST | draft | **shipped (Phase 2.9)** | sync/async/job dispatch; metadata schemas verified via placement_exclusion test |
+| 12 | CONTENT_ADDRESSING | draft | **shipped (Phase 2.10)** | Python ContentAddressStore (FileInput sentinel + 20 GB GC cap); GDScript wrapper for stamp reading |
+| 13 | QUALITY_TIERS | draft | **shipped (Phase 2.3)** | 5 tiers config + Python + GDScript resolvers + cross-impl parity test; `get_tier`/`load_config` (builtin shadowing avoided) |
+| 14 | WORLD_CONTRACT | draft | **shipped (Phase 2.11)** | Preflight host + 3 cross-cutting checks (allowlist, doc_health, logging_lint); real W5 repo passes its own contract |
+| 15 | RENDERER_RESEARCH_BRIEF | draft | n/a | Brief, not a system; output is spec 15a decision doc (Phase 3 next) |
+| 16 | LOGGING_AND_ERROR_CONVENTIONS | draft | **shipped (Phase 2.2)** | Log.gd + Python mirror; 5 levels; structured + JSON; lint enforced |
+| 17 | VERSIONING_AND_MIGRATION | draft | **shipped (Phase 2.2)** | World5.gd VERSION + parse/is_compatible/migration_path; Python mirror reads plugin.cfg |
+| 18 | PLUGIN_INSTALL_AND_DEV_LOOP | draft | **shipped (Phase 2.12)** | plugin.gd autoloads + setup.py CLI (install_demo, verify_install); Junction fallback |
+| X | FRAME_BUDGET | draft | n/a | Spec only — frame allocations consumed by render-touching systems (Phase 4+) |
 
 ## What's load-bearing in this tier
 

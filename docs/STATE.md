@@ -8,10 +8,12 @@
 
 ## One-sentence summary
 
-**Phase 0 (repo scaffold) shipped + pushed to GitHub.** 47 specs +
-directory tree + plugin.cfg + project.godot + pipeline package +
-docs scaffold live at github.com/aarkan1313/world5.git on `main`
-(commit `f73b4f8`). Ready for Phase 2 foundation build.
+**Phase 2 (Tier 0 foundation build) shipped.** 13 Tier 0 systems
+live in code (Log, World5, QualityTiers, Job, JobScheduler, GpuJob,
+GpuResourceTracker, SpatialIndex, AssetStream, StreamingBudget,
+ChangeBroadcast, ContentAddress, WorldContract). 224 tests pass via
+`verify --full` in 4.6s. All Tier 0 autoloads register cleanly.
+Ready for Phase 3 (renderer research sprint per spec 15).
 
 ## Per-tier state
 
@@ -52,14 +54,14 @@ docs scaffold live at github.com/aarkan1313/world5.git on `main`
 
 ## What does NOT exist yet
 
-- Any engine system code (Tier 0 primitives, vertical systems) —
-  Phase 2 builds these
-- Any pipeline system code beyond the `world5` package skeleton
-- Any tests
-- Any lint scripts (`godot_root_check`, `doc_health`, `logging_lint`)
-- `python -m world5.verify` CLI
-- Any build-notes (Phase 0 build-note is the FIRST one — coming next)
-- Any plans (no system has moved to plan stage yet)
+- Any vertical system code (terrain, materials, decoration, foliage,
+  etc.) — those land in Phase 4+
+- Spec 15a renderer decision doc (Phase 3 output)
+- Capture-based renderer tests (Phase 4 land)
+- Any plans (no system has moved to plan stage yet; first plan likely
+  the Phase 3 renderer research)
+- Spec status sweep (all 47 specs still `draft`; planned for Phase 3
+  start)
 
 ## What's blocked
 
@@ -85,6 +87,12 @@ key open questions, where each system's W4.1 reference lives).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
+- 2026-05-16: **Phase 2 shipped** (`cb46ffc`) — all 13 Tier 0
+  systems in code; 224 tests pass; autoloads register; preflight
+  green; real-GPU layer working
+- 2026-05-16: Real-GPU test infrastructure (`cbf2ada`) — RenderingDevice
+  + compute shaders in tests via `--display-driver windows`
+- 2026-05-16: USAGE.md + 2 workflow recipes (`be56e8c`)
 - 2026-05-16: **Phase 0 shipped + pushed to GitHub** (commit
   `f73b4f8`); repo at github.com/aarkan1313/world5.git
 - 2026-05-16: self-audit + fix pass (~129 distinct fixes)
