@@ -9,35 +9,45 @@ class_name RingDebugOverlay extends Node3D
 
 
 var _enabled: bool = false
-var _ring_visuals: Array = []   # Array[MeshInstance3D]
+var _bound_rings: Array = []     # Array[ClipmapRing] — kept for lazy build
+var _ring_visuals: Array = []   # Array[MeshInstance3D] — built on first enable
 
 
 func _ready() -> void:
 	visible = _enabled
 
 
-## Bind to a list of ClipmapRings. Re-call to rebuild visuals (e.g.
-## after ring_count change in tier override).
+## Bind to a list of ClipmapRings. Visuals are NOT built until enabled
+## (cheaper when debug_overlay stays off — the default).
 func bind_rings(rings: Array) -> void:
-	# Clear previous visuals
-	for v in _ring_visuals:
-		if is_instance_valid(v):
-			v.queue_free()
-	_ring_visuals.clear()
-	# Build one wireframe-AABB visual per ring
-	for ring in rings:
-		var visual: MeshInstance3D = _make_ring_visual(ring)
-		add_child(visual)
-		_ring_visuals.append(visual)
+	_bound_rings = rings.duplicate()
+	if _enabled:
+		_rebuild_visuals()
 
 
 func set_enabled(on: bool) -> void:
 	_enabled = on
 	visible = on
+	if on and _ring_visuals.is_empty() and not _bound_rings.is_empty():
+		_rebuild_visuals()
 
 
 func is_enabled() -> bool:
 	return _enabled
+
+
+func _rebuild_visuals() -> void:
+	# Clear previous visuals (use free() to drop RIDs immediately so
+	# scene teardown doesn't leak; queue_free was leaving them
+	# pending across exit).
+	for v in _ring_visuals:
+		if is_instance_valid(v):
+			v.free()
+	_ring_visuals.clear()
+	for ring in _bound_rings:
+		var visual: MeshInstance3D = _make_ring_visual(ring)
+		add_child(visual)
+		_ring_visuals.append(visual)
 
 
 # --- internal ---

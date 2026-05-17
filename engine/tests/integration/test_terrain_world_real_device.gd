@@ -100,14 +100,18 @@ func test_sample_height_no_data_returns_zero() -> void:
 
 func test_rings_snap_to_camera() -> void:
 	_camera.global_position = Vector3(100.0, 50.0, 200.0)
-	# Pump a frame so _process runs
+	# Pump a couple frames so _process runs + camera resolves lazily.
+	# (TW's first _process tick may have _camera still null while it
+	# resolves via camera_path; second tick uses the resolved camera.)
+	await get_tree().process_frame
 	await get_tree().process_frame
 	# Each ring's MeshInstance3D should have moved to its snap point.
 	# Inner ring (cell 1m) snaps to (100, 200) exactly.
 	var debug: Dictionary = _tw.get_debug_state()
 	var rings: Array = debug["rings"]
-	assert_almost_eq(float(rings[0]["center"].x), 100.0, 1.0)
-	assert_almost_eq(float(rings[0]["center"].y), 200.0, 1.0)
+	var center: Vector2 = rings[0]["center"]
+	assert_almost_eq(center.x, 100.0, 1.0)
+	assert_almost_eq(center.y, 200.0, 1.0)
 
 
 # --- end-to-end streaming (real GPU only) ---

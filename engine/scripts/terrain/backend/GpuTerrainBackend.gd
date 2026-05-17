@@ -29,12 +29,8 @@ var _shader_source: String = ""
 var _shader_rid: RID = RID()
 var _rd: RenderingDevice = null
 
-# Running tally of CPU-resident page bytes this backend has produced.
-# Published to StreamingBudget on each successful generate per spec 08a
-# rule 3 (TB-REV-C3). Decremented when caller drops the result; for now
-# we publish a high-water mark, the cache (Phase 4.4) will manage real
-# residency.
-var _cpu_pages_bytes: int = 0
+# Residency-byte publishing moved to PageStreamingJob (TR-INTEG-C2 fix):
+# the cache is the source of truth, not the backend.
 
 
 func name() -> String:
@@ -90,26 +86,15 @@ func generate_page(request: TerrainPageRequest) -> TerrainPageResult:
 
 	if wants_height_cpu:
 		res.height_cpu = heights
-		_cpu_pages_bytes += heights.size() * 4  # float32
-		_publish_budget()
-	# height_gpu: TODO Phase 4.4 — wrap heights into a Texture2DRD
-	# tracked via GpuResourceTracker + publish gpu_pages_bytes (TB-REV-C3).
+	# TR-INTEG-C2 fix: backend no longer publishes a monotonic high-
+	# water mark. The cache is the source of truth for resident bytes,
+	# and PageStreamingJob publishes after every cache change. Backend
+	# generates pages but doesn't own residency.
+	# height_gpu: TODO Phase 4.5 — wrap heights into a Texture2DRD
+	# tracked via GpuResourceTracker (per spec 08a rule 3 + 5). When
+	# this lands, gpu_pages publishing wires the same way.
 
 	return res
-
-
-# Publishes cpu_pages high-water mark to StreamingBudget. Lazy lookup so
-# unit tests without the autoload don't crash. Per spec 08a rule 3.
-func _publish_budget() -> void:
-	var loop: SceneTree = Engine.get_main_loop() as SceneTree
-	if loop == null:
-		return
-	var budget: Node = loop.root.get_node_or_null("/root/StreamingBudget")
-	if budget == null:
-		return
-	budget.publish("terrain_backend", {
-		"cpu_pages": _cpu_pages_bytes / (1024 * 1024),  # MB rounded
-	})
 
 
 # --- internal ---

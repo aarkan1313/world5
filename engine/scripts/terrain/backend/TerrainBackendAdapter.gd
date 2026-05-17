@@ -34,14 +34,25 @@ func _init() -> void:
 ## Owner MUST call before drop, OR before RenderingDevice teardown
 ## (per spec 08a rule 5; TB-REV-C2). Idempotent.
 func shutdown() -> void:
-	if _backend != null and is_instance_valid(_backend):
-		_backend.shutdown()
+	# Capture local ref + null the field first so a re-entrant
+	# notification (e.g. when this adapter's own PREDELETE fires
+	# during a shutdown chain) sees null and bails.
+	var backend: GpuTerrainBackend = _backend
 	_backend = null
+	if backend != null and is_instance_valid(backend):
+		backend.shutdown()
 
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_PREDELETE:
-		shutdown()
+		# Inline the shutdown logic (calling shutdown() here triggers a
+		# "null instance" warning under late-stage RefCounted PREDELETE
+		# because the GDScript dispatch sees self as mid-deallocation
+		# even though it's running on us). The actual work is just:
+		var backend: GpuTerrainBackend = _backend
+		_backend = null
+		if backend != null and is_instance_valid(backend):
+			backend.shutdown()
 
 
 ## Submit a page-generation request. Returns the JobScheduler job id.

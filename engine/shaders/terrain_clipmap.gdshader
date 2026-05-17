@@ -25,17 +25,22 @@ uniform vec3 fallback_color : source_color = vec3(0.35, 0.45, 0.25);
 // --- LOD morph (per-ring driven by ClipmapDispatch) ---
 uniform float morph_factor : hint_range(0.0, 1.0) = 0.0;
 
+// World XZ passed from vertex to fragment so the per-fragment matmul
+// is avoided (TR-PERF-M1 fix).
+varying vec2 v_world_xz;
+
 void vertex() {
     // Sample heightmap at this vertex's UV (vertices come with UV
     // matching the ring's local grid)
     float h = texture(height_map, UV).r;
     // Heightmap stored as [0,1] normalized fraction → world height
     VERTEX.y = (h - 0.5) * 2.0 * height_scale + height_offset;
+    // Compute world_xz ONCE in vertex (was per-fragment matmul)
+    v_world_xz = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
 }
 
 void fragment() {
-    // World XZ from the model-space vertex position
-    vec2 world_xz = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
+    vec2 world_xz = v_world_xz;
 
     // Sample macro albedo (the anti-repeat layer)
     vec2 mu = w5_macro_uv(world_xz, macro_aabb);

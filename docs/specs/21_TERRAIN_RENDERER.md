@@ -217,3 +217,8 @@ streamed 3D world. Everything else is internal.
   clipmap-parameter defaults table; promoted "open questions" to
   Phase 4 lock-by dates; updated dependencies (15a not 15; added
   08a GPU/CPU contract).
+- 2026-05-17 (Phase 4.4 audit): inner-hole cap downgraded from
+  stated module responsibility to deferred-optimization (see
+  ClipmapGeometry inline doc; calibration sprint 4.5 may swap to
+  L-shape donut if overdraw measurable). Spec 24 Layer 1 (siblings)
+  deferred to Phase 5 per spec 24 amendment same date.

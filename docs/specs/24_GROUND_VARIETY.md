@@ -90,17 +90,43 @@ within the 1 ms variety budget allocated in X_FRAME_BUDGET.
 ## Implementation phases
 
 Phase 4 (terrain MVP, one biome):
-- Layer 1 (siblings + stochastic UV) — required for first walking demo
-- Layer 3 (macro albedo) — required to validate far-field perception
+- Layer 3 (macro albedo) — shipped; validates far-field perception
+- Layer 1 (siblings + stochastic UV) — **DEFERRED to Phase 5** (see
+  amendment 2026-05-17 below). Phase 4 ships the macro-albedo
+  variety layer + per-fragment world-noise modulation only.
 
 Phase 5 (texture pipeline):
+- Layer 1 (siblings + stochastic UV) — lands alongside the pipeline
+  that produces sibling sets
 - Layer 2 (detail array) — folds in once pipeline produces detail
   overlays
 
-Common shader primitives (built in Phase 4):
-- `variety_sample_3tap(uv, world_xz, slot)` — Heitz-Neyret 3-tap blend
-- `variety_macro_albedo(world_xz)` — far-field sample
-- `variety_world_noise(world_xz, freq)` — shared noise primitive
+Common shader primitives (Layer 3 shipped in Phase 4 via
+`variety_common.gdshaderinc`):
+- `w5_world_noise(uv, freq)` — shared noise primitive (shipped)
+- `w5_macro_uv(world_xz, aabb)` — far-field sample (shipped)
+- `w5_variety_sample_3tap(uv, world_xz, slot)` — Heitz-Neyret 3-tap
+  blend (Phase 5; needs sibling-array textures from pipeline)
+
+## Amendment 2026-05-17 (Phase 4.4 audit response)
+
+Original spec said "Layer 1 siblings — required for first walking
+demo". The Phase 4.4 spec-vs-code review (TR-SPEC-C2) flagged that
+the shader infrastructure for siblings was never built. Root cause:
+**Layer 1 requires sibling textures that the texture pipeline
+produces — and that pipeline doesn't exist until Phase 5.** Shipping
+shader code for siblings in Phase 4 without textures to bind would
+be aspirational scaffolding.
+
+**Decision**: Layer 1 ships in Phase 5 alongside the texture pipeline.
+Phase 4's walking demo shows the macro-albedo + world-noise variety
+only — visibly weaker than the spec'd "no obvious repeat" bar, but
+honest about what the pipeline supports today. Phase 5 closes the
+gap before Phase 6 (second biome).
+
+Spec-21 walking-demo acceptance criteria for Phase 4.6 are adjusted
+accordingly: "no obvious far-field repeat" (macro-albedo job) instead
+of "no obvious repeat at any distance".
 
 ## Producer / consumer contract
 
@@ -171,3 +197,5 @@ Common shader primitives (built in Phase 4):
   (siblings + stochastic UV / detail texture array / macro albedo);
   building-block compositor (D) deferred to Phase 7+. Shader-budget
   arithmetic added; per-layer Phase 4 vs Phase 5 split documented.
+- 2026-05-17 (later): amended — Layer 1 deferred from Phase 4 to
+  Phase 5 (TR-SPEC-C2 audit response). Phase 4 ships Layer 3 only.

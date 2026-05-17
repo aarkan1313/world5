@@ -56,11 +56,20 @@ var _slots: SurfaceSlotMask = null
 var _adapter: TerrainBackendAdapter = null
 var _diag: RingDebugOverlay = null
 var _probes: PageDebugProbes = null
+var _kernel: NoiseStackKernel = null
 
 # Bookkeeping
 var _camera: Node3D = null
 var _loaded: bool = false
 var _full_detail: bool = false
+# Last camera-XZ a residency update saw (rounded to page boundary),
+# used to skip the per-frame diff when the camera hasn't crossed a
+# page edge (TR-SPEC-S6 + TR-PERF-S1 fix).
+var _last_residency_camera_xz: Vector2 = Vector2(NAN, NAN)
+# Page bookkeeping for full-detail readiness check + spec'd
+# get_resident_pages() shape (TR-SPEC-C3 + TR-SPEC-S1).
+# Key = "ring:x:z" → {ring, xz, age_ms}
+var _page_load_times: Dictionary = {}
 
 
 # --- lifecycle ---
@@ -86,6 +95,7 @@ func _process(_delta: float) -> void:
 		return
 
 	var cam_pos: Vector3 = _camera.global_position
+	var cam_xz: Vector2 = Vector2(cam_pos.x, cam_pos.z)
 
 	# 1. Snap rings to camera (per-ring cell-aligned)
 	_dispatch.update(_rings, cam_pos)
@@ -95,23 +105,28 @@ func _process(_delta: float) -> void:
 		var ring: ClipmapRing = _rings[i]
 		var half_extent: float = float(ring_vertex_grid - 1) * ring.cell_size_m * 0.5
 		var morph: float = _dispatch.compute_morph_factor(
-			Vector2(cam_pos.x, cam_pos.z),
-			ring.snapped_center,
-			half_extent,
-			morph_band_fraction,
+			cam_xz, ring.snapped_center, half_extent, morph_band_fraction,
 		)
 		var mat: Material = ring.mesh_instance.material_override
 		if mat is ShaderMaterial:
 			_material_pipeline.set_morph_factor(mat as ShaderMaterial, morph)
 
-	# 3. Compute required page set across all rings + push to residency
-	var required: Array = []
-	for i in range(_rings.size()):
-		var ring: ClipmapRing = _rings[i]
-		var ring_extent: float = float(ring_vertex_grid - 1) * ring.cell_size_m
-		required.append_array(_residency.required_pages_for_ring(
-			Vector2(cam_pos.x, cam_pos.z), i, ring_extent))
-	_residency.update(required)
+	# 3. Residency update — dirty-check: only re-diff when camera crossed
+	# a page boundary (TR-SPEC-S6 + TR-PERF-S1 fix). At rest with no
+	# motion, this skips ~all the per-frame dict work.
+	var cam_page_xz: Vector2 = Vector2(
+		floor(cam_xz.x / page_extent_m),
+		floor(cam_xz.y / page_extent_m),
+	)
+	if cam_page_xz != _last_residency_camera_xz:
+		_last_residency_camera_xz = cam_page_xz
+		var required: Array = []
+		for i in range(_rings.size()):
+			var ring: ClipmapRing = _rings[i]
+			var ring_extent: float = float(ring_vertex_grid - 1) * ring.cell_size_m
+			required.append_array(_residency.required_pages_for_ring(
+				cam_xz, i, ring_extent))
+		_residency.update(required)
 
 
 # --- public API ---
@@ -120,11 +135,21 @@ func is_full_detail_ready() -> bool:
 	return _full_detail
 
 
+## Returns Array[Dictionary{"ring": int, "xz": Vector2, "age_ms": int}]
+## per spec 21 §Public API (TR-SPEC-S1 fix).
 func get_resident_pages() -> Array:
 	if _cache == null:
 		return []
-	# Returns just count + bytes for now; per-page detail in 4.6
-	return [{"count": _cache.size(), "bytes": _cache.total_bytes()}]
+	var now: int = Time.get_ticks_msec()
+	var out: Array = []
+	for k in _page_load_times.keys():
+		var rec: Dictionary = _page_load_times[k]
+		out.append({
+			"ring": rec["ring"],
+			"xz": rec["xz"],
+			"age_ms": now - int(rec["loaded_at_ms"]),
+		})
+	return out
 
 
 func sample_height_at(world_xz: Vector2) -> float:
@@ -203,15 +228,25 @@ func _build_modules() -> void:
 
 	_streaming = PageStreamingJob.new()
 	_streaming.name = "PageStreamingJob"
-	_streaming.configure(_adapter, _cache)
+	# Streaming gets all per-page params from us (TR-INTEG-C1, TR-SPEC-S5).
+	# Capabilities: height_cpu for sampling + future GPU upload pathway
+	# (height_gpu wires here when MaterialPipeline.bind_height_map_rd
+	# lands per spec 08a; today we bind CPU→ImageTexture per-load).
+	_streaming.configure(_adapter, _cache, page_extent_m, ring_vertex_grid,
+		0, "high", _kernel, ["height_cpu"])
 	add_child(_streaming)
 
-	# Wire residency → streaming
+	# Residency knows about streaming so it can skip re-emitting load
+	# requests for in-flight pages (TR-INTEG-C3 fix).
+	_residency.configure(_cache, page_extent_m, _streaming)
+
+	# Wire residency → streaming for actual page work
 	_residency.page_load_requested.connect(_streaming.on_load_requested)
 	_residency.page_evict_requested.connect(_streaming.on_evict_requested)
-	# Re-emit to public signals
-	_residency.page_load_requested.connect(_on_page_load_requested)
-	_residency.page_evict_requested.connect(_on_page_evict_requested)
+	# Public-signal relays + heightmap binding fire on the ACTUAL load
+	# event (TR-INTEG-C3, TR-SPEC-C3 fix — was firing on request).
+	_streaming.page_actually_loaded.connect(_on_page_actually_loaded)
+	_streaming.page_actually_evicted.connect(_on_page_actually_evicted)
 
 	# Build rings + materials
 	var meshes: Array = _geometry.build(ring_count, ring_vertex_grid,
@@ -235,18 +270,43 @@ func _build_modules() -> void:
 # --- world bundle loading ---
 
 func _load_world_bundle(bundle_path: String) -> void:
-	# Phase 4.4 ships a minimal loader: just macro albedo + surface_slots
-	# if present. Phase 4.6 expands to biome_catalog + kernels per spec 14.
+	# Phase 4.4 ships a minimal loader: macro albedo + surface_slots +
+	# noise_stack kernel if present. Phase 4.6 expands to biome_catalog
+	# per spec 14. Missing files are logged warn (TR-SPEC-S2 fix —
+	# was silently no-op).
 	var macro_cfg: String = bundle_path + "macro_albedo.json"
 	if FileAccess.file_exists(macro_cfg):
-		_macro.load_from_path(macro_cfg)
-		for ring in _rings:
-			var mat: Material = ring.mesh_instance.material_override
-			if mat is ShaderMaterial:
-				_material_pipeline.bind_macro_albedo(mat as ShaderMaterial, _macro)
+		if _macro.load_from_path(macro_cfg):
+			for ring in _rings:
+				var mat: Material = ring.mesh_instance.material_override
+				if mat is ShaderMaterial:
+					_material_pipeline.bind_macro_albedo(mat as ShaderMaterial, _macro)
+		else:
+			Log.warn("terrain_world", "macro_albedo.json failed to load",
+				{"path": macro_cfg})
+	else:
+		Log.warn("terrain_world", "bundle missing macro_albedo.json",
+			{"bundle": bundle_path})
+
 	var slots_cfg: String = bundle_path + "surface_slots.json"
 	if FileAccess.file_exists(slots_cfg):
-		_slots.load_from_path(slots_cfg)
+		if not _slots.load_from_path(slots_cfg):
+			Log.warn("terrain_world", "surface_slots.json failed to load",
+				{"path": slots_cfg})
+
+	# Kernel config (TR-SPEC-S5 fix — was hard-coded defaults)
+	var kernel_cfg: String = bundle_path + "kernels/noise_stack.json"
+	if FileAccess.file_exists(kernel_cfg):
+		var f: FileAccess = FileAccess.open(kernel_cfg, FileAccess.READ)
+		if f != null:
+			var parsed: Variant = JSON.parse_string(f.get_as_text())
+			f.close()
+			if parsed is Dictionary:
+				_kernel = NoiseStackKernel.from_dict(parsed)
+				# Re-configure streaming with the loaded kernel
+				if _streaming != null:
+					_streaming.configure(_adapter, _cache, page_extent_m,
+						ring_vertex_grid, 0, "high", _kernel, ["height_cpu"])
 
 	_loaded = true
 	world_loaded.emit()
@@ -254,21 +314,113 @@ func _load_world_bundle(bundle_path: String) -> void:
 
 func _exit_tree() -> void:
 	# Per spec 08a rule 5: free GPU resources BEFORE the autoload
-	# tracker tears down. Adapter holds the cached shader RID.
+	# tracker tears down. Adapter holds the cached shader RID
+	# (TR-INTEG-S1 fix — was only freeing adapter; now also clears
+	# cache + disconnects signals to defend against late-arriving
+	# coroutines from in-flight page jobs).
+	if _streaming != null:
+		if _residency != null:
+			if _residency.page_load_requested.is_connected(
+					_streaming.on_load_requested):
+				_residency.page_load_requested.disconnect(
+					_streaming.on_load_requested)
+			if _residency.page_evict_requested.is_connected(
+					_streaming.on_evict_requested):
+				_residency.page_evict_requested.disconnect(
+					_streaming.on_evict_requested)
 	if _adapter != null:
 		_adapter.shutdown()
+	if _cache != null:
+		_cache.clear()
+	# Tell StreamingBudget terrain is gone
+	var budget: Node = get_node_or_null("/root/StreamingBudget")
+	if budget != null:
+		budget.clear("terrain_cache")
 	if _loaded:
 		world_unloaded.emit()
 
 
-# --- signal relays ---
+# --- page load / evict handlers ---
 
-func _on_page_load_requested(ring: int, page_xz: Vector2) -> void:
-	# We can't observe the actual completion of the load here cheaply;
-	# emit the public signal on the request so consumers know SOMETHING
-	# is streaming. Phase 4.6 wires a "page actually cached" path.
+func _on_page_actually_loaded(ring: int, page_xz: Vector2) -> void:
+	var now: int = Time.get_ticks_msec()
+	_page_load_times[_page_key(ring, page_xz)] = {
+		"ring": ring, "xz": page_xz, "loaded_at_ms": now,
+	}
+	# Bind heightmap to the matching ring's material if the page covers
+	# the ring's center (Phase 4.4 simplification: one page per ring at
+	# the center; outer-ring extents > page extent will show stretched
+	# texture at edges — calibration sprint 4.5 picks the right ratio).
+	if ring >= 0 and ring < _rings.size():
+		var r: ClipmapRing = _rings[ring]
+		# Only bind if THIS page covers the ring's snapped center
+		var center_page_origin: Vector2 = Vector2(
+			floor(r.snapped_center.x / page_extent_m) * page_extent_m,
+			floor(r.snapped_center.y / page_extent_m) * page_extent_m,
+		)
+		if center_page_origin == page_xz:
+			var page: TerrainPageResult = _cache.get_page(ring, page_xz)
+			if page != null and not page.height_cpu.is_empty():
+				_bind_height_to_ring(r, page)
+
 	page_loaded.emit(ring, page_xz)
 
+	# Full-detail readiness: declared "ready" once every ring has at
+	# least one resident page (TR-SPEC-C3 fix). Simple bar; calibration
+	# sprint 4.5 may refine to "all required pages resident".
+	if not _full_detail and _all_rings_have_pages():
+		_full_detail = true
+		full_detail_ready.emit()
 
-func _on_page_evict_requested(ring: int, page_xz: Vector2) -> void:
+
+func _on_page_actually_evicted(ring: int, page_xz: Vector2) -> void:
+	_page_load_times.erase(_page_key(ring, page_xz))
 	page_unloaded.emit(ring, page_xz)
+	# Demote full-detail if a ring just emptied (rare but possible
+	# under aggressive LRU pressure).
+	if _full_detail and not _all_rings_have_pages():
+		_full_detail = false
+
+
+func _bind_height_to_ring(ring: ClipmapRing,
+		page: TerrainPageResult) -> void:
+	var mat: Material = ring.mesh_instance.material_override
+	if not (mat is ShaderMaterial):
+		return
+	# Convert PackedFloat32Array → ImageTexture for the shader uniform.
+	# Phase 4.5 will swap to Texture2DRD via height_gpu capability so
+	# the upload happens once on the render thread (TR-PERF-S2 path).
+	var n: int = int(sqrt(page.height_cpu.size()))
+	if n < 2:
+		return
+	var amp: float = ring_vertex_grid * 1.0  # safe upper bound
+	if _kernel != null:
+		amp = _kernel.amplitude
+	# Normalize heights to [0, 1] for the shader's (h - 0.5) * 2 * scale
+	# decoding (matches terrain_clipmap.gdshader's vertex math).
+	var bytes: PackedByteArray = PackedByteArray()
+	bytes.resize(n * n * 4)  # RF format (single float per pixel)
+	for i in range(page.height_cpu.size()):
+		var h: float = page.height_cpu[i]
+		var normalized: float = clamp((h / amp) * 0.5 + 0.5, 0.0, 1.0)
+		bytes.encode_float(i * 4, normalized)
+	var img: Image = Image.create_from_data(n, n, false, Image.FORMAT_RF, bytes)
+	var tex: ImageTexture = ImageTexture.create_from_image(img)
+	_material_pipeline.bind_height_map(mat as ShaderMaterial, tex, amp, 0.0)
+
+
+func _all_rings_have_pages() -> bool:
+	if _rings.is_empty():
+		return false
+	# Each ring must have ≥ 1 page resident in its level
+	var rings_seen: Dictionary = {}
+	for k in _page_load_times.keys():
+		rings_seen[_page_load_times[k]["ring"]] = true
+	for i in range(_rings.size()):
+		if not rings_seen.has(i):
+			return false
+	return true
+
+
+func _page_key(ring: int, page_xz: Vector2) -> String:
+	return "%d:%d:%d" % [ring, int(page_xz.x), int(page_xz.y)]

@@ -28,14 +28,21 @@ signal page_evict_requested(ring: int, page_xz: Vector2)
 var _cache: TerrainPageCache = null
 var _page_extent_m: float = 256.0    # spec 20 default page extent
 
+# Optional reference to the streaming job so we can query in-flight
+# status + skip re-emitting load_requested for already-loading pages
+# (TR-INTEG-C3 fix).
+var _streaming: PageStreamingJob = null
+
 # Last-frame's required set, encoded as a Dictionary[key -> {ring, xz}]
 # for fast diff.
 var _last_required: Dictionary = {}
 
 
-func configure(cache: TerrainPageCache, page_extent_m: float) -> void:
+func configure(cache: TerrainPageCache, page_extent_m: float,
+		streaming: PageStreamingJob = null) -> void:
 	_cache = cache
 	_page_extent_m = page_extent_m
+	_streaming = streaming
 
 
 ## Compute the set of page-origin-aligned tiles that cover a ring's
@@ -84,13 +91,17 @@ func update(required: Array) -> void:
 		var k: String = _key(entry["ring"], entry["xz"])
 		new_required[k] = entry
 
-	# Loads: required this frame, not in cache
+	# Loads: required this frame, not in cache, not already in flight
+	# (TR-INTEG-C3: was emitting every frame for in-flight pages).
 	for k in new_required.keys():
 		var entry: Dictionary = new_required[k]
 		var ring: int = entry["ring"]
 		var xz: Vector2 = entry["xz"]
-		if not _cache.has(ring, xz):
-			page_load_requested.emit(ring, xz)
+		if _cache.has(ring, xz):
+			continue
+		if _streaming != null and _streaming.has_in_flight(ring, xz):
+			continue
+		page_load_requested.emit(ring, xz)
 
 	# Evicts: required LAST frame, not required this frame
 	# (snapshot keys to avoid pitfall meta-3 — iterate during erase)

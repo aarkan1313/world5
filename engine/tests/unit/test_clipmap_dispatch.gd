@@ -26,6 +26,7 @@ func _make_rings(ring_count: int = 4, grid_n: int = 16,
 	for r in range(ring_count):
 		var ring: ClipmapRing = ClipmapRing.new()
 		ring.configure(meshes[r], r, inner_cell * pow(2.0, r))
+		add_child(ring.mesh_instance)
 		rings.append(ring)
 		_rings_to_free.append(ring)
 	return rings

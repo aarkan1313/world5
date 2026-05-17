@@ -13,8 +13,9 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	# Free MeshInstance3D's that tests created (they own RD instance
-	# dependencies that leak otherwise)
+	# Free MeshInstance3D's immediately (not queue_free) so their
+	# rendering-server Instance RIDs drop before the next test
+	# file's autoload teardown checks for leaks.
 	for r in _rings_to_free:
 		if is_instance_valid(r.mesh_instance):
 			r.mesh_instance.free()
@@ -26,6 +27,9 @@ func _make_ring(level: int = 0, grid_n: int = 16,
 	var meshes: Array = _geom.build(level + 1, grid_n, inner_cell_m)
 	var ring: ClipmapRing = ClipmapRing.new()
 	ring.configure(meshes[level], level, inner_cell_m * pow(2.0, level))
+	# Add to scene tree so Godot manages the rendering-server Instance
+	# RID; after_each free()'s immediately to drop it before next test.
+	add_child(ring.mesh_instance)
 	_rings_to_free.append(ring)
 	return ring
 
