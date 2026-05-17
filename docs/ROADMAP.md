@@ -10,20 +10,21 @@
 
 ## One-paragraph current focus
 
-**Phase 4 (terrain MVP) is the next sprint.** Spec 15a renderer
-decision committed: **clipmap** (3 of 5 candidates eliminated by
-Godot 4.5 capability survey; clipmap proven via prototype at
-~0.7 ms/frame on RTX 5090 Laptop). Spec 21 (Terrain Renderer) +
-spec 24 (Ground Variety) now unblock. Phase 4 builds the production
-multi-ring clipmap with per-page streaming + LOD morph zones +
-multi-biome material blend, validates with one biome demo.
+**Phase 5 (ground texture pipeline) is in progress.** Phase 4 (terrain
+MVP, 4.1-4.8) closed 2026-05-17 with the walking demo running
+standalone on Godot 4.6.2. Phase 5 entry has shipped spec amendments
+(23/24/25) + bundle scaffold + MaterialVariants loader; user is
+authoring textures offline in parallel. When textures land we run
+the W4 pipeline port + first-biome execution (5.1+5.4) + the spec 24
+Layer 1+2 shader work (5.5). Plan doc at
+[plans/25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md);
 ~5-10 sessions estimated.
 
 ## Phase status
 
 | Phase | Status | Doc | Est. sessions |
 |---|---|---|---|
-| Phase 1 — Spec layer | ✅ done | (47 specs in `specs/`) | ~30 |
+| Phase 1 — Spec layer | ✅ done | (48 specs in `specs/`) | ~30 |
 | Phase 1.5 — Audits | ✅ done | AUDIT_FINDINGS + SELF_AUDIT_FINDINGS | ~2 |
 | Phase 0 — Repo setup | ✅ done | [phase_0_repo_setup.md](roadmap/phase_0_repo_setup.md) | 1 (commit `f73b4f8`) |
 | Phase 2 — Foundation build (Tier 0) | ✅ done | [phase_2_foundations.md](roadmap/phase_2_foundations.md) | 1 (commits `bcb1d62` → `cb46ffc`) |

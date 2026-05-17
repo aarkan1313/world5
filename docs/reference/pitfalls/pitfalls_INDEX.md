@@ -4,7 +4,7 @@
 > this file is the index; per-tier pitfall files carry detail.
 >
 > Cap: ≤ 300 lines (discipline; once approached, split into more tiers).
-> Last updated: 2026-05-16.
+> Last updated: 2026-05-17.
 
 ## How to use
 
@@ -85,7 +85,9 @@ links into the per-tier file.
 | meta-1 | [Static methods named `get`/`load`/etc. shadow Godot builtins](pitfalls_meta.md#1) | meta | 13 | 2.3 |
 | meta-2 | [`--headless` disables RenderingDevice; use `--display-driver windows` for GPU tests](pitfalls_meta.md#2) | meta | 06, 08a | 2.5 |
 | meta-3 | [GDScript Dictionary iteration during erase is undefined; snapshot keys first](pitfalls_meta.md#3) | meta | 07, 11 | 2-audit |
+| meta-4 | [Autoload name collides with class_name global; use W5_ prefix + W5Lookup helper](pitfalls_meta.md#4) | meta | 07, 08a | 4.7 |
+| meta-5 | [Main RD rejects submit/sync in Godot 4.6; use create_local_rendering_device()](pitfalls_meta.md#5) | meta | 08a, 20 | 4.8 |
 
 ## Doc cap status
 
-This file: ~75 lines (well under 300 cap).
+This file: ~85 lines (well under 300 cap).

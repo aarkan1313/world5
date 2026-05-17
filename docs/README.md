@@ -5,7 +5,7 @@
 
 ## What is W5
 
-W5 (World 5) is a **Godot 4.5 + Python world-generation engine** shipped
+W5 (World 5) is a **Godot 4.6.2 + Python world-generation engine** shipped
 as a Godot plugin and consumed by external game projects (first
 intended consumer: a 2.5D wizard game). Engine + pipeline; 3D-only at
 runtime; full world system (water + weather + caves + foliage +
@@ -64,7 +64,7 @@ docs/
 ├── AUDIT_FINDINGS.md            ← outside audit output
 ├── SELF_AUDIT_FINDINGS.md       ← self-audit + resolution table
 ├── SITEMAP.json                 ← machine-readable doc tree
-├── specs/                       ← 47 spec docs (one per system)
+├── specs/                       ← 48 spec docs (one per system)
 ├── state/                       ← per-tier current state
 │   ├── state_meta.md
 │   ├── state_core.md            (Tier 1 systems)

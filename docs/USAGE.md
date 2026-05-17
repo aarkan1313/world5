@@ -19,7 +19,7 @@ Full recipe: [workflows/running_tests.md](workflows/running_tests.md)
 ### Open the project in Godot
 ```bash
 # Repo root: D:\assets\world 5\
-# Open demo/project.godot in Godot 4.5+
+# Open demo/project.godot in Godot 4.6.2+
 # The addons/world5/ junction → ../../engine/ is already set up.
 ```
 

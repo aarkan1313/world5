@@ -144,3 +144,133 @@ pass.
 **First hit**: 2026-05-16 (Phase 2 self-audit caught 3 instances
 across JobScheduler + ChangeBroadcast; all fixed via snapshot
 pattern).
+
+---
+
+## #4 — Autoload name collides with class_name global
+
+**Symptom**: Godot editor's Autoload UI rejects with dialog:
+"Can't add Autoload: X is an invalid name. Must not collide with an
+existing global script class name." Same error appears as a parse
+error in headless `--import` mode for every script whose class_name
+matches an autoload entry in `[autoload]` of project.godot.
+
+**Cause**: Godot 4 treats autoload-registered names as global
+identifiers (so consumer code can write `JobScheduler.submit(...)`).
+A `class_name JobScheduler` declaration creates the same identifier.
+The engine refuses the collision rather than silently picking one.
+
+The hidden trap: if autoloads are registered only via an editor
+plugin's `add_autoload_singleton`, the collision is checked at
+add-time but the autoloads aren't persisted to `project.godot` until
+an interactive editor save. So everything works in tests + editor
+sessions; standalone runs silently see no autoloads → SUT
+`get_node_or_null("/root/X")` returns null → systems silently
+no-op or crash later.
+
+**Fix**: prefix autoload-registered names with a project-unique tag
+(W5 uses `W5_`); keep `class_name X` on the script for test
+construction + type hints. Add an explicit `[autoload]` section to
+`project.godot` with the prefixed names so standalone runs work.
+SUT code looks up via a helper (`W5Lookup.find("X")`) that checks
+the prefixed path first, falls back to bare name for tests that
+inject a fresh instance.
+
+```ini
+; project.godot
+[autoload]
+W5_StreamingBudget="*res://addons/world5/scripts/core/StreamingBudget.gd"
+W5_JobScheduler="*res://addons/world5/scripts/core/JobScheduler.gd"
+```
+
+```gdscript
+# Script keeps class_name for test .new()
+class_name JobScheduler extends Node
+# Consumer code:
+var sched: Node = W5Lookup.find("JobScheduler")
+```
+
+**What didn't work**:
+- Same-name autoload + class_name → parse error
+- Plugin-only autoload registration → fails in standalone (editor-
+  save dependency hidden)
+- Renaming the class_name and updating every test to use preload
+  instead of `.new()` → touches 14+ test files; fragile
+
+**Diagnostic**: standalone-run console fills with
+`[your_system] X autoload missing` errors every frame. Test suite
+green but `godot --path demo res://scenes/X.tscn` broken.
+
+**Related**: spec 07 JOB_SYSTEM (lazy `/root/W5_JobScheduler`
+lookup), spec 08a (GpuJob routing depends on JobScheduler being
+findable), W5Lookup helper at
+`engine/scripts/core/W5Lookup.gd`.
+
+**First hit**: 2026-05-17 (Phase 4.6 visual review found walking
+demo broken standalone; Phase 4.7 fix landed at commit `bc8c954`).
+
+---
+
+## #5 — Main RenderingDevice rejects explicit submit/sync in Godot 4.6
+
+**Symptom**: Calling `RenderingDevice.submit()` or
+`RenderingDevice.sync()` on the RD returned by
+`RenderingServer.get_rendering_device()` fires:
+```
+ERROR: Only local devices can submit and sync.
+   at: submit (servers/rendering/rendering_device.cpp:6293)
+```
+Every frame, as long as your compute work is being dispatched.
+Buffer readbacks via `buffer_get_data()` return empty or stale data.
+
+**Cause**: Godot 4.6 made the main RD's submit/sync lifecycle the
+exclusive domain of Godot's own renderer. External callers must
+create a LOCAL RD via `RenderingServer.create_local_rendering_device()`
+for any compute work that needs explicit submit/sync.
+
+Tests sometimes work by accident: gut's test viewport setup creates
+a local RD under the hood that `get_rendering_device()` happens to
+return in test contexts. Standalone scene runs use the main RD
+directly, exposing the bug.
+
+**Fix**: create + cache a local RD in any system that does compute
+work with explicit submit/sync:
+
+```gdscript
+var _rd: RenderingDevice = null
+
+func _ensure_rd() -> RenderingDevice:
+    if _rd != null:
+        return _rd
+    _rd = RenderingServer.create_local_rendering_device()
+    return _rd
+
+func shutdown() -> void:
+    if _rd != null:
+        # Free any owned RIDs first, then the device itself
+        _rd.free()
+        _rd = null
+```
+
+Local RD is fully independent from the main RD — different memory
+pool, different command queue. Readback via `buffer_get_data()`
+crosses back to CPU bytes which any consumer (including the main
+RD's shaders via ImageTexture upload) can use.
+
+**What didn't work**:
+- `RenderingServer.get_rendering_device()` from the render thread
+  (still the main RD; same error)
+- `RenderingServer.call_on_render_thread(...)` wrapping the
+  submit/sync (same error; the thread isn't the issue, the RD
+  ownership is)
+
+**Diagnostic**: grep your code for `.submit()` + `.sync()` paired
+with `get_rendering_device()`. Replace with
+`create_local_rendering_device()`.
+
+**Related**: spec 08a GPU_CPU_CONTRACT (rule 1: RenderingDevice
+calls on render thread — refines to "on render thread + on a local
+RD"), spec 20 TERRAIN_BACKEND (first hit), GpuTerrainBackend.gd.
+
+**First hit**: 2026-05-17 (Phase 4.6 visual review; Phase 4.8 fix
+landed at commit `049ceb8`).

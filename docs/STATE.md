@@ -8,16 +8,16 @@
 
 ## One-sentence summary
 
-**Phase 4 (terrain MVP) closed.** Walking demo at
-`demo/scenes/walking_demo.tscn` launches end-to-end with a real
-world bundle on Godot 4.6.2 stable mono; user walks WASD through
-a clipmap-rendered 5-ring terrain with real heightmap displacement +
-lighting. Phase 4.5 calibration + Phase 4.6 stationary baseline
-measured cost at 4-6 ms on RTX 5090 Laptop (rasterization-bound, not
-streaming); F2 engaged for 3060-class hardware via per-tier
-ring_count of 3/4/5/6/7. 5/5 verify layers green. Two outside
-audits actioned. Next: **Phase 5 (texture pipeline)** so the
-terrain stops being fallback-color and gets real ground textures.
+**Phase 4 (terrain MVP) closed + Phase 4.7/4.8 standalone-run bugs
+fixed + Phase 5 entry shipped.** Walking demo at
+`demo/scenes/walking_demo.tscn` runs standalone on Godot 4.6.2
+stable mono with real autoload bootstrap + local-RD page generation.
+Renders the heightmap-displaced clipmap (5 rings @ high tier) but
+shows a flat-brown fallback color band because there are no ground
+textures yet — those land in Phase 5 once the in-flight texture
+authoring completes. 5/5 verify layers green stable. Walking-demo
+materials/ scaffold + sibling manifest schema ready for textures to
+drop in.
 
 ## Per-tier state
 
@@ -32,92 +32,102 @@ terrain stops being fallback-color and gets real ground textures.
 
 ## What exists right now
 
-- **W5 git repo** at `D:/assets/world 5/` with remote
-  `github.com/aarkan1313/world5.git` on `main` (commit `f73b4f8`)
-- 47 spec docs in `specs/` (all status `draft`; outside-audited + self-audited)
-- 3 audit / review docs: REVIEW_BRIEF.md, AUDIT_FINDINGS.md,
-  SELF_AUDIT_FINDINGS.md
-- 1 system inventory: SYSTEM_INVENTORY.md
-- 1 orchestrator guide: ORCHESTRATOR_PLANNING_GUIDE.md
-- Doc-tree scaffold: STATE.md + ROADMAP.md + README.md +
-  CONTRIBUTING.md + state/ + roadmap/ + reference/pitfalls/
-- **Directory tree per spec 01**: `engine/` + `demo/` + `pipeline/` +
-  `tests/` + `tools/` with all subdirs scaffolded (empty dirs marked
-  with .gitkeep)
-- **`engine/plugin.cfg`** + `engine/plugin.gd` (autoloads commented
-  for Phase 2)
-- **`engine/README.md`** + `engine/CHANGELOG.md` (Keep-a-Changelog) +
-  `engine/LICENSE` placeholder
-- **`demo/project.godot`** (Godot 4.5+ Forward+) + `demo/README.md`
-- **`pipeline/pyproject.toml`** editable-install package + `pipeline/world5/`
-  importable Python module (version 0.0.1) + `pipeline/README.md`
-- **Per-machine addon junction** at `demo/addons/world5` → `engine/`
-  (created via Windows Junction since user lacks Developer Mode /
-  admin; junction is in .gitignore as per-machine artifact)
-- `.gitignore` + `.gitattributes` + `.godotignore.template`
+**Spec layer** (48 docs in `specs/`, all `draft`; 2 outside audits
++ 1 self-audit actioned across the Tier 0 + Phase 4 specs)
+- AUDIT_FINDINGS.md / SELF_AUDIT_FINDINGS.md / SELF_AUDIT_PHASE_2_FINDINGS.md
+- SYSTEM_INVENTORY.md + ORCHESTRATOR_PLANNING_GUIDE.md + REVIEW_BRIEF.md
+
+**Tier 0 foundations** — all 13 systems in code with tests
+- Log / World5 / QualityTiers / Job / JobScheduler / GpuJob /
+  GpuResourceTracker / SpatialIndex / AssetStream / StreamingBudget /
+  ChangeBroadcast / ContentAddress / WorldContract
+- Autoloads registered at `/root/W5_<Name>` via project.godot +
+  plugin.gd (W5_ prefix from Phase 4.7 to avoid class_name collision)
+- W5Lookup helper for SUT lookups (test-override path + autoload
+  fallback)
+
+**Tier 1 terrain renderer (Phase 4 closed)** — clipmap-based, real-GPU
+- Backend: GpuTerrainBackend uses local RD (Phase 4.8) + Python
+  parity (1e-4 m tolerance, 7 cases including negative coords)
+- NoiseStackKernel (Phase 4.3 — config wrapper; full kernel system
+  with ABC/composer deferred until ErosionKernel lands)
+- Renderer: ClipmapGeometry/Ring/Dispatch + TerrainPageCache +
+  ResidencyManager + PageStreamingJob + MaterialPipeline +
+  MacroAlbedo + SurfaceSlotMask + RingDebugOverlay + PageDebugProbes
+- TerrainWorld composer (430 lines, under 800-line cap)
+- Walking demo at `demo/scenes/walking_demo.tscn` runs standalone
+  (post Phase 4.7+4.8 fixes) on Godot 4.6.2 stable mono
+- Calibration measured: 4-6 ms CPU on RTX 5090 Laptop at 4-6 rings;
+  F2 engaged conservatively for 3060 (per-tier ring_count 3/4/5/6/7)
+
+**Tier 1 materials scaffold (Phase 5 entry)** — directory layout +
+manifest schema ready for textures
+- `engine/worlds/walking_demo/materials/biome_alpine/{ground,mid,
+  rock}/`, plus `<slot>_variants/` for sibling sets, plus `detail/`
+  for overlays — all gitkeeped, awaiting textures
+- `material_variants.json` (W4-validated schema) + per-biome
+  `detail_array.json` placeholder
+- `MaterialVariants.gd` loader/validator + 8 unit tests
+
+**Tools / build infrastructure**
+- `python -m world5.verify` 4-mode CLI (fastest/fast/default/full);
+  5 layers: pytest / gut (headless) / gut_real_gpu / preflight /
+  capture. Currently 5/5 green stable.
+- pytest 115 passed; gut ~250+ tests across unit/integration/perf/visual
+- Godot 4.6.2 stable mono at `C:/Godot/v4.6.2/...` (pinned)
+- Per-machine `demo/addons/world5/` junction → `../../engine/`
+
+**Texture pipeline (Phase 5 — not started; plan exists)**
+- Plan at `docs/plans/25_TEXTURE_PIPELINE_PLAN.md` (~370 lines,
+  W4-validated 2026-05-17 staging test)
+- User has textures being authored in parallel (offline)
+- Phase 5.1 (module port from W4) + 5.4 (first biome) + 5.5 (shader
+  Layers 1+2) pending
 
 ## What does NOT exist yet
 
-- Materials / decoration / foliage / atmosphere / water vertical
-  code (those land in Phase 5+; terrain is the only vertical that
-  exists today)
-- Spec status sweep (all 48 specs still `draft`; the lifecycle move
-  to `reviewed` slipped through Phases 2-4, scheduled for Phase 5
-  open)
-- Real RTX 3060 measurement (Phase 4.5 calibration measures on
-  dev RTX 5090 Laptop; 3060 measurement deferred until hardware
-  available)
-- Walking demo scene (Phase 4.6)
+- Real ground textures (Phase 5 deliverable; user authoring offline)
+- Spec status sweep (48 specs still `draft`; Phase 5 close)
+- Real RTX 3060 measurement (no hardware on dev rig; deferred)
+- Decoration / foliage / atmosphere / water / weather / caves /
+  deformation / persistence vertical code (Phases 6-14)
 
 ## What's blocked
 
-Nothing. Spec 15a (renderer decision: clipmap) shipped at Phase 3
-close. Spec 21 (Terrain Renderer) + spec 24 (Ground Variety) unblocked
-2026-05-17 at Phase 4.1 start; both now `draft` with committed
-architecture. Implementation in progress per
-[plans/21_TERRAIN_RENDERER_PLAN.md](plans/21_TERRAIN_RENDERER_PLAN.md).
+Nothing. Phase 5 has its plan + scaffold; can start the W4 module
+port anytime OR wait for the user's in-flight textures to land + run
+the diversity batch directly. No system is dependency-blocked.
 
 ## Per-spec status snapshot
 
-All 47 specs are `Status: draft`. The user has reviewed the spec layer
-(outside audit + self-audit both done) but a formal `draft → reviewed`
-status sweep hasn't run yet — that happens at Phase 0 close (so the
-sweep can update the file lifecycle in a single pass).
-
-See per-tier state files for per-system detail (what each spec covers,
-key open questions, where each system's W4.1 reference lives).
+All 48 specs are `Status: draft`. Multiple outside-audit + self-audit
+passes have reviewed the spec layer + driven amendments (notably
+Phase 4 specs 21 + 24 + 25 + 23). The formal `draft → reviewed`
+lifecycle sweep is still pending; planned for Phase 5 close (so
+sweep runs against the most-evolved spec set).
 
 ## Recent activity (last 5 entries)
 
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
-- 2026-05-17: cohesion review (docs-only). 3 cross-spec seams
-  tightened: ROADMAP now notes ErosionKernel must ship before Phase 10
-  water (was implicit); spec 22 documents climate moisture-degradation
-  window (Phase 4-9 flat-per-biome until Phase 10 water) + clarifies
-  `auto_biome_rules` is intentionally geometry-only.
-- 2026-05-16: **Phase 3 shipped** — clipmap renderer committed in
-  spec 15a; working prototype at
-  `engine/examples/renderer_research_prototype/`; 130k-tri scene
-  at 0.7 ms/frame on RTX 5090 Laptop. Spec 21 + spec 24 unblock.
-- 2026-05-16: Phase 2 self-audit + critical fix pass — 42 findings
-  documented; all 5 criticals actioned (2 real bugs fixed, 2
-  refuted by measurement, 1 reclassified); pitfall meta-3 added
-- 2026-05-16: **Phase 2 shipped** (`cb46ffc`) — all 13 Tier 0
-  systems in code; 224 tests pass; autoloads register; preflight
-  green; real-GPU layer working
-- 2026-05-16: Real-GPU test infrastructure (`cbf2ada`) — RenderingDevice
-  + compute shaders in tests via `--display-driver windows`
-- 2026-05-16: USAGE.md + 2 workflow recipes (`be56e8c`)
-- 2026-05-16: **Phase 0 shipped + pushed to GitHub** (commit
-  `f73b4f8`); repo at github.com/aarkan1313/world5.git
-- 2026-05-16: self-audit + fix pass (~129 distinct fixes)
-- 2026-05-16: outside audit (`AUDIT_FINDINGS.md`)
-- 2026-05-16: post-audit fix pass — 2 new specs
-  (X_FRAME_BUDGET, 08a_GPU_CPU_CONTRACT); ~30 spec revisions
-- 2026-05-16: Phase 1 spec writing complete (45 specs initially,
-  later 47 with audit additions)
+- 2026-05-17 (Phase 5 entry, `baa71ac`): spec amendments
+  (23/24/25 absorbed the texture-pipeline workflow decisions); 
+  walking_demo bundle scaffold (material_variants.json + per-slot
+  dirs); MaterialVariants.gd loader + 8 tests. Awaiting textures.
+- 2026-05-17 (Phase 4.8, `049ceb8`): GpuTerrainBackend uses local RD
+  via `RenderingServer.create_local_rendering_device()`. Standalone
+  scenes no longer error with "Only local devices can submit and sync".
+- 2026-05-17 (Phase 4.7, `bc8c954`): autoload rename W5_ prefix +
+  W5Lookup helper + project.godot `[autoload]` section. Walking demo
+  now bootstraps autoloads in standalone runs without editor open.
+- 2026-05-17 (Phase 4.6, `3f9b08c`): walking demo shipped — scene
+  + WalkCamera + world bundle + stationary-camera baseline test.
+  Phase 4 closes.
+- 2026-05-17 (Phase 4.5, `b435640`): calibration sprint — first real
+  perf measurement on RTX 5090 Laptop (4-6 ms at 4-6 rings;
+  rasterization-bound). quality_tiers.json + X_FRAME_BUDGET.md
+  updated. F2 trigger engaged for 3060.
 
 ## How to update this doc
 

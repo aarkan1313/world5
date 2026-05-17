@@ -11,12 +11,12 @@
 | # | Spec | Status | Code | Notes |
 |---|---|---|---|---|
 | 19 | KERNEL_SYSTEM | draft | [NoiseStackKernel only](../../engine/scripts/terrain/kernels/NoiseStackKernel.gd) | **Phase 4.3 shipped NoiseStack config wrapper only** (not the full kernel system per spec — no Kernel ABC, no KernelComposer, GpuTerrainBackend hard-types NoiseStackKernel). The Kernel ABC + dispatch land in the phase that adds ErosionKernel (pre-bake; spec 19 sprint 2). OA-C3 audit 2026-05-17 |
-| 20 | TERRAIN_BACKEND | draft | none | GPU-only in v1; `TerrainPageRequest`/`TerrainPageResult` contract; capability vocabulary enumerated (post-self-audit). Runtime overlay layer (R32F sparse per-chunk) documented for deformation |
-| 21 | TERRAIN_RENDERER | draft | [21_TERRAIN_RENDERER_PLAN.md](../plans/21_TERRAIN_RENDERER_PLAN.md) | Unblocked 2026-05-17 by spec 15a (clipmap). Module decomposition expanded with per-module responsibilities + parameter defaults. Frame budget: 2.0 ms at high tier |
+| 20 | TERRAIN_BACKEND | draft | [backend/](../../engine/scripts/terrain/backend/) | Phase 4.2 shipped: TerrainPageRequest/Result + GpuTerrainBackend (local RD per Phase 4.8) + TerrainBackendAdapter (bounded-concurrency window). Python ↔ GPU parity at 1e-4 m across 7 test cases including negative coords + seed extremes |
+| 21 | TERRAIN_RENDERER | draft | [terrain/](../../engine/scripts/terrain/) + [PLAN](../plans/21_TERRAIN_RENDERER_PLAN.md) | Phase 4.4-4.6 shipped: 12 modules across renderer/streaming/material/diagnostics + TerrainWorld composer (430 lines). 250+ tests. Walking demo runs standalone post Phase 4.7+4.8. Frame budget 2.0 ms at high; measured 4-6 ms on RTX 5090 Laptop (F2 trigger engaged for 3060) |
 | 22 | BIOME_CATALOG | draft | none | Hybrid auto-biome + splat overrides. Climate is per-XZ via climate_base + climate_rules (post-audit C5) |
-| 23 | MATERIALS_PBR | draft | none | Variable per-biome slots (1-8); macro_albedo REQUIRED when visibility_ship_distance > 2km |
-| 24 | GROUND_VARIETY | draft | none | Unblocked 2026-05-17 by spec 15a. Committed: Layer 1 siblings+stochastic UV (C) + Layer 2 detail array (B) + Layer 3 macro albedo (E). Layer 1+3 ship Phase 4; Layer 2 Phase 5 |
-| 25 | TEXTURE_PIPELINE | draft | none | 4 output modes: tileable PBR / detail overlays / tx_subject / macro_albedo. GPU mutex via `pipeline/core/gpu_mutex.py` (cross-pipeline) |
+| 23 | MATERIALS_PBR | draft | [MaterialPipeline + MaterialVariants](../../engine/scripts/terrain/material/) | Phase 4.4 shipped MaterialPipeline + MacroAlbedo + SurfaceSlotMask. Phase 5 entry shipped: on-disk layout for sibling sets (`<slot>_variants/`) + detail overlays (`detail/`) per amended spec; MaterialVariants.gd loader + 8 tests; walking_demo bundle scaffold awaiting textures |
+| 24 | GROUND_VARIETY | draft | Layer 3 in shader; Layer 1+2 pending | Phase 4: Layer 3 macro+world-noise shipped. Phase 5 entry: spec absorbed material_variants.json schema as Layer 1 contract. Layer 1+2 shader code lands Phase 5.5 once siblings + detail tiles exist. Compositor (D) deferred to Phase 7+ |
+| 25 | TEXTURE_PIPELINE | draft | [PLAN](../plans/25_TEXTURE_PIPELINE_PLAN.md) | Phase 5 entry: spec amended with two-YAML layout (discovery + sibling pools), purpose-mode macro default, dev-only operator model. Plan doc has full workflow walkthrough validated via 2026-05-17 staging test. Module port from W4 + first biome execution pending |
 | 26 | TRELLIS_3D_PIPELINE | draft | none | Review-per-subject carry-over from W4.1 (~120 COPY / 40 REGEN / 26 DROP estimate). GPU mutex coordination with spec 25 |
 | 27 | LOD_BAKE | draft | none | 3 tiers (LOD0/1/2); impostors handle distant. Sync orphan-file preflight check (post-self-audit) |
 | 28 | DECORATION | draft | none | Build fresh on Tier 0; ships R1-R9 + R13 + R14abc + R15 dither. `decoration_overrides.json` (renamed from `decoration_zones.json`). Foliage placement seam via `placement_exclusion` broadcast. Blob instance = 40 bytes |
@@ -71,3 +71,5 @@ Verified consistent post-self-audit:
 
 - This file: ~80 lines (well under 300 cap)
 - Per-spec entries will grow ~5-10 lines each as systems ship
+- Phase 5 will append a Code column entry to row 25 once
+  `pipeline/textures/` lights up
