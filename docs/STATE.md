@@ -8,18 +8,18 @@
 
 ## One-sentence summary
 
-**Sub-phase 4.9 closed: audit C1 + C2 + S8 fixed end-to-end.**
-Walking demo's three critical renderer bugs are now resolved:
-(a) outer clipmap rings bind a per-ring Texture2DArray of all
-resident pages + shader picks correct page per fragment via world XZ
-→ no more chunk seams (audit C1, 4.9.a); (b) per-fragment slot
-selection drives mid + rock textures onto matching slope+elevation
-bands via biome_catalog selectors (audit C2, 4.9.b); (c) walking
-demo ships a biome_catalog.json (audit S8, 4.9.d). 27 new tests
-including 3 real-GPU visual regressions. **Still open**: audit C3
-(sibling_blend_freq tune) + S2 (macro_albedo) deferred to Phase 5.6
-+ 4.9.c respectively, both blocked on Phase 5.1 W4 module port.
-5/5 verify layers green stable in 60.6s.
+**Phase 5.1 W4 module port is the active sub-phase.** Phase 4.9 closed
+end-to-end last session (audit C1 + C2 + S8 fixed — multi-page
+heightmap binding + per-fragment slot selection + biome_catalog).
+Remaining audit items all converge on one unlock: port
+`D:/assets/world 4/pipeline/textures/tx_*.py` (11 modules) +
+`D:/assets/world 4/pipeline/diversity_*.py` + `build_contact_sheet.py`
+(4 drivers) into `pipeline/world5/textures/` so the W5 pipeline runs
+end-to-end without depending on `D:/tmp/w5_candidates/`. W4 source
+is stable (5 trivial line diffs in working tree). Plan: file-copy +
+path-edit per [plan 25 §5.1](plans/25_TEXTURE_PIPELINE_PLAN.md);
+~1-2 sessions. Verify still 5/5 layers green stable at 139 pytest +
+gut + gut_real_gpu + preflight + capture.
 
 ## Per-tier state
 
@@ -163,6 +163,12 @@ sweep runs against the most-evolved spec set).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
+- 2026-05-17 (Phase 5.1 opening — W4 module port active):
+  Phase 5.1 sub-phase opened. Plan = port 11 W4 tx_*.py modules +
+  4 drivers (diversity, contact_sheet, review, material_variants)
+  into pipeline/world5/textures/. Unblocks 4.9.c macro_albedo +
+  5.4.b detail overlays + 5.6 calibration + audit S5/S6/S7. W4
+  source confirmed stable (5 trivial diffs in working tree).
 - 2026-05-17 (Phase 4.9 closed — audit C1+C2+S8 fixed):
   RingHeightArray multi-page heightmap binding (C1, 4.9.a) +
   per-fragment slot selection with BiomeCatalog selectors (C2, 4.9.b)

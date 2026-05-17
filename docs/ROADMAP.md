@@ -10,19 +10,21 @@
 
 ## One-paragraph current focus
 
-**Sub-phase 4.9 closed: audit C1 + C2 + S8 fixed.** Walking demo
-now binds per-fragment slot selection (mid + rock textures reach the
-GPU via the new BiomeCatalog → bind_all_slots → shader loop chain)
-+ multi-page heightmap per ring (RingHeightArray → bind_height_array
-→ shader picks correct page per fragment from world XZ → no more
-outer-ring chunk seams). Built across 3 sub-phases (4.9.b, 4.9.d,
-4.9.a) with 27 new tests including 3 real-GPU visual regressions.
-**Phase 4.9.c (macro_albedo for walking_demo) remains deferred**
-pending Phase 5.1 W4 module port. **Next**: 5.1 unblock → 5.4.b
-detail overlays + sibling_blend_freq tune → 5.6 real-hardware
-calibration → 5.7 erosion sprint → Phase 6 forest. See
-[audit findings](AUDIT_FINDINGS_PHASE_0_5_2026_05_17.md) for the
-full punch-list and what remains.
+**Phase 5.1 — W4 texture-pipeline module port — IS NEXT and active.**
+Phase 4.9 closed end-to-end (audit C1 + C2 + S8 fixed). Walking demo
+now has per-fragment slot selection + multi-page heightmap binding;
+3 critical renderer bugs resolved. The remaining audit items
+(macro_albedo S2, detail overlays S3, sibling tune C3, real-hardware
+calibration S1, QA gates S6, biome YAMLs S7) all converge on one
+unlock: **port the W4 `tx_*.py` modules into `pipeline/world5/textures/`**
+so the W5 pipeline can run end-to-end without depending on
+`D:/tmp/w5_candidates/` (the texture team's external chain). Source
+files at `D:/assets/world 4/pipeline/textures/tx_*.py` are stable
+enough (dirty working tree has only 5 trivial line changes).
+Per the plan: file-copy + path-edit, ~1-2 sessions; ports 11 modules
++ builds 4 driver CLIs (diversity, contact_sheet, review,
+material_variants). Plan doc at
+[plans/25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md) §5.1.
 
 ## Phase status
 
@@ -43,7 +45,7 @@ full punch-list and what remains.
 | **Phase 5 — Ground texture pipeline** | 🚧 5.5 + 5.4 shipped (4.9 closed core gaps); 5.1 held; 5.6 pending | [25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md) | 5-10 |
 | Phase 5.5 — Variety shader Layer 1+2 | ✅ done (4.9.b finished slot selection); sibling_blend_freq tune pending (C3 → 5.6) | [phase_5_5_variety_shader.md](roadmap/phase_5_5_variety_shader.md) | 1 session |
 | Phase 5.4 — First biome (alpine) | ⚠️ shipped; macro_albedo (S2) + detail/ (S3) blocked on 5.1; slot selection now active | [build-notes/phase_5_4_first_biome_2026_05_17.md](build-notes/phase_5_4_first_biome_2026_05_17.md) | 1 session (incl brown-band fix) |
-| Phase 5.1 — W4 module port (held) | ⏸ held; unblocks 4.9.c + 5.4.b + 5.6 | [25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md) | 1-2 |
+| **Phase 5.1 — W4 module port** | 🚧 active (unblocks 4.9.c + 5.4.b + 5.6 + audit S5/S6/S7) | [phase_5_1_w4_module_port.md](roadmap/phase_5_1_w4_module_port.md) + [plan](plans/25_TEXTURE_PIPELINE_PLAN.md) | 1-2 |
 | Phase 5.4.b — Detail overlays + sibling_blend_freq tune | pending (depends on 5.1) | — | 3-4 |
 | Phase 5.6 — Calibration on real hardware | pending | — | 1-2 |
 | Phase 5.7 — Erosion sprint (ErosionKernel + KernelComposer) | pending (was unscheduled; now placed before Phase 10) | spec 19 | multi-sprint |
