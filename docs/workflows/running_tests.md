@@ -89,21 +89,21 @@ CI / pre-commit hooks should fail on non-zero.
 
 ### Specific gut file (headless mode; no RenderingDevice)
 ```bash
-"/c/Godot/Godot_v4.5-stable_win64.exe" --headless --path demo \
+"/c/Godot/v4.6.2/Godot_v4.6.2-stable_mono_win64/Godot_v4.6.2-stable_mono_win64.exe" --headless --path demo \
   --script "res://addons/gut/gut_cmdln.gd" \
   -gtest=res://addons/world5/tests/unit/test_log.gd -gexit
 ```
 
 ### All gut tests in a dir (recurse subdirs)
 ```bash
-"/c/Godot/Godot_v4.5-stable_win64.exe" --headless --path demo \
+"/c/Godot/v4.6.2/Godot_v4.6.2-stable_mono_win64/Godot_v4.6.2-stable_mono_win64.exe" --headless --path demo \
   --script "res://addons/gut/gut_cmdln.gd" \
   -gdir=res://addons/world5/tests/ -ginclude_subdirs -gexit
 ```
 
 ### Tests that need real RenderingDevice (compute shaders, etc.)
 ```bash
-"/c/Godot/Godot_v4.5-stable_win64.exe" \
+"/c/Godot/v4.6.2/Godot_v4.6.2-stable_mono_win64/Godot_v4.6.2-stable_mono_win64.exe" \
   --display-driver windows --rendering-driver vulkan --path demo \
   --script "res://addons/gut/gut_cmdln.gd" \
   -gtest=res://addons/world5/tests/unit/test_gpu_real_device.gd -gexit
@@ -175,7 +175,7 @@ test file has a syntax / shadowing issue (see pitfall meta-1).
 After adding a new `class_name` GDScript file, gut may report
 "GUT class_names have not been imported." Fix:
 ```bash
-"/c/Godot/Godot_v4.5-stable_win64.exe" --headless --path demo --import
+"/c/Godot/v4.6.2/Godot_v4.6.2-stable_mono_win64/Godot_v4.6.2-stable_mono_win64.exe" --headless --path demo --import
 ```
 
 ## See also

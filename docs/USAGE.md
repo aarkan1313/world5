@@ -84,7 +84,9 @@ If you hit something unexpected:
 
 ## Versions pinned
 
-- **Godot**: 4.5 stable (`C:/Godot/Godot_v4.5-stable_win64.exe` on dev)
+- **Godot**: 4.6.2 stable mono (`C:/Godot/v4.6.2/Godot_v4.6.2-stable_mono_win64/Godot_v4.6.2-stable_mono_win64.exe` on dev)
+  - Verified via full verify pass 2026-05-17 (Phase 4.4 close); upgraded from 4.5
+  - 4.5 stable binary kept as fallback at `C:/Godot/Godot_v4.5-stable_win64.exe`
 - **Python**: 3.12+ (per `pipeline/pyproject.toml`)
 - **gut**: 9.4.0 (cloned into `demo/addons/gut/`)
 - **W5**: 0.0.1 (per `engine/plugin.cfg`)

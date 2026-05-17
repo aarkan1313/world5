@@ -41,7 +41,7 @@ Sources:
 
 For tests / scripts that need a real GPU:
 ```bash
-"/c/Godot/Godot_v4.5-stable_win64.exe" \
+"/c/Godot/v4.6.2/Godot_v4.6.2-stable_mono_win64/Godot_v4.6.2-stable_mono_win64.exe" \
   --display-driver windows \
   --rendering-driver vulkan \
   --path demo \
@@ -151,7 +151,7 @@ happens, gut tests that reference `MyClass` fail with
 
 Fix: run a one-time import:
 ```bash
-"/c/Godot/Godot_v4.5-stable_win64.exe" --headless --path demo --import
+"/c/Godot/v4.6.2/Godot_v4.6.2-stable_mono_win64/Godot_v4.6.2-stable_mono_win64.exe" --headless --path demo --import
 ```
 
 The verify CLI doesn't auto-import (would slow every run). If gut

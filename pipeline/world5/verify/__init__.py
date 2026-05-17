@@ -117,7 +117,8 @@ def _resolve_godot_bin() -> Path | None:
     Order of preference:
     1. WORLD5_GODOT_BIN env var (explicit override)
     2. `godot` on PATH (Unix convention)
-    3. C:/Godot/Godot_v4.5-stable_win64.exe (this dev's Windows install)
+    3. C:/Godot/v4.6.2/.../Godot_v4.6.2-stable_mono_win64.exe (current pin)
+    4. C:/Godot/Godot_v4.5-stable_win64.exe (legacy fallback)
 
     Returns None if Godot cannot be located; gut layer skips with a
     clear reason in that case.
@@ -131,6 +132,11 @@ def _resolve_godot_bin() -> Path | None:
     on_path = shutil.which("godot")
     if on_path:
         return Path(on_path)
+    # Current pin: 4.6.2 stable mono (verified Phase 4.4 close 2026-05-17)
+    pin = Path("C:/Godot/v4.6.2/Godot_v4.6.2-stable_mono_win64/Godot_v4.6.2-stable_mono_win64.exe")
+    if pin.exists():
+        return pin
+    # Legacy fallback: 4.5 stable (kept available during 4.6 transition)
     fallback = Path("C:/Godot/Godot_v4.5-stable_win64.exe")
     if fallback.exists():
         return fallback
@@ -165,7 +171,7 @@ def _run_gut(real_gpu: bool = False) -> LayerResult:
             duration_s=time.monotonic() - start,
             details={
                 "reason": "Godot binary not found",
-                "hint": "Set WORLD5_GODOT_BIN env var, OR add `godot` to PATH, OR install Godot 4.5 at C:/Godot/",
+                "hint": "Set WORLD5_GODOT_BIN env var, OR add `godot` to PATH, OR install Godot 4.6.2 at C:/Godot/v4.6.2/",
             },
         )
     godot_bin = str(godot_path)
