@@ -8,14 +8,15 @@
 
 ## One-sentence summary
 
-**Phase 5.7.a closed — Python ErosionKernel reference shipped** (8
-TDD pytests green). Spec 19 hydraulic (Mei 2007) + thermal (Musgrave)
-post-process kernel; emits eroded height + drainage_map + flow_direction
-+ flow_accumulation per spec 19 §"Auxiliary outputs". Parity-reference
-quality (single-threaded numpy, ~250 lines); GPU port deferred to
-5.7.d when perf demands it. Schema at `engine/resources/schemas/kernels/erosion.schema.json`.
-**Next**: Phase 5.7.b KernelComposer — the piece that unblocks
-Phase 6 multi-biome render via per-fragment biome_weights.
+**Phase 5.7.b closed — Python KernelComposer shipped** (12 TDD pytests
+green; pytest total now 165). Computes `biome_weights(x,z,elev,slope)`
+via softmax over auto_biome_rules (the multi-biome unblocker for
+Phase 6) + `sample_height(x,z,seed)` via chain dispatch (shorthand
+and explicit forms). Walking_demo catalog (alpine + forest) is the
+canonical fixture. Erosion-in-chain recognized but per-point dispatch
+deferred to 5.7.c bake_page. **Next**: 5.7.c content-addressed
+bake_page OR GDScript runtime mirror of biome_weights (Phase 6
+multi-biome render unblock).
 
 ## Per-tier state
 
@@ -164,6 +165,23 @@ sweep runs against the most-evolved spec set).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
+- 2026-05-17 (Phase 5.7.b closed — Python KernelComposer):
+  Spec 19 §"KernelComposer" + spec 22 §"Catalog schema". Two
+  responsibilities: (1) `biome_weights(x,z,elev,slope)` via softmax
+  over each biome's auto_biome_rules elevation+slope bands (same
+  smoothstep shape as shader's w5_slot_weight for consistency);
+  (2) `sample_height(x,z,seed)` via per-biome kernel chain dispatch.
+  Chain spec supports shorthand `{type: noise_stack, params}` and
+  explicit `{type: chain, stages: [...]}` per kernel_chain.schema.json.
+  Erosion-in-chain RECOGNIZED but per-point dispatch DEFERRED to
+  5.7.c bake_page (erosion needs page-scope context). 12 TDD pytests
+  green (construct + reject-malformed + weights sum-to-1 + biome
+  dominance at elev extremes + crossover-blend + chain-of-1 ==
+  bare-kernel + explicit-chain == shorthand + determinism × 2).
+  pytest total 165. Build note phase_5_7_b_kernel_composer_2026_05_17.md.
+  Phase 6 multi-biome render path: port `_band_weight` to GDScript
+  + bind auto_rules per biome → shader multiplies slot_weight by
+  per-biome weight per fragment.
 - 2026-05-17 (Phase 5.7.a closed — Python ErosionKernel reference):
   Spec 19 §"Kernel types shipped in v1" item 2. Mei 2007 hydraulic
   step (rain → flux → velocity → sediment capacity → dissolve/deposit

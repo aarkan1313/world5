@@ -12,5 +12,11 @@ to its own sprint per spec 19 amendment.
 
 from world5.kernels.noise_stack import NoiseStackKernel  # noqa: F401
 from world5.kernels.erosion import ErosionKernel, ErosionResult  # noqa: F401
+from world5.kernels.composer import KernelComposer  # noqa: F401
 
-__all__ = ["NoiseStackKernel", "ErosionKernel", "ErosionResult"]
+__all__ = [
+    "NoiseStackKernel",
+    "ErosionKernel",
+    "ErosionResult",
+    "KernelComposer",
+]

@@ -10,20 +10,18 @@
 
 ## One-paragraph current focus
 
-**Phase 6 paused; pivoting to Phase 5.7 erosion sprint per roadmap.**
-Started Phase 6 (forest second biome) — texture team's forest
-candidates promoted (48 files, 9 sibling entries), `biome_catalog.json`
-extended with the `forest` biome including `auto_biome_rules` for
-biome-weight crossover. While starting the multi-biome shader
-wire-up, the architectural shape revealed that **per-fragment biome
-weighting is a KernelComposer concern, not a per-slot shader
-concern**. Per project ethos + user direction "best long term way /
-following roadmap", paused Phase 6 with textures + catalog left as
-test fixture, suppressed forest entries in `material_variants.json`
-via `_pending_slots` (loader-ignored). Now pivoting to **Phase 5.7
-erosion sprint** — first sub-task 5.7.a (Python ErosionKernel
-reference). Composer (5.7.b) is the missing piece that unblocks
-proper Phase 6 multi-biome render.
+**Phase 5.7.a + 5.7.b shipped — the kernel-system parity ground
+truth + the multi-biome unblocker.** ErosionKernel (Mei 2007 hydraulic
++ Musgrave thermal) emits eroded height + drainage_map + flow_direction
++ flow_accumulation for spec 35 water + spec 41 roads. KernelComposer
+emits `biome_weights(x,z,elev,slope)` via softmax over auto_biome_rules
++ `sample_height(x,z,seed)` via chain dispatch; chain shorthand and
+explicit forms both work; erosion-in-chain recognized but deferred to
+5.7.c bake_page. 20 new TDD tests (8 erosion + 12 composer); pytest
+total now 165. Walking_demo catalog (alpine + forest with auto_rules)
+is the canonical fixture. **Next**: 5.7.c content-addressed bake_page
+(makes erosion chains usable + caches output) OR GDScript runtime
+mirror of biome_weights (unblocks Phase 6 multi-biome render).
 
 ## Phase status
 
@@ -49,7 +47,7 @@ proper Phase 6 multi-biome render.
 | Phase 5.1 — W4 module port | ✅ done (11 tx_*.py + 3 drivers ported; 15/15 import; 6/6 CLIs --help) | [phase_5_1_module_port_2026_05_17.md](build-notes/phase_5_1_module_port_2026_05_17.md) | 1 session |
 | Phase 5.4.b — Detail overlays + sibling_blend_freq tune + per-biome YAMLs | ⚠️ partial (b.1 + b.2 shipped — C3 + S7 closed; b.3 detail overlays deferred) | [phase_5_4_b_detail_overlays_and_tune.md](roadmap/phase_5_4_b_detail_overlays_and_tune.md) + [build-notes/phase_5_4_b_partial_2026_05_17.md](build-notes/phase_5_4_b_partial_2026_05_17.md) | 3-4 |
 | Phase 5.6 — Calibration on real hardware | pending | — | 1-2 |
-| **Phase 5.7 — Erosion sprint (ErosionKernel + KernelComposer)** | 🚧 in progress (5.7.a ✅ done — Python ErosionKernel + 8 TDD tests; 5.7.b KernelComposer next) | [phase_5_7_erosion_sprint.md](roadmap/phase_5_7_erosion_sprint.md) + [build-notes/phase_5_7_a_erosion_kernel_2026_05_17.md](build-notes/phase_5_7_a_erosion_kernel_2026_05_17.md) | multi-sprint (~10-15 sessions across 5 sub-sprints) |
+| **Phase 5.7 — Erosion sprint (ErosionKernel + KernelComposer)** | 🚧 in progress (5.7.a + 5.7.b ✅ done — Python ErosionKernel + KernelComposer with biome_weights + chain dispatch; 5.7.c content-addressed bake + GDScript runtime mirror next; either unblocks Phase 6) | [phase_5_7_erosion_sprint.md](roadmap/phase_5_7_erosion_sprint.md) + [build-notes/phase_5_7_a_erosion_kernel_2026_05_17.md](build-notes/phase_5_7_a_erosion_kernel_2026_05_17.md) + [build-notes/phase_5_7_b_kernel_composer_2026_05_17.md](build-notes/phase_5_7_b_kernel_composer_2026_05_17.md) | multi-sprint (~10-15 sessions across 5 sub-sprints) |
 | Phase 6 — Second biome (forest) | ⏸ paused 2026-05-17 (test fixture landed: forest textures promoted + biome_catalog extended; render gated on 5.7.b KernelComposer) | [build-notes/phase_6_paused_2026_05_17.md](build-notes/phase_6_paused_2026_05_17.md) | 3-5 (post 5.7.b) |
 | Phase 7 — Decoration end-to-end | pending | (write when starting) | 5-10 |
 | Phase 8 — Foliage system | pending | (write when starting) | 25-100 (see SA-S1) |

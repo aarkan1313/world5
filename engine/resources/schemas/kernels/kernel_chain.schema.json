@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "world5/kernels/kernel_chain.schema.json",
+  "title": "KernelChain config",
+  "description": "Spec 19 §KernelComposer + spec 22 §Catalog schema. A biome's `kernel` field is either a single-stage kernel spec (flat object with `type` + `params`) OR a chain spec (`type: 'chain'` + ordered `stages` array of single-stage specs).\n\nKernelComposer reads this when baking a world; runs the stages in order (output of stage N is input to stage N+1). Currently shipping stage types: `noise_stack` (base height field) + `erosion` (post-process). A bare single-stage spec is treated as a chain-of-one.\n\nMulti-biome blending is NOT inside the chain — it happens at the Composer level across biomes via auto_biome_rules softmax.",
+  "oneOf": [
+    {"$ref": "#/$defs/single_stage"},
+    {"$ref": "#/$defs/chain"}
+  ],
+  "$defs": {
+    "single_stage": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "_note": {"type": "string"},
+        "type": {
+          "type": "string",
+          "enum": ["noise_stack", "erosion"],
+          "description": "Stage kernel type. `noise_stack` is a base generator (produces height from x,z); `erosion` is a post-process (takes height in, returns eroded height + auxiliary fields)."
+        },
+        "params": {
+          "type": "object",
+          "description": "Stage-specific parameters. Validated against the per-stage schema (noise_stack.schema.json or erosion.schema.json) at composer-load time."
+        }
+      },
+      "additionalProperties": true
+    },
+    "chain": {
+      "type": "object",
+      "required": ["type", "stages"],
+      "properties": {
+        "_note": {"type": "string"},
+        "type": {
+          "type": "string",
+          "const": "chain"
+        },
+        "stages": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "description": "Ordered list of single-stage specs. Output of stage N is input to stage N+1. First stage MUST be a base generator (noise_stack); subsequent stages MAY be post-processes (erosion). max 8 stages keeps bake-time bounded.",
+          "items": {"$ref": "#/$defs/single_stage"}
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
