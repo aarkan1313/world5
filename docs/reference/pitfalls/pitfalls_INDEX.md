@@ -83,6 +83,7 @@ links into the per-tier file.
 | # | Title | Tier | Spec | Phase |
 |---|---|---|---|---|
 | meta-1 | [Static methods named `get`/`load`/etc. shadow Godot builtins](pitfalls_meta.md#1) | meta | 13 | 2.3 |
+| meta-2 | [`--headless` disables RenderingDevice; use `--display-driver windows` for GPU tests](pitfalls_meta.md#2) | meta | 06, 08a | 2.5 |
 
 ## Doc cap status
 

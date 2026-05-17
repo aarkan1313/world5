@@ -45,3 +45,47 @@ Error: Too few arguments for ..." messages.
 in Tier 0 + later should check for builtin collisions.
 
 **First hit**: 2026-05-16 (Phase 2.3, QualityTiers).
+
+---
+
+## #2 — `--headless` mode disables RenderingDevice
+
+**Symptom**: `RenderingServer.get_rendering_device()` returns null
+when Godot was launched with `--headless`. Any
+`RenderingDevice.*` call from a gut test crashes. Tests that try to
+exercise compute shaders / textures / buffers fail to run.
+
+**Cause**: Godot's `--headless` flag is shorthand for
+`--display-driver headless --audio-driver Dummy`. The `headless`
+display driver only supports the `dummy` rendering driver, which
+provides no GPU pipeline. Intentional (servers without GPUs need to
+run); not a bug.
+
+**Fix**: For tests that need RenderingDevice, launch with
+`--display-driver windows --rendering-driver vulkan` (or `d3d12`)
+instead of `--headless`. A real (briefly visible) Vulkan window
+appears + closes when the script exits. The verify CLI's `--full`
+mode does this automatically for `test_*_real_device.gd` files.
+
+**Pattern in test code** (so the same file passes under both modes):
+```gdscript
+var rd: RenderingDevice = RenderingServer.get_rendering_device()
+if rd == null:
+    pending("RenderingDevice unavailable; run with --display-driver windows")
+    return
+# ... real GPU work ...
+```
+
+**What didn't work**:
+- `--display-driver dummy --rendering-driver vulkan` — invalid combo
+- `RenderingServer.create_local_rendering_device()` — depends on
+  main device existing; returns null in headless too
+
+**Diagnostic**: `RenderingServer.get_rendering_device() == null` is
+the definitive check.
+
+**Related**: spec 06 Layer 3a (real GPU gut), spec 08a GpuJob, W4
+memory entry `godot_headless_null_viewport`.
+
+**First hit**: 2026-05-16 (Phase 2.5, user-prompted; real GPU tests
+shipped Phase 2.6).

@@ -111,18 +111,22 @@ def _run_pytest() -> LayerResult:
     )
 
 
-def _run_gut() -> LayerResult:
-    """Run gut headless. Returns LayerResult.
+def _run_gut(real_gpu: bool = False) -> LayerResult:
+    """Run gut. Returns LayerResult.
 
-    Stub for Phase 2.1: gut isn't installed yet. Returns 'skip' with
-    a clear reason. Once gut lands at engine/addons/gut/, this method
-    becomes a real subprocess call to godot --headless --script ...
+    Phase 2.5+: gut runs in headless mode for the bulk of tests.
+    Real GPU tests (test_gpu_real_device.gd etc.) require a real
+    RenderingDevice, which headless mode disables. When real_gpu=True
+    we relaunch with --display-driver windows --rendering-driver vulkan
+    and only run tests in the integration/ dir matching pattern
+    test_*_real_device.gd or test_*_gpu.gd.
     """
     start = time.monotonic()
     gut_path = REPO_ROOT / "demo" / "addons" / "gut"
+    name = "gut_real_gpu" if real_gpu else "gut"
     if not gut_path.exists():
         return LayerResult(
-            name="gut",
+            name=name,
             status="skip",
             duration_s=time.monotonic() - start,
             details={"reason": "gut not installed at demo/addons/gut/"},
@@ -130,22 +134,34 @@ def _run_gut() -> LayerResult:
     godot_bin = shutil.which("godot") or "C:/Godot/Godot_v4.5-stable_win64.exe"
     if not Path(godot_bin).exists() and not shutil.which(godot_bin):
         return LayerResult(
-            name="gut",
+            name=name,
             status="error",
             duration_s=time.monotonic() - start,
             details={"reason": f"Godot binary not found at {godot_bin}"},
         )
-    cmd = [
-        godot_bin,
-        "--headless",
-        "--path",
-        str(REPO_ROOT / "demo"),
-        "--script",
-        "res://addons/gut/gut_cmdln.gd",
-        "-gdir=res://addons/world5/tests/",
-        "-ginclude_subdirs",
-        "-gexit",
-    ]
+    if real_gpu:
+        cmd = [
+            godot_bin,
+            "--display-driver", "windows",
+            "--rendering-driver", "vulkan",
+            "--path", str(REPO_ROOT / "demo"),
+            "--script", "res://addons/gut/gut_cmdln.gd",
+            "-gdir=res://addons/world5/tests/",
+            "-ginclude_subdirs",
+            "-gprefix=test_",
+            "-gsuffix=_real_device.gd",
+            "-gexit",
+        ]
+    else:
+        cmd = [
+            godot_bin,
+            "--headless",
+            "--path", str(REPO_ROOT / "demo"),
+            "--script", "res://addons/gut/gut_cmdln.gd",
+            "-gdir=res://addons/world5/tests/",
+            "-ginclude_subdirs",
+            "-gexit",
+        ]
     try:
         proc = subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True, text=True, timeout=300)
     except subprocess.TimeoutExpired:
@@ -158,7 +174,7 @@ def _run_gut() -> LayerResult:
     duration = time.monotonic() - start
     status = "pass" if proc.returncode == 0 else "fail"
     return LayerResult(
-        name="gut",
+        name=name,
         status=status,
         duration_s=duration,
         details={"returncode": proc.returncode},
@@ -201,15 +217,19 @@ def run_verify(mode: VerifyMode = VerifyMode.DEFAULT) -> VerifyResult:
     # Layer 1: pytest (always run, all modes)
     layers.append(_run_pytest())
 
-    # Layer 2: gut (fast / default / full)
+    # Layer 2: gut headless (fast / default / full)
     if mode in (VerifyMode.FAST, VerifyMode.DEFAULT, VerifyMode.FULL):
-        layers.append(_run_gut())
+        layers.append(_run_gut(real_gpu=False))
 
-    # Layer 3: preflight (default / full)
+    # Layer 3: gut real GPU (full only — opens a Vulkan window, needs GPU)
+    if mode == VerifyMode.FULL:
+        layers.append(_run_gut(real_gpu=True))
+
+    # Layer 4: preflight (default / full)
     if mode in (VerifyMode.DEFAULT, VerifyMode.FULL):
         layers.append(_run_preflight())
 
-    # Layer 4: capture-based renderer tests (full only)
+    # Layer 5: capture-based renderer tests (full only)
     if mode == VerifyMode.FULL:
         layers.append(_run_capture())
 

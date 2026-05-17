@@ -67,7 +67,23 @@ Run: `godot --headless --path demo --script res://addons/gut/gut_cmdln.gd
 Building our own would duplicate effort. The fact that W4.1 didn't
 adopt it was the gap.
 
-### Layer 3: Capture-based renderer tests
+### Layer 3a: Real-GPU gut tests (Phase 2.5 lesson)
+
+A subset of gut tests need a real `RenderingDevice` — GpuJob behavior,
+GpuResourceTracker against real RIDs, compute shader dispatch, etc.
+Godot's `--headless` mode DISABLES RenderingDevice (per Godot docs +
+search 2026-05-16), so headless gut runs skip these tests as
+`pending` via `pending("RenderingDevice unavailable")`.
+
+The verify CLI's `--full` mode runs a second gut pass with
+`--display-driver windows --rendering-driver vulkan` (opens a hidden
+Vulkan window briefly; needs a GPU). Test files matching
+`test_*_real_device.gd` are collected here exclusively. This was
+the resolution for SA-S3.3 (spec 21 GPU/CPU thread compliance test
+gap) — real GPU testing IS possible without a CI desktop session,
+just not under `--headless`.
+
+### Layer 3b: Capture-based renderer tests
 
 Lives at `engine/tests/perf/` + `engine/tests/visual/`. Three sub-types:
 
