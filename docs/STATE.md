@@ -8,16 +8,16 @@
 
 ## One-sentence summary
 
-**Phase 4 (terrain MVP) closed + Phase 4.7/4.8 standalone-run bugs
-fixed + Phase 5 entry shipped.** Walking demo at
+**Phase 4 (terrain MVP) closed + Phase 5 entry shipped + Phase 5.5
+shader infrastructure landed.** Walking demo at
 `demo/scenes/walking_demo.tscn` runs standalone on Godot 4.6.2
-stable mono with real autoload bootstrap + local-RD page generation.
-Renders the heightmap-displaced clipmap (5 rings @ high tier) but
-shows a flat-brown fallback color band because there are no ground
-textures yet — those land in Phase 5 once the in-flight texture
-authoring completes. 5/5 verify layers green stable. Walking-demo
-materials/ scaffold + sibling manifest schema ready for textures to
-drop in.
+stable mono. Spec 24 Layer 1 (siblings + 3-tap stochastic UV) +
+Layer 2 (detail array overlay) shader primitives + binders shipped
+and verified on a real GPU; current walking demo still renders flat-
+brown because `has_siblings`/`has_detail` default false (no textures
+bound), but once textures land Phase 5.4 promotion will flip the
+binders on without any further shader work. 5/5 verify layers green
+stable.
 
 ## Per-tier state
 
@@ -69,6 +69,21 @@ manifest schema ready for textures
   `detail_array.json` placeholder
 - `MaterialVariants.gd` loader/validator + 8 unit tests
 
+**Tier 1 variety shader (Phase 5.5)** — Layer 1 + Layer 2 fully wired
+- `variety_common.gdshaderinc`: `w5_variety_sample_3tap()` (Heitz-
+  Neyret simplified 3-tap stochastic UV blend) + `w5_detail_blend()`
+  (2-tap overlay blend) primitives
+- `terrain_clipmap.gdshader`: optional Layer 1 + Layer 2 paths gated
+  by `has_siblings` + `has_detail` flags; unbound flag defaults
+  preserve the pre-5.5 macro-only render so the demo works today
+- `MaterialPipeline.bind_sibling_array(mat, array, start, count)` +
+  `bind_detail_array(mat, array, count)` — pipe in Phase 5.4
+  promote.py output without further shader work
+- 18 unit tests (test_material_pipeline + test_variety_common_shader)
+  + 4 real-GPU integration tests asserting shader compiles, draw
+  doesn't crash, and Layer 1 output measurably differs from
+  macro-only fallback
+
 **Tools / build infrastructure**
 - `python -m world5.verify` 4-mode CLI (fastest/fast/default/full);
   5 layers: pytest / gut (headless) / gut_real_gpu / preflight /
@@ -111,8 +126,14 @@ sweep runs against the most-evolved spec set).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
+- 2026-05-17 (Phase 5.5 shader work): Spec 24 Layer 1
+  (siblings + 3-tap stochastic UV) + Layer 2 (detail overlays)
+  shader primitives + MaterialPipeline binders shipped. 22 new tests
+  green (18 unit + 4 real-GPU). Walking demo unchanged visually
+  because no sibling/detail textures bound yet; once Phase 5.4
+  promotion runs, binders flip on without further shader work.
 - 2026-05-17 (Phase 5 entry, `baa71ac`): spec amendments
-  (23/24/25 absorbed the texture-pipeline workflow decisions); 
+  (23/24/25 absorbed the texture-pipeline workflow decisions);
   walking_demo bundle scaffold (material_variants.json + per-slot
   dirs); MaterialVariants.gd loader + 8 tests. Awaiting textures.
 - 2026-05-17 (Phase 4.8, `049ceb8`): GpuTerrainBackend uses local RD
@@ -124,10 +145,6 @@ Per spec 02 R7: STATE matches reality, not plans.
 - 2026-05-17 (Phase 4.6, `3f9b08c`): walking demo shipped — scene
   + WalkCamera + world bundle + stationary-camera baseline test.
   Phase 4 closes.
-- 2026-05-17 (Phase 4.5, `b435640`): calibration sprint — first real
-  perf measurement on RTX 5090 Laptop (4-6 ms at 4-6 rings;
-  rasterization-bound). quality_tiers.json + X_FRAME_BUDGET.md
-  updated. F2 trigger engaged for 3060.
 
 ## How to update this doc
 

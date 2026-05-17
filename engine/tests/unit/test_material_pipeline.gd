@@ -89,3 +89,92 @@ func test_per_ring_materials_are_independent() -> void:
 	p.set_morph_factor(m1, 0.8)
 	assert_almost_eq(float(m0.get_shader_parameter("morph_factor")), 0.2, 1e-5)
 	assert_almost_eq(float(m1.get_shader_parameter("morph_factor")), 0.8, 1e-5)
+
+
+# --- Phase 5.5: Layer 1 (siblings + stochastic UV) ---
+
+func _make_sibling_array(layers: int, size: int = 4) -> Texture2DArray:
+	## Build a Texture2DArray with N solid-color layers for tests.
+	var imgs: Array = []
+	for i in range(layers):
+		var img: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+		var c: float = float(i) / max(1.0, float(layers - 1))
+		img.fill(Color(c, 1.0 - c, 0.5, 1.0))
+		imgs.append(img)
+	var arr: Texture2DArray = Texture2DArray.new()
+	arr.create_from_images(imgs)
+	return arr
+
+
+func test_bind_sibling_array_sets_texture_and_count() -> void:
+	# Layer 1 contract: shader receives one Texture2DArray with all
+	# sibling layers concatenated + per-slot (start, count) lookup so
+	# the fragment shader's 3-tap sample knows which layers to blend.
+	var p: MaterialPipeline = MaterialPipeline.new()
+	var mat: ShaderMaterial = p.make_ring_material(0)
+	var arr: Texture2DArray = _make_sibling_array(4)
+	p.bind_sibling_array(mat, arr, 0, 4)
+	assert_eq(mat.get_shader_parameter("sibling_array"), arr,
+		"sibling_array uniform must hold the bound Texture2DArray")
+	assert_eq(int(mat.get_shader_parameter("sibling_start")), 0)
+	assert_eq(int(mat.get_shader_parameter("sibling_count")), 4)
+	assert_eq((mat.get_shader_parameter("has_siblings") as bool), true,
+		"has_siblings flag must flip true when array is bound")
+
+
+func test_sibling_count_capped_at_8_per_spec_24() -> void:
+	# Spec 24 max_variants_per_slot = 8 (shader limit). Binder must
+	# enforce so callers don't silently overflow the shader's tap budget.
+	var p: MaterialPipeline = MaterialPipeline.new()
+	var mat: ShaderMaterial = p.make_ring_material(0)
+	var arr: Texture2DArray = _make_sibling_array(12)
+	p.bind_sibling_array(mat, arr, 0, 12)
+	assert_lte(int(mat.get_shader_parameter("sibling_count")), 8,
+		"binder must clamp sibling_count to shader cap of 8")
+
+
+func test_unbinding_siblings_clears_has_flag() -> void:
+	# Walking demo today has no real siblings yet; the path of "no
+	# array bound" must keep has_siblings = false so the shader's
+	# pre-Phase-5 macro-only path still works.
+	var p: MaterialPipeline = MaterialPipeline.new()
+	var mat: ShaderMaterial = p.make_ring_material(0)
+	# Default after make_ring_material: no array bound
+	assert_eq((mat.get_shader_parameter("has_siblings") as bool), false,
+		"has_siblings must default false on a fresh ring material")
+
+
+# --- Phase 5.5: Layer 2 (detail overlays) ---
+
+func _make_detail_array(layers: int, size: int = 4) -> Texture2DArray:
+	## Like _make_sibling_array but builds detail overlay textures.
+	var imgs: Array = []
+	for i in range(layers):
+		var img: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+		# Alpha gradient per layer so each detail has a different
+		# coverage profile (matches real overlay authoring shape)
+		img.fill(Color(0.5, 0.5, 0.5, float(i + 1) / float(layers)))
+		imgs.append(img)
+	var arr: Texture2DArray = Texture2DArray.new()
+	arr.create_from_images(imgs)
+	return arr
+
+
+func test_bind_detail_array_sets_uniforms() -> void:
+	# Layer 2 contract: one Texture2DArray of biome overlays + count
+	# of layers + flag flips has_detail true so the shader runs the
+	# detail blend; default-unbound preserves Phase 4.6 visual.
+	var p: MaterialPipeline = MaterialPipeline.new()
+	var mat: ShaderMaterial = p.make_ring_material(0)
+	var arr: Texture2DArray = _make_detail_array(5)
+	p.bind_detail_array(mat, arr, 5)
+	assert_eq(mat.get_shader_parameter("detail_array"), arr)
+	assert_eq(int(mat.get_shader_parameter("detail_count")), 5)
+	assert_eq((mat.get_shader_parameter("has_detail") as bool), true)
+
+
+func test_detail_unbound_flag_defaults_false() -> void:
+	var p: MaterialPipeline = MaterialPipeline.new()
+	var mat: ShaderMaterial = p.make_ring_material(0)
+	assert_eq((mat.get_shader_parameter("has_detail") as bool), false,
+		"has_detail must default false on a fresh ring material")

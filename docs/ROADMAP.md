@@ -12,11 +12,15 @@
 
 **Phase 5 (ground texture pipeline) is in progress.** Phase 4 (terrain
 MVP, 4.1-4.8) closed 2026-05-17 with the walking demo running
-standalone on Godot 4.6.2. Phase 5 entry has shipped spec amendments
-(23/24/25) + bundle scaffold + MaterialVariants loader; user is
-authoring textures offline in parallel. When textures land we run
-the W4 pipeline port + first-biome execution (5.1+5.4) + the spec 24
-Layer 1+2 shader work (5.5). Plan doc at
+standalone on Godot 4.6.2. Phase 5 entry shipped spec amendments
+(23/24/25) + bundle scaffold + MaterialVariants loader. **Phase 5.5
+shader infrastructure landed same day**: Layer 1 (siblings + 3-tap
+stochastic UV) + Layer 2 (detail overlays) primitives + binders +
+real-GPU verification — ready to consume textures when they land
+without further shader work. **Phase 5.1 (W4 module port) is held**
+because another chat is mid-edit on W4's `pipeline/textures/` +
+`pipeline/diversity_*.py`; porting now would snapshot a stale tree.
+User authoring textures offline in parallel. Plan doc at
 [plans/25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md);
 ~5-10 sessions estimated.
 
@@ -35,7 +39,8 @@ Layer 1+2 shader work (5.5). Plan doc at
 | Phase 4.6 — Walking demo | ✅ done (sub-phase of 4) | [phase_4_6_walking_demo.md](roadmap/phase_4_6_walking_demo.md) | 1 session |
 | Phase 4.7 — Autoload rename refactor | ✅ done | [phase_4_7_autoload_rename.md](roadmap/phase_4_7_autoload_rename.md) | 1 session |
 | Phase 4.8 — Local RD refactor | ✅ done | [phase_4_8_local_rd_refactor.md](roadmap/phase_4_8_local_rd_refactor.md) | 1 session |
-| **Phase 5 — Ground texture pipeline** | 🚧 in progress (scaffold + spec amendments shipped) | [25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md) | 5-10 |
+| **Phase 5 — Ground texture pipeline** | 🚧 in progress (entry + 5.5 shader infra shipped; 5.1 held) | [25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md) | 5-10 |
+| Phase 5.5 — Variety shader Layer 1+2 | ✅ done (sub-phase of 5) | [phase_5_5_variety_shader.md](roadmap/phase_5_5_variety_shader.md) | 1 session |
 | Phase 6 — Second biome | pending | (write when starting) | 3-5 |
 | Phase 7 — Decoration end-to-end | pending | (write when starting) | 5-10 |
 | Phase 8 — Foliage system | pending | (write when starting) | 25-100 (see SA-S1) |
