@@ -7,13 +7,21 @@
 ##
 ## Thread-safety: this class assumes it's invoked on the render
 ## thread (via GpuJob). The TerrainBackendAdapter is the public API
-## that wraps every call in a GpuJob. Test invocations from gut's
-## main thread work because Godot 4.5 tolerates direct RD calls
-## from the main thread in non-headless mode.
+## that wraps every call in a GpuJob.
 ##
-## Headless mode (RenderingDevice == null): generate_page returns a
-## result with version_stamp.error populated. No crash; lets unit
-## tests run.
+## RenderingDevice: uses a LOCAL RD via
+## RenderingServer.create_local_rendering_device() instead of the
+## main RD. Godot 4.6 forbids explicit submit/sync on the main RD
+## ("Only local devices can submit and sync"). The local RD path
+## works in both standalone scenes + gut tests (Phase 4.8 fix from
+## the 2026-05-17 visual-review session — the previous main-RD
+## approach worked only by accident when gut's test viewport happened
+## to provide a local RD; standalone runs were broken).
+##
+## Headless mode (no display server): create_local_rendering_device
+## may still return null in some headless configurations;
+## generate_page returns a result with version_stamp.error populated.
+## No crash; lets unit tests run.
 
 class_name GpuTerrainBackend extends RefCounted
 
@@ -25,8 +33,12 @@ const SHADER_PATH := "res://addons/world5/shaders/terrain_page_gen.glsl"
 
 # Cached shader source text (loaded once)
 var _shader_source: String = ""
-# Cached compiled shader RID per-RD (RD is process-singleton in practice)
+# Cached compiled shader RID for the backend's owned local RD.
 var _shader_rid: RID = RID()
+# Local RenderingDevice — created on first use; owned by the backend
+# (per Phase 4.8 fix). Lifetime: backend's lifetime; freed in
+# shutdown(). DO NOT share across backend instances since each owns
+# its RIDs.
 var _rd: RenderingDevice = null
 
 # Residency-byte publishing moved to PageStreamingJob (TR-INTEG-C2 fix):
@@ -63,8 +75,10 @@ func generate_page(request: TerrainPageRequest) -> TerrainPageResult:
 			res.version_stamp["error"] = "invalid_kernel: " + str(kerrs)
 			return res
 
-	# 2. Get RenderingDevice (skip gracefully if unavailable)
-	var rd: RenderingDevice = RenderingServer.get_rendering_device()
+	# 2. Get the backend's local RD (lazy-create on first call).
+	#    Phase 4.8: was RenderingServer.get_rendering_device() (main
+	#    RD); Godot 4.6 rejects explicit submit/sync on main RD.
+	var rd: RenderingDevice = _ensure_rd()
 	if rd == null:
 		res.version_stamp["error"] = "no_rendering_device"
 		return res
@@ -98,6 +112,18 @@ func generate_page(request: TerrainPageRequest) -> TerrainPageResult:
 
 
 # --- internal ---
+
+# Lazy-create a local RD on first use. Returns null in environments
+# where create_local_rendering_device fails (rare; e.g. some headless
+# setups). Cached for the backend's lifetime.
+func _ensure_rd() -> RenderingDevice:
+	if _rd != null:
+		return _rd
+	_rd = RenderingServer.create_local_rendering_device()
+	if _rd == null:
+		return null
+	return _rd
+
 
 func _generate_heights(rd: RenderingDevice,
 		request: TerrainPageRequest) -> PackedFloat32Array:
@@ -228,31 +254,31 @@ func _compile_shader(rd: RenderingDevice) -> bool:
 	var tracker: Node = W5Lookup.find("GpuResourceTracker")
 	if tracker != null:
 		tracker.register(_shader_rid, "terrain_backend", "shader", 0)
-	_rd = rd
+	# Note: _rd was set by _ensure_rd before _compile_shader was called.
 	return true
 
 
 ## Explicit shutdown — frees the cached shader RID + unregisters from
-## tracker. Owner (TerrainBackendAdapter) MUST call this before letting
-## the backend drop, OR before the RenderingDevice autoload tears down.
-## Per spec 08a rule 5: owners free in _exit_tree before the autoload
-## unloads (TB-REV-C2: NOTIFICATION_PREDELETE on RefCounted is too
-## late — tracker autoload may already be gone).
+## tracker + frees the local RD. Owner (TerrainBackendAdapter) MUST
+## call this before letting the backend drop. Per spec 08a rule 5:
+## owners free in _exit_tree before the tracker autoload unloads.
 func shutdown() -> void:
-	if _shader_rid.is_valid() and _rd != null:
+	if _rd == null:
+		return
+	if _shader_rid.is_valid():
 		_rd.free_rid(_shader_rid)
 		var tracker: Node = W5Lookup.find("GpuResourceTracker")
 		if tracker != null:
 			tracker.unregister(_shader_rid)
 		_shader_rid = RID()
-		_rd = null
+	# Local RD: free explicitly (Godot doesn't auto-cleanup since
+	# create_local_rendering_device returns an unowned ref).
+	_rd.free()
+	_rd = null
 
 
 func _notification(what: int) -> void:
 	# Defensive fallback: if owner forgot to call shutdown(), try here.
-	# May silently no-op if RD already gone (spec 08a rule 5 lesson).
-	# Use a guard against null self-state (which can happen if
-	# NOTIFICATION_PREDELETE fires after partial teardown).
 	if what == NOTIFICATION_PREDELETE:
-		if _shader_rid.is_valid() and _rd != null:
+		if _rd != null:
 			shutdown()

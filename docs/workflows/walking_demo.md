@@ -3,34 +3,23 @@
 > Phase 4.6 deliverable. Launches the W5 terrain renderer end-to-end
 > with a real world bundle. Walk around with WASD.
 
-## ⚠️ Known issue — terrain renders as flat plane standalone
+## What you'll see today (pre-Phase-5)
 
-Phase 4.7 fixed the autoload bootstrap (autoloads now register
-correctly via project.godot's `[autoload]` section + W5_ prefix).
-But standalone runs hit a second bug:
+Phase 4.7 + 4.8 fixed the standalone-run plumbing — autoloads
+register, page generation succeeds, heightmaps load, materials
+bind, all 5 verify layers green. **But the rendered terrain looks
+flat brown** because:
 
-```
-ERROR: Only local devices can submit and sync.
-   at: GpuTerrainBackend._generate_heights
-```
+1. There are no ground textures yet (Phase 5 ships sibling sets +
+   detail array + real macro_albedo PNGs per spec 24's variety
+   architecture)
+2. Without textures, the shader falls back to `fallback_color` (a
+   dark olive) modulated by world-noise — visually similar to the
+   procedural sky's ground band
 
-`GpuTerrainBackend` uses the MAIN RenderingDevice for compute work
-(`rd.submit() / rd.sync()`). Godot 4.6 only allows local devices
-to be explicitly submitted/synced — the main RD is owned by
-Godot's renderer. Result: page generation fails → heightmaps stay
-unbound → terrain shader samples a zero-default texture →
-`VERTEX.y = -50m` everywhere → terrain is a flat plane below the
-camera's view → you see only the procedural sky's ground band.
-
-The gut_real_gpu test layer works because gut's test viewport uses
-a local RD; standalone scenes don't. Fix: use
-`RenderingServer.create_local_rendering_device()` in the backend
-(Phase 4.8 — see `docs/roadmap/phase_4_8_local_rd_refactor.md`).
-
-**Until Phase 4.8 ships**: open the scene in Godot editor + press
-F5. The in-editor render path uses a separate RD context where
-the compute work succeeds. Standalone command-line runs still
-show only sky + a flat plane.
+Once Phase 5 lands real textures, "is terrain visible?" becomes
+obvious. For now, the demo runs without errors but isn't visually
+distinct from the sky.
 
 ## Launch
 
