@@ -47,7 +47,7 @@ shipped 28 forest candidates) OR Phase 5.7 (erosion sprint).
 | Phase 5.1 — W4 module port | ✅ done (11 tx_*.py + 3 drivers ported; 15/15 import; 6/6 CLIs --help) | [phase_5_1_module_port_2026_05_17.md](build-notes/phase_5_1_module_port_2026_05_17.md) | 1 session |
 | Phase 5.4.b — Detail overlays + sibling_blend_freq tune + per-biome YAMLs | ⚠️ partial (b.1 + b.2 shipped — C3 + S7 closed; b.3 detail overlays deferred) | [phase_5_4_b_detail_overlays_and_tune.md](roadmap/phase_5_4_b_detail_overlays_and_tune.md) + [build-notes/phase_5_4_b_partial_2026_05_17.md](build-notes/phase_5_4_b_partial_2026_05_17.md) | 3-4 |
 | Phase 5.6 — Calibration on real hardware | pending | — | 1-2 |
-| Phase 5.7 — Erosion sprint (ErosionKernel + KernelComposer) | pending (was unscheduled; now placed before Phase 10) | spec 19 | multi-sprint |
+| Phase 5.7 — Erosion sprint (ErosionKernel + KernelComposer) | pending (plan written; sprint-family) | [phase_5_7_erosion_sprint.md](roadmap/phase_5_7_erosion_sprint.md) | multi-sprint (~10-15 sessions across 5 sub-sprints) |
 | Phase 6 — Second biome | pending (4.9 unblocked; awaits 5.4.b for detail completeness) | (write when starting) | 3-5 |
 | Phase 7 — Decoration end-to-end | pending | (write when starting) | 5-10 |
 | Phase 8 — Foliage system | pending | (write when starting) | 25-100 (see SA-S1) |
