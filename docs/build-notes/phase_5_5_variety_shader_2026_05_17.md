@@ -1,9 +1,12 @@
-# Phase 5.5 — Variety shader Layer 1 + Layer 2
+# Phase 5.5 — Variety shader Layer 1 + Layer 2 + runtime glue + promote tool
 
-> Date: 2026-05-17
-> Closes: Phase 5.5 (spec 24 Layers 1 + 2 shader infrastructure)
-> Opens: nothing new — clears the runway for Phase 5.4 texture binding
->        once the in-flight texture authoring completes
+> Date: 2026-05-17 (extended same-day after initial commit `14e68f4`)
+> Closes: Phase 5.5 (spec 24 Layers 1 + 2 shader infrastructure +
+>         manifest loaders + Texture2DArray builders + promote.py +
+>         world-contract preflight)
+> Opens: nothing new — Phase 5.4 (first biome) can run the moment
+>        textures land; promote.py drives the file gymnastics + the
+>        preflight gates broken state before render
 
 Phase 5.5 was authored ahead of Phase 5.4 (first-biome texture run)
 because the shader work is non-conflicting with the in-flight W4
@@ -118,6 +121,87 @@ code, zero W4 imports.
 Phase 5.1 stays held pending the other chat's W4 work landing on
 origin/main.
 
+## Phase 5.5 extension (same-day continuation, commit pending)
+
+After the initial 5.5 ship landed clean, the natural next slice was
+"what else can we build for Phase 5 without textures or W4 sources?"
+Answer: the runtime glue between the manifest schemas + the shader
+binders, plus the promote tool that drives the file moves Phase 5.4
+will need, plus the preflight that catches broken state before render.
+
+### New deliverables
+
+**Manifest loaders + Texture2DArray builders** (engine/scripts/terrain/material/):
+- `DetailArray.gd` — loads detail_array.json (Layer 2 manifest);
+  validates blend weights in [0,1] + referenced tiles are declared
+- `SiblingTextureArray.gd` — given a `MaterialVariants` manifest +
+  materials/ root, loads the per-variant PBR images + assembles them
+  into a single Texture2DArray + emits the per-slot (start, count)
+  window table the shader binder needs. Size-mismatched variants
+  skipped with a warn (not abort)
+- `DetailTextureArray.gd` — same but for detail overlays; preserves
+  tile-name→layer-index lookup so missing tiles don't shift downstream
+  indices for the caller
+
+**Authoring tool** (pipeline/world5/textures/):
+- `promote.py` + CLI: copies candidate textures from
+  `candidates/<biome>/<slot>/<tag>/` into a world bundle's
+  `materials/biome_<biome>/{<slot>, <slot>_variants/v<i>_<tag>}/` +
+  atomically updates `material_variants.json`. Net-new W5 tool
+  (W4 was manual file moves; plan called this *"the single
+  highest-leverage Phase 5 tooling deliverable"*). Validates ALL
+  inputs before the first file copy + enforces spec-24's 8-cap
+  per slot + wipes stale `v<i>_*` dirs on re-promote so leftover
+  sibling state can't linger
+
+**Preflight check** (pipeline/world5/world_contract/):
+- `materials_manifests.py`: validates material_variants.json +
+  detail_array.json against on-disk files. Distinguishes:
+  - "not promoted yet" (source dir empty or absent) → **warning** —
+    the legitimate pre-Phase-5.4 walking demo state
+  - "broken promote" (source dir has some PBR maps but not albedo
+    specifically, or detail/ dir exists but a declared tile is
+    missing) → **error** — half-written state, refuses to ship
+- Registered in the world_contract checks registry
+
+### Schema clarification (spec 24)
+
+The plan's `material_variants.json` example used the short-form
+`"source": "ground"` (biome-relative; renderer prepends
+`biome_<biome>/`). My initial promote.py + SiblingTextureArray
+mistakenly used the long form `"source": "biome_alpine/ground"`.
+Corrected to short form across all 4 consumers (loader, promote.py,
+preflight check, tests). This is the canonical form going forward.
+
+### Test counts (cumulative for Phase 5.5)
+
+| Layer | Count | Delta |
+|---|---|---|
+| pytest | 139 | +24 (promote + materials_manifests) |
+| gut headless | 250+ | +19 (DetailArray + SiblingTexArr + DetailTexArr) |
+| gut_real_gpu | unchanged | (no new GPU tests in extension) |
+| preflight | 0 errors / 0 warnings | (repo mode; warnings appear with --world) |
+
+Full verify: 5/5 green stable in 46.8s.
+
+### What's load-bearing post-extension
+
+- `MaterialVariants.source` resolution is biome-relative; any new
+  consumer must prepend `biome_<biome>/` to the source field
+- `materials_manifests` warning/error split is the contract for
+  "is this world ready to render?" — Phase 5.4 promotion run is
+  expected to flip ground/mid/rock from warning → silent on the
+  walking demo
+- `promote.py` is the *only* tool that should mutate
+  material_variants.json. Hand-edits invite the half-written state
+  the preflight catches.
+- `SiblingTextureArray.build()` + `DetailTextureArray.build()` are
+  the runtime entry points TerrainWorld will call when wiring Phase
+  5.5 textures into the per-ring shader materials (Phase 5.4
+  integration step). They return empty-but-non-null arrays when
+  no textures are bound so the unbound path stays the default.
+
 ## Doc cap status
 
-~115 lines (well under 350 build-note cap).
+~225 lines (under 350 build-note cap; extension content justified by
+the new code surface area).

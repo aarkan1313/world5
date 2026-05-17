@@ -67,8 +67,32 @@ W4 pipeline cleanup landing on origin/main. W4 is currently 312
 commits ahead locally with dirty working tree in
 `pipeline/textures/` + `pipeline/diversity_*.py`.
 
+## Phase 5.5 extension (same-day, post initial commit)
+
+After the shader landed, built out the runtime glue + the promote
+tool while still avoiding W4-touching work. Now in:
+
+- `DetailArray.gd` + `DetailTextureArray.gd` (Layer 2 manifest +
+  Texture2DArray loader)
+- `SiblingTextureArray.gd` (Layer 1 Texture2DArray loader; resolves
+  biome-relative `source` per the canonical spec 24 schema)
+- `pipeline/world5/textures/promote.py` (5.2; "single highest-leverage
+  tooling deliverable" per plan 25 — net-new W5 tool, never existed
+  in W4)
+- `world_contract/materials_manifests.py` (5.3 preflight: warn on
+  not-promoted-yet, error on broken-promote)
+- 43+ new tests total across pytest + gut
+
+Schema clarification: `source` is biome-relative (short form),
+matching the plan's schema example. Corrected across all consumers.
+
 ## Next entry points
 
-- Phase 5.4 (first biome) — when textures land + Phase 5.1 unblocks
-- Phase 5.2 (`promote.py`) — net-new tool, no W4 dependency; could
-  ship next session against the locked sibling-manifest schema
+- Phase 5.4 (first biome) — when textures land; promote.py drives
+  the file moves, preflight gates the result
+- Phase 5.1 (W4 `tx_*.py` port) still held — parallel chat working
+  in W4 pipeline. Re-evaluate next session once their changes land
+- TerrainWorld integration of SiblingTextureArray + DetailTextureArray
+  loaders (currently the binders are wired but nothing calls
+  build() at world-load time — pure runtime-glue step, no shader
+  changes needed)

@@ -70,19 +70,29 @@ manifest schema ready for textures
 - `MaterialVariants.gd` loader/validator + 8 unit tests
 
 **Tier 1 variety shader (Phase 5.5)** — Layer 1 + Layer 2 fully wired
+end-to-end (shader + manifest loaders + Texture2DArray builders +
+authoring tool + preflight)
 - `variety_common.gdshaderinc`: `w5_variety_sample_3tap()` (Heitz-
   Neyret simplified 3-tap stochastic UV blend) + `w5_detail_blend()`
   (2-tap overlay blend) primitives
 - `terrain_clipmap.gdshader`: optional Layer 1 + Layer 2 paths gated
   by `has_siblings` + `has_detail` flags; unbound flag defaults
   preserve the pre-5.5 macro-only render so the demo works today
-- `MaterialPipeline.bind_sibling_array(mat, array, start, count)` +
-  `bind_detail_array(mat, array, count)` — pipe in Phase 5.4
-  promote.py output without further shader work
-- 18 unit tests (test_material_pipeline + test_variety_common_shader)
-  + 4 real-GPU integration tests asserting shader compiles, draw
-  doesn't crash, and Layer 1 output measurably differs from
-  macro-only fallback
+- `MaterialPipeline.bind_sibling_array()` + `bind_detail_array()` —
+  binders for the shader; ready to flip on the moment textures land
+- `MaterialVariants.gd` + `DetailArray.gd` — manifest loaders +
+  validators (spec 24 schemas)
+- `SiblingTextureArray.gd` + `DetailTextureArray.gd` — runtime
+  loaders that assemble a `Texture2DArray` from a manifest +
+  on-disk PBR images; biome-relative `source` resolution
+- `pipeline/world5/textures/promote.py` — net-new CLI tool
+  (W4 had this as manual file moves); copies candidate textures
+  into a world bundle + atomically updates `material_variants.json`
+- `world_contract/materials_manifests.py` — preflight check that
+  validates manifests against on-disk files; distinguishes "not
+  promoted yet" (warning) from "broken promote state" (error)
+- 45+ tests covering all of the above (24 new Python + 19 new GDScript
+  + 4 real-GPU integration)
 
 **Tools / build infrastructure**
 - `python -m world5.verify` 4-mode CLI (fastest/fast/default/full);
@@ -126,12 +136,18 @@ sweep runs against the most-evolved spec set).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
+- 2026-05-17 (Phase 5.5 runtime glue + promote tool):
+  DetailArray + SiblingTextureArray + DetailTextureArray loaders
+  (manifest → Texture2DArray). promote.py CLI (net-new W5 tool;
+  workflow-critical). World-contract `materials_manifests` preflight
+  with warning/error split (not-promoted-yet vs broken-promote).
+  +24 Python tests, +19 GDScript tests; 139 pytest + gut all green.
 - 2026-05-17 (Phase 5.5 shader work): Spec 24 Layer 1
   (siblings + 3-tap stochastic UV) + Layer 2 (detail overlays)
   shader primitives + MaterialPipeline binders shipped. 22 new tests
-  green (18 unit + 4 real-GPU). Walking demo unchanged visually
-  because no sibling/detail textures bound yet; once Phase 5.4
-  promotion runs, binders flip on without further shader work.
+  green. Walking demo unchanged visually because no sibling/detail
+  textures bound yet; once Phase 5.4 promotion runs, binders flip on
+  without further shader work.
 - 2026-05-17 (Phase 5 entry, `baa71ac`): spec amendments
   (23/24/25 absorbed the texture-pipeline workflow decisions);
   walking_demo bundle scaffold (material_variants.json + per-slot

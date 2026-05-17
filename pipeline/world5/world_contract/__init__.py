@@ -106,11 +106,14 @@ def validate(
 
 
 # Register the built-in checks at import time
-from world5.world_contract import godot_root_check, doc_health, logging_lint  # noqa: E402
+from world5.world_contract import (  # noqa: E402
+    godot_root_check, doc_health, logging_lint, materials_manifests,
+)
 
 register_check("allowlist", godot_root_check.run)
 register_check("doc_health", doc_health.run)
 register_check("logging_lint", logging_lint.run)
+register_check("materials_manifests", materials_manifests.run)
 
 
 def main(argv: list[str] | None = None) -> int:
