@@ -10,21 +10,18 @@
 
 ## One-paragraph current focus
 
-**Phase 5.1 — W4 texture-pipeline module port — IS NEXT and active.**
-Phase 4.9 closed end-to-end (audit C1 + C2 + S8 fixed). Walking demo
-now has per-fragment slot selection + multi-page heightmap binding;
-3 critical renderer bugs resolved. The remaining audit items
-(macro_albedo S2, detail overlays S3, sibling tune C3, real-hardware
-calibration S1, QA gates S6, biome YAMLs S7) all converge on one
-unlock: **port the W4 `tx_*.py` modules into `pipeline/world5/textures/`**
-so the W5 pipeline can run end-to-end without depending on
-`D:/tmp/w5_candidates/` (the texture team's external chain). Source
-files at `D:/assets/world 4/pipeline/textures/tx_*.py` are stable
-enough (dirty working tree has only 5 trivial line changes).
-Per the plan: file-copy + path-edit, ~1-2 sessions; ports 11 modules
-+ builds 4 driver CLIs (diversity, contact_sheet, review,
-material_variants). Plan doc at
-[plans/25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md) §5.1.
+**Phase 5.1 closed.** 11 tx_*.py modules + 3 driver CLIs ported
+from W4 to `pipeline/world5/textures/` with relative-package
+imports + W5-layout path rebases. 15/15 modules import; 6/6 CLIs
+respond to `--help`. Verify still 5/5 green stable. The W5 texture
+pipeline is now first-class — fresh devs can run `python -m
+world5.textures.diversity` + `tx_macro_terrain` + `promote` without
+depending on the texture team's external chain at `D:/tmp/`.
+**Next**: either Phase 4.9.c (macro_albedo for walking_demo via the
+now-ported `tx_macro_terrain.py`; ~1 session; fixes the olive
+horizon band) OR Phase 5.4.b (sibling_blend_freq tune + detail
+overlays; 3-4 sessions; fixes tile-to-tile repeat at eye height).
+Both directly attack the user-flagged visual issues. User picks.
 
 ## Phase status
 
@@ -45,7 +42,7 @@ material_variants). Plan doc at
 | **Phase 5 — Ground texture pipeline** | 🚧 5.5 + 5.4 shipped (4.9 closed core gaps); 5.1 held; 5.6 pending | [25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md) | 5-10 |
 | Phase 5.5 — Variety shader Layer 1+2 | ✅ done (4.9.b finished slot selection); sibling_blend_freq tune pending (C3 → 5.6) | [phase_5_5_variety_shader.md](roadmap/phase_5_5_variety_shader.md) | 1 session |
 | Phase 5.4 — First biome (alpine) | ⚠️ shipped; macro_albedo (S2) + detail/ (S3) blocked on 5.1; slot selection now active | [build-notes/phase_5_4_first_biome_2026_05_17.md](build-notes/phase_5_4_first_biome_2026_05_17.md) | 1 session (incl brown-band fix) |
-| **Phase 5.1 — W4 module port** | 🚧 active (unblocks 4.9.c + 5.4.b + 5.6 + audit S5/S6/S7) | [phase_5_1_w4_module_port.md](roadmap/phase_5_1_w4_module_port.md) + [plan](plans/25_TEXTURE_PIPELINE_PLAN.md) | 1-2 |
+| Phase 5.1 — W4 module port | ✅ done (11 tx_*.py + 3 drivers ported; 15/15 import; 6/6 CLIs --help) | [phase_5_1_module_port_2026_05_17.md](build-notes/phase_5_1_module_port_2026_05_17.md) | 1 session |
 | Phase 5.4.b — Detail overlays + sibling_blend_freq tune | pending (depends on 5.1) | — | 3-4 |
 | Phase 5.6 — Calibration on real hardware | pending | — | 1-2 |
 | Phase 5.7 — Erosion sprint (ErosionKernel + KernelComposer) | pending (was unscheduled; now placed before Phase 10) | spec 19 | multi-sprint |
