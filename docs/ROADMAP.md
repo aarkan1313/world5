@@ -10,18 +10,19 @@
 
 ## One-paragraph current focus
 
-**Phase 5 alpine first-biome rendering live.** Phase 4 (terrain MVP,
-4.1-4.8) closed 2026-05-17. Phase 5 entry shipped spec amendments
-(23/24/25) + bundle scaffold + MaterialVariants loader. Phase 5.5
-shader infrastructure (Layer 1+2 primitives + binders + Texture2DArray
-loaders + TerrainWorld wire-up + promote.py + preflight) all shipped
-same day. **Phase 5.4 closed**: texture team delivered 91 candidates
-across alpine + forest biomes; alpine promoted into walking demo;
-three compounding bugs (AABB / normals / winding) fixed; walking
-demo now renders displaced firn-snow terrain. Phase 5.1 (W4 module
-port) still held — parallel chat. Phase 5.6 calibration + Phase 6
-forest are unblocked but not yet started. Plan doc at
-[plans/25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md).
+**Sub-phase 4.9 opening: re-audit found Phase 4 closed prematurely.**
+Walking demo Phase 5.4 alpine render exposed three critical bugs that
+violate specs 21+23+24: outer rings sample one heightmap page each
+→ chunk seams; per-fragment slot selection never built → mid/rock
+textures dead weight; sibling 3-tap noise too low → tile repeat at
+eye height. A 4-subagent re-audit (charter +
+[findings doc](AUDIT_FINDINGS_PHASE_0_5_2026_05_17.md)) found these
++ 9 significant + 9 minor gaps across phases 0-5. Phase 0+2 are
+clean; phases 4 / 4.5 / 4.6 / 5.4 / 5.5 all claim ✅ done while
+shipping unfinished core systems. Build notes were honest about
+deferred work; ROADMAP+STATE glossed over the cuts. **Sub-phase 4.9
+(renderer correctness) is being opened to close the critical gaps
+before Phase 5.6 calibration or Phase 6 forest**. Plan doc pending.
 
 ## Phase status
 
@@ -33,15 +34,20 @@ forest are unblocked but not yet started. Plan doc at
 | Phase 2 — Foundation build (Tier 0) | ✅ done | [phase_2_foundations.md](roadmap/phase_2_foundations.md) | 1 (commits `bcb1d62` → `cb46ffc`) |
 | Phase 2 audit + fix | ✅ done | SELF_AUDIT_PHASE_2_FINDINGS | 1 (commits `17fce3d` → `d6d6c94`) |
 | Phase 3 — Renderer research sprint | ✅ done | [phase_3_renderer_research.md](roadmap/phase_3_renderer_research.md) + spec 15a | 1 (came in under 3-5 estimate) |
-| Phase 4 — Terrain MVP (one biome) | ✅ done | [phase_4_terrain_mvp.md](roadmap/phase_4_terrain_mvp.md) | 6 sessions (4.1-4.6) |
-| Phase 4.5 — Calibration sprint | ✅ done (sub-phase of 4) | [phase_4_5_calibration.md](roadmap/phase_4_5_calibration.md) | 1 session |
-| Phase 4.6 — Walking demo | ✅ done (sub-phase of 4) | [phase_4_6_walking_demo.md](roadmap/phase_4_6_walking_demo.md) | 1 session |
+| Phase 4 — Terrain MVP (one biome) | ⚠️ shipped with critical spec gaps — see 4.9 | [phase_4_terrain_mvp.md](roadmap/phase_4_terrain_mvp.md) | 6 sessions (4.1-4.6) |
+| Phase 4.5 — Calibration sprint | ⚠️ shipped; 3060 perf claim inverted (S1) | [phase_4_5_calibration.md](roadmap/phase_4_5_calibration.md) | 1 session |
+| Phase 4.6 — Walking demo | ⚠️ shipped; multi-page binding + slot selection deferred | [phase_4_6_walking_demo.md](roadmap/phase_4_6_walking_demo.md) | 1 session |
 | Phase 4.7 — Autoload rename refactor | ✅ done | [phase_4_7_autoload_rename.md](roadmap/phase_4_7_autoload_rename.md) | 1 session |
 | Phase 4.8 — Local RD refactor | ✅ done | [phase_4_8_local_rd_refactor.md](roadmap/phase_4_8_local_rd_refactor.md) | 1 session |
-| **Phase 5 — Ground texture pipeline** | 🚧 5.5 + 5.4 shipped; 5.1 held; 5.6 calibration pending | [25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md) | 5-10 |
-| Phase 5.5 — Variety shader Layer 1+2 | ✅ done (sub-phase of 5) | [phase_5_5_variety_shader.md](roadmap/phase_5_5_variety_shader.md) | 1 session |
-| Phase 5.4 — First biome (alpine) | ✅ done (sub-phase of 5) | [build-notes/phase_5_4_first_biome_2026_05_17.md](build-notes/phase_5_4_first_biome_2026_05_17.md) | 1 session (incl brown-band fix) |
-| Phase 6 — Second biome | pending | (write when starting) | 3-5 |
+| **Phase 4.9 — Renderer correctness (audit-driven)** | 🚧 opening | [phase_4_9_renderer_correctness.md](roadmap/phase_4_9_renderer_correctness.md) + [AUDIT_FINDINGS](AUDIT_FINDINGS_PHASE_0_5_2026_05_17.md) | 3-5 |
+| **Phase 5 — Ground texture pipeline** | 🚧 5.5 + 5.4 shipped (with gaps); 5.1 held; 5.6 pending | [25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md) | 5-10 |
+| Phase 5.5 — Variety shader Layer 1+2 | ⚠️ shipped; slot selection deferred (C2); sibling_blend_freq tune pending (C3) | [phase_5_5_variety_shader.md](roadmap/phase_5_5_variety_shader.md) | 1 session |
+| Phase 5.4 — First biome (alpine) | ⚠️ shipped; macro_albedo (S2) + detail/ (S3) + slot selection (C2) missing | [build-notes/phase_5_4_first_biome_2026_05_17.md](build-notes/phase_5_4_first_biome_2026_05_17.md) | 1 session (incl brown-band fix) |
+| Phase 5.1 — W4 module port (held) | ⏸ held; unblocks 5.4.b + 5.6 | [25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md) | 1-2 |
+| Phase 5.4.b — Detail overlays + sibling tune | pending (depends on 5.1 + 4.9) | — | 3-4 |
+| Phase 5.6 — Calibration on real hardware | pending | — | 1-2 |
+| Phase 5.7 — Erosion sprint (ErosionKernel + KernelComposer) | pending (was unscheduled; now placed before Phase 10) | spec 19 | multi-sprint |
+| Phase 6 — Second biome | pending (depends on 4.9 + 5.4.b) | (write when starting) | 3-5 |
 | Phase 7 — Decoration end-to-end | pending | (write when starting) | 5-10 |
 | Phase 8 — Foliage system | pending | (write when starting) | 25-100 (see SA-S1) |
 | Phase 9 — Atmosphere + lighting | pending | (write when starting) | 3-5 |
@@ -135,13 +141,29 @@ Phase 15 (bake recipes) + Phase 16 (forkability) — can parallelize
 
 ### Cross-phase kernel deliveries
 
-`ErosionKernel` (spec 19 sprint 2) is unscheduled in the phase table
-above but **must ship before Phase 10 water** (Phase 10 rivers consume
-its `drainage_map` + `flow_direction` + `flow_accumulation` outputs
-per spec 35). Natural fit is alongside Phase 5 (texture pipeline) since
-both are pre-bake; otherwise insert a Phase 5.5 erosion sprint. Lock
-the placement when Phase 5 plan-doc is written.
+`ErosionKernel` (spec 19 sprint 2) + `KernelComposer` + `DemFeatureKernel`
+are scheduled as **Phase 5.7 erosion sprint** per the 2026-05-17 audit
+findings. ErosionKernel must ship before Phase 10 water (Phase 10
+rivers consume its `drainage_map` + `flow_direction` +
+`flow_accumulation` outputs per spec 35). DemFeatureKernel can ship
+later but is in the same sprint family.
+
+## Docs-drift discipline (audit fix 2026-05-17)
+
+The 2026-05-17 re-audit found that build notes (transactional) were
+honest about deferred work while ROADMAP + STATE (aggregate) silently
+glossed over the cuts. The systemic fix:
+
+**Every phase close MUST update ROADMAP.md + STATE.md to reflect
+what the BUILD NOTE says, not what the spec promised.** A phase is
+not done until the roadmap row honestly describes what shipped vs
+what was cut. Use ⚠️ (shipped with caveats) instead of ✅ (clean
+done) when scope was deferred — and link the build note that
+explains the deferral.
+
+The spec→roadmap→state→build-note loop must close at every phase
+boundary or the docs drift again.
 
 ## Doc cap status
 
-- This file: ~120 lines (well under 200 cap)
+- This file: ~165 lines (under 200 cap)

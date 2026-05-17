@@ -8,15 +8,20 @@
 
 ## One-sentence summary
 
-**Phase 5.4 alpine first-biome rendering live.** Walking demo at
-`demo/scenes/walking_demo.tscn` renders displaced firn-snow alpine
-terrain end-to-end on Godot 4.6.2 stable mono: BFL+local textures
-promoted into the world bundle, Layer 1 sibling-blend active, no
-visible repeat at standing-eye height. Brown-band bug class (AABB +
-normals + winding) fixed with 2 new mesh-level regression guards.
-Textures are author-supplied + gitignored (297 MB / ~12 MB per
-file); manifest + scaffold remain tracked. 5/5 verify layers green
-stable (139 pytest + gut + gut_real_gpu + preflight + capture).
+**Sub-phase 4.9 opening per audit findings.** Walking demo Phase 5.4
+ships displaced firn-snow alpine terrain on Godot 4.6.2 but with
+three critical spec-violation bugs surfaced by visual review:
+(a) outer clipmap rings sample one heightmap page each → visible
+chunk seams; (b) per-fragment slot selection never built → mid/rock
+textures are dead weight; (c) sibling 3-tap noise too low → visible
+tile repeat at eye height. 4-subagent re-audit
+([findings](AUDIT_FINDINGS_PHASE_0_5_2026_05_17.md)) found these
++ 9 significant + 9 minor gaps across phases 0-5. Phase 0+2 clean;
+phases 4 / 4.5 / 4.6 / 5.4 / 5.5 all marked ✅ done while shipping
+unfinished core systems. **Sub-phase 4.9 (renderer correctness)
+opens next** to fix the critical gaps before Phase 5.6 or Phase 6.
+5/5 verify layers green stable at 139 pytest + gut + gut_real_gpu
++ preflight + capture, but verify-green ≠ spec-compliant.
 
 ## Per-tier state
 
@@ -45,19 +50,35 @@ stable (139 pytest + gut + gut_real_gpu + preflight + capture).
 - W5Lookup helper for SUT lookups (test-override path + autoload
   fallback)
 
-**Tier 1 terrain renderer (Phase 4 closed)** — clipmap-based, real-GPU
+**Tier 1 terrain renderer (Phase 4 shipped with critical gaps)** — clipmap-based, real-GPU
 - Backend: GpuTerrainBackend uses local RD (Phase 4.8) + Python
   parity (1e-4 m tolerance, 7 cases including negative coords)
-- NoiseStackKernel (Phase 4.3 — config wrapper; full kernel system
-  with ABC/composer deferred until ErosionKernel lands)
+- NoiseStackKernel (Phase 4.3) — config wrapper only. **Spec 19 v1
+  also requires ErosionKernel + DemFeatureKernel + KernelComposer;
+  scheduled for Phase 5.7 erosion sprint** (was unscheduled pre-audit)
 - Renderer: ClipmapGeometry/Ring/Dispatch + TerrainPageCache +
   ResidencyManager + PageStreamingJob + MaterialPipeline +
   MacroAlbedo + SurfaceSlotMask + RingDebugOverlay + PageDebugProbes
-- TerrainWorld composer (430 lines, under 800-line cap)
+- TerrainWorld composer (514 lines, under 800-line cap)
 - Walking demo at `demo/scenes/walking_demo.tscn` runs standalone
-  (post Phase 4.7+4.8 fixes) on Godot 4.6.2 stable mono
-- Calibration measured: 4-6 ms CPU on RTX 5090 Laptop at 4-6 rings;
-  F2 engaged conservatively for 3060 (per-tier ring_count 3/4/5/6/7)
+  (post Phase 4.7+4.8 fixes) on Godot 4.6.2 stable mono; renders
+  displaced firn-snow alpine post Phase 5.4
+- Calibration measured: 4-6 ms CPU on RTX 5090 Laptop at 4-6 rings.
+  **Spec 21 perf bar NOT met on 3060** — extrapolation gives 13-17
+  ms at 4 rings (7-12× over 2.0 ms budget). F2 fallback decision
+  TBD pending real hardware. ROADMAP currently claims "F2 engaged
+  conservatively"; correct claim is "viability unproven"
+- **Critical gaps (sub-phase 4.9 opening to fix)**:
+  - C1: outer rings bind one heightmap page each → visible chunk
+    seams (rings 2-4 are 510-2040m wide vs 256m page); fix is
+    multi-page binding per ring
+  - C2: per-fragment slot selection never implemented — spec 23
+    §"Surface slot model" + spec 22 declare per-slot selectors
+    (slope/elevation) but no shader code does selection. Mid/rock
+    textures are dead weight; only first slot binds
+  - C3: sibling 3-tap noise frequency 0.10 produces visible repeat
+    at standing eye height; spec 24 Quality bar "no obvious repeat"
+    not met
 
 **Tier 1 materials scaffold (Phase 5 entry)** — directory layout +
 manifest schema ready for textures
@@ -101,12 +122,21 @@ authoring tool + preflight)
 - Godot 4.6.2 stable mono at `C:/Godot/v4.6.2/...` (pinned)
 - Per-machine `demo/addons/world5/` junction → `../../engine/`
 
-**Texture pipeline (Phase 5 — not started; plan exists)**
+**Texture pipeline (Phase 5 — partially shipped; gaps documented)**
 - Plan at `docs/plans/25_TEXTURE_PIPELINE_PLAN.md` (~370 lines,
   W4-validated 2026-05-17 staging test)
-- User has textures being authored in parallel (offline)
-- Phase 5.1 (module port from W4) + 5.4 (first biome) + 5.5 (shader
-  Layers 1+2) pending
+- Phase 5.4 (alpine first-biome): textures promoted (BFL 2048² +
+  local 1024²). ground + 3 siblings × 3 slots = 48 files. But only
+  the ground slot renders today (C2 blocks mid/rock); no
+  macro_albedo (S2); no detail overlays (S3)
+- Phase 5.5 (shader Layer 1+2): primitives + binders + Texture2DArray
+  loaders + TerrainWorld wire-up shipped. Single-active-slot only
+  (C2). sibling_blend_freq=0.10 produces visible repeat (C3)
+- Phase 5.1 (W4 module port): HELD. Only promote.py exists in
+  pipeline/world5/textures/. The texture team's external chain at
+  d:/tmp/ is stable; unblock 5.1 next
+- Phase 5.4.b (detail overlays + sibling tune) + 5.6 (real calibration)
+  + 5.7 (erosion sprint) pending after 4.9 + 5.1
 
 ## What does NOT exist yet
 

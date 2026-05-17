@@ -166,6 +166,16 @@ streamed 3D world. Everything else is internal.
   teardown); max single module file ≤ 1500 lines (relaxed from 1000
   for same reason). The structural rule stands: composer is
   delegation only, helpers live in modules.
+- **Page-edge continuity (audit C1 2026-05-17)**: at any LOD ring,
+  the heightmap sampled at the visible mesh boundary must match the
+  heightmap that an adjacent ring (or adjacent page within the same
+  ring) would sample at the same world XZ. **A ring wider than
+  `page_extent_m` MUST bind multiple pages and sample the right
+  page per fragment via world XZ**; binding one page per ring causes
+  visible chunk seams at outer rings. Enforced via the regression
+  guard `test_terrain_capture_baseline_real_device::
+  test_ring_heightmap_continuity_at_page_boundary` (to be added in
+  Phase 4.9.a).
 
 ## Discoverability
 
@@ -222,3 +232,8 @@ streamed 3D world. Everything else is internal.
   ClipmapGeometry inline doc; calibration sprint 4.5 may swap to
   L-shape donut if overdraw measurable). Spec 24 Layer 1 (siblings)
   deferred to Phase 5 per spec 24 amendment same date.
+- 2026-05-17 (Phase 4.9 audit C1): added Quality-bar item
+  "Page-edge continuity" — explicit requirement that rings wider
+  than `page_extent_m` bind multiple pages and sample per fragment.
+  Phase 4 shipped with single-page binding causing visible chunk
+  seams at outer rings. Phase 4.9.a fixes.

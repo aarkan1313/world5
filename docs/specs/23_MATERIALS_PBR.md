@@ -125,9 +125,33 @@ Each biome declares its slot list in the catalog (spec 22):
 
 Variable slot count per biome, 1-8 slots max (shader hard cap).
 Selector rules use slope + elevation + noise to determine weight at
-each fragment. Surface slot world mask (W4 pattern) bakes these into
-a shared `Texture2DArrayRD` sampled at world XZ — same approach W4
-proved works.
+each fragment.
+
+**Audit C2 hardening (2026-05-17)**: per-fragment slot selection is a
+**Phase 4 deliverable, not Phase 6** — the renderer cannot claim
+spec 23 compliance until the fragment shader actually selects + blends
+across active slots per fragment. Pre-audit, Phase 4 shipped with
+only the first slot bound; mid + rock textures were dead weight.
+
+Acceptance criteria:
+1. Every (biome, slot) declared in `surface_slots.json` has its
+   sibling Texture2DArray window (`start, count`) bound on every
+   ring material.
+2. Fragment shader computes a per-fragment slot weight from
+   `slope_deg` (derived from heightmap derivatives at the fragment)
+   + `elevation` (vertex Y at fragment) + optional noise (per-biome
+   `selector` rule).
+3. Final albedo = weighted sum across active slots; weights normalize
+   to 1.0 per fragment.
+4. Single-slot bundles (legitimate authoring choice for simple
+   biomes) collapse to the existing single-slot binding path; the
+   selector machinery is opt-in via slot count > 1.
+
+Surface slot world mask (W4 pattern) bakes these into a shared
+`Texture2DArrayRD` sampled at world XZ — same approach W4 proved
+works. Per-fragment derivation (Phase 4.9.b path) avoids the
+authored-mask bake step entirely; either approach satisfies the
+acceptance criteria above.
 
 ## Multi-biome blending
 
@@ -235,3 +259,9 @@ class MaterialBindings:
   (`<slot>_variants/v*_*.png`) + per-biome detail overlays
   (`detail/<tag>_*.png` + `detail_array.json`). Both consumed by
   MaterialPipeline at world-load via spec 24 Layer 1+2 contracts.
+- 2026-05-17 (Phase 4.9 audit C2): hardened per-fragment slot
+  selection as a Phase 4 deliverable (was previously ambiguous —
+  the words "Surface slot world mask" left the implementation
+  pattern open enough that Phase 4 shipped binding only the first
+  slot). Added explicit 4-item acceptance criteria. Phase 4.9.b
+  fixes.

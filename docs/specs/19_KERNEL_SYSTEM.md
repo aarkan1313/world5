@@ -185,3 +185,9 @@ Three kernels in v1, in build order:
   drainage_map + flow_direction + flow_accumulation as auxiliary
   outputs (consumed by spec 35 water + spec 41 roads). Closes
   silent contract gap.
+- 2026-05-17: audit C4. Phase 4.3 shipped NoiseStackKernel ONLY;
+  v1 also requires ErosionKernel + DemFeatureKernel + KernelComposer
+  which are unscheduled in the original ROADMAP. Scheduled as
+  **Phase 5.7 erosion sprint** (ErosionKernel + KernelComposer);
+  DemFeatureKernel deferred to dedicated later sprint (no immediate
+  Phase 6+ consumer). ErosionKernel MUST ship before Phase 10 water.
