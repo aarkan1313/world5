@@ -10,19 +10,20 @@
 
 ## One-paragraph current focus
 
-**Phase 4.9.c closed — Phase 4.9 is fully done.** Walking demo now
-ships `macro_albedo.json` at world root + alpine purpose-preset PNG
-under `materials/biome_alpine/ground/`. The renderer's "bundle
-missing macro_albedo.json" warning is gone; far-field reads as a
-broad alpine snowfield instead of olive-grey fallback. Also: ported
-`tx_macro_terrain.py` updated to read W5 `material_kit` (in addition
-to W4 `kit_dir`), preflight gained `macro_albedo_*` checks (+4
-tests; pytest now 143 passed), `captures/` dirs gitignored. Verify
-5/5 layers green stable in 61.0s. **Next**: Phase 5.4.b directly
-attacks the user-flagged tile-to-tile + chunk-to-chunk visual
-issues: tune `sibling_blend_freq` per tier (audit C3) + author 5-7
-alpine detail overlays (audit S3) + port W4 per-biome YAMLs to
-`pipeline/biomes/` (audit S7). 3-4 sessions.
+**Phase 5.4.b partial closed: sibling tune (C3) + per-biome YAMLs
+(S7).** `terrain_sibling_blend_freq` now a per-tier knob in
+`quality_tiers.json` (low 0.20 → cinematic 0.40); high tier ships
+0.30 (was 0.10) — 3× finer noise wavelength = visible tile repeat
+broken at standing eye height. New `MaterialPipeline.bind_sibling_blend_freq`
++ TerrainWorld wire-up + 2 TDD tests. `pipeline/biomes/alpine.yaml`
++ `forest.yaml` ported from W4 (51 + 21 candidates) — fresh devs
+can run `python -m world5.textures.diversity --biome alpine` end-
+to-end inside the W5 repo. Verify 5/5 green stable in 60.0s.
+**Remaining 5.4.b.3** (detail overlay authoring; audit S3): 2-3
+sessions of ComfyUI batches; deferred (heavy + doesn't block).
+**Next** (user picks): Phase 5.4.b.3 (visible Layer 2 detail
+variation) OR Phase 6 (forest second biome — texture team already
+shipped 28 forest candidates) OR Phase 5.7 (erosion sprint).
 
 ## Phase status
 
@@ -44,7 +45,7 @@ alpine detail overlays (audit S3) + port W4 per-biome YAMLs to
 | Phase 5.5 — Variety shader Layer 1+2 | ✅ done (4.9.b finished slot selection); sibling_blend_freq tune pending (C3 → 5.4.b) | [phase_5_5_variety_shader.md](roadmap/phase_5_5_variety_shader.md) | 1 session |
 | Phase 5.4 — First biome (alpine) | ✅ done (4.9.c closed S2 macro_albedo; slot selection active via 4.9.b) | [build-notes/phase_5_4_first_biome_2026_05_17.md](build-notes/phase_5_4_first_biome_2026_05_17.md) | 1 session (incl brown-band fix) |
 | Phase 5.1 — W4 module port | ✅ done (11 tx_*.py + 3 drivers ported; 15/15 import; 6/6 CLIs --help) | [phase_5_1_module_port_2026_05_17.md](build-notes/phase_5_1_module_port_2026_05_17.md) | 1 session |
-| Phase 5.4.b — Detail overlays + sibling_blend_freq tune | pending (depends on 5.1) | — | 3-4 |
+| Phase 5.4.b — Detail overlays + sibling_blend_freq tune + per-biome YAMLs | ⚠️ partial (b.1 + b.2 shipped — C3 + S7 closed; b.3 detail overlays deferred) | [phase_5_4_b_detail_overlays_and_tune.md](roadmap/phase_5_4_b_detail_overlays_and_tune.md) + [build-notes/phase_5_4_b_partial_2026_05_17.md](build-notes/phase_5_4_b_partial_2026_05_17.md) | 3-4 |
 | Phase 5.6 — Calibration on real hardware | pending | — | 1-2 |
 | Phase 5.7 — Erosion sprint (ErosionKernel + KernelComposer) | pending (was unscheduled; now placed before Phase 10) | spec 19 | multi-sprint |
 | Phase 6 — Second biome | pending (4.9 unblocked; awaits 5.4.b for detail completeness) | (write when starting) | 3-5 |

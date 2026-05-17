@@ -242,4 +242,25 @@ func test_bind_all_slots_empty_windows_leaves_has_siblings_false() -> void:
 	p.bind_all_slots(mat, null, [], [], [])
 	assert_eq((mat.get_shader_parameter("has_siblings") as bool), false,
 		"empty/null inputs must leave has_siblings false (macro-only path)")
+
+
+func test_bind_sibling_blend_freq_sets_uniform() -> void:
+	# Phase 5.4.b audit C3 fix. sibling_blend_freq drives the
+	# stochastic-UV noise wavelength; per-tier so high tiers can
+	# afford finer-frequency variation (less visible tile repeat).
+	var p: MaterialPipeline = MaterialPipeline.new()
+	var mat: ShaderMaterial = p.make_ring_material(0)
+	p.bind_sibling_blend_freq(mat, 0.35)
+	assert_almost_eq(float(mat.get_shader_parameter("sibling_blend_freq")),
+		0.35, 0.001, "binder must set the uniform exactly as passed")
+
+
+func test_bind_sibling_blend_freq_clamps_negative() -> void:
+	# Negative or zero frequency is nonsensical (would freeze noise
+	# at a single sibling). Binder must clamp to a small positive.
+	var p: MaterialPipeline = MaterialPipeline.new()
+	var mat: ShaderMaterial = p.make_ring_material(0)
+	p.bind_sibling_blend_freq(mat, -0.5)
+	assert_gt(float(mat.get_shader_parameter("sibling_blend_freq")), 0.0,
+		"negative freq must be clamped to a small positive")
 	assert_eq(int(mat.get_shader_parameter("slot_count")), 0)

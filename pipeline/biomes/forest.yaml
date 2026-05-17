@@ -1,0 +1,66 @@
+# Temperate forest biome — MID SLOT ONLY.
+#
+# Forest ground (scrub_dense) and rock (rocky_slope) are real-ortho
+# (W3's _soft_composite pipeline applied to USGS LiDAR orthophotos).
+# We keep those untouched — real Earth surface beats AI for
+# authenticity at close range.
+#
+# This file generates AI siblings for the mid slot only. Existing
+# mid is `tundra_lichen` (single ComfyUI generation from the old
+# aaa_texture pipeline). This batch produces 21 hybrid-pipeline
+# alternatives that future stochastic-texturing work can pick from.
+#
+# Palette: warm browns + greens + grey rock + lichen accents. The
+# temperate-forest mid slot is the "lichen-rock + moss + leaf-litter"
+# space — organic, varied, naturally high-frequency content.
+
+biome: forest
+prompt_prefix: "tileable seamless texture, "
+prompt_suffix: ", overhead perspective"
+
+slots:
+  mid:
+    category: Mixed
+    candidates:
+      - tag: lichen_on_rock_brown
+        body: "pale lichen patches on warm-brown weathered rock, muted earth palette with green-grey accents, forest understory"
+      - tag: moss_on_bark_chunks
+        body: "fragments of mossy bark and woody debris over warm forest floor, varied brown and green organic surface"
+      - tag: leaf_litter_dense
+        body: "dense temperate forest leaf litter, mixed brown deciduous leaves with green accents, varied autumnal palette"
+      - tag: roots_with_moss
+        body: "exposed tree roots covered in moss snaking across warm-brown soil, organic curving patterns, dense vegetation"
+      - tag: fern_understory
+        body: "small fern fronds emerging through forest floor litter, fresh greens over warm brown duff, varied textures"
+      - tag: mossy_log_fragments
+        body: "fallen mossy log fragments embedded in forest floor, dark-brown rotting wood with bright green moss coverage"
+      - tag: lichen_carpet_grey
+        body: "dense grey-green lichen carpet over forest rock substrate, muted cool palette with warm undertones, weathered"
+      - tag: pine_needles
+        body: "dense pine needle litter with scattered cones, warm orange-brown palette with embedded organic debris"
+      - tag: oak_leaf_brown
+        body: "oak leaf litter on forest floor, mixed shades of warm brown with curled leaf textures, varied organic"
+      - tag: woody_debris_moss
+        body: "woody debris with patches of bright green moss between fragments, contrast of dark wood and vibrant moss"
+      - tag: forest_floor_seedlings
+        body: "forest floor with small green seedlings emerging through leaf litter, varied organic with vertical accents"
+      - tag: mossy_rock_outcrop_base
+        body: "base of mossy forest rock outcrop with surrounding leaf litter and moss spread, warm-cool transition"
+      - tag: lichen_orange_rust
+        body: "vivid orange-rust lichen patches on grey-brown forest rock, high color contrast with weathered base"
+      - tag: forest_grass_tufts
+        body: "scattered grass tufts emerging through forest floor leaf litter, fresh green over warm brown debris"
+      - tag: mushrooms_in_litter
+        body: "small mushrooms scattered in temperate forest leaf litter, brown caps over warm-brown forest floor"
+      - tag: bark_pieces_lichen
+        body: "loose bark pieces with attached lichen coverage on forest floor, varied browns with grey-green accents"
+      - tag: forest_root_tangle
+        body: "tangled exposed forest tree roots with moss in crevices, warm-cool organic varied surface"
+      - tag: damp_forest_moss
+        body: "damp temperate forest moss bed with varied green tones and small twig fragments, soft organic carpet"
+      - tag: leaf_litter_with_acorns
+        body: "forest leaf litter with scattered acorns and small seed pods, warm-brown palette with embedded debris"
+      - tag: forest_rock_with_lichen
+        body: "weathered forest rock fragments with patches of pale lichen, warm-cool palette balance, mid-elevation"
+      - tag: deciduous_decay
+        body: "deeply decomposed deciduous leaves over rich dark forest soil, fine organic detail with dark base"

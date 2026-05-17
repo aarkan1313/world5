@@ -1,0 +1,127 @@
+# Alpine biome — prompt set for diversity batch.
+# Used by pipeline/diversity_run.py.
+#
+# Each entry under `slots:<slot>:` is one candidate. The full prompt
+# sent to aaa_texture is: prompt_prefix + body + prompt_suffix.
+# Categories control texture_qa thresholds (see CATEGORY_THRESHOLDS in
+# texture_qa.py).
+#
+# Slot distribution: 16 ground / 21 mid / 14 rock (51 total).
+biome: alpine
+prompt_prefix: "tileable seamless texture, "
+prompt_suffix: ", overhead perspective"
+
+slots:
+  ground:
+    category: Snow
+    candidates:
+      - tag: fresh_powder
+        body: "fresh powder snow, soft undisturbed surface, bright cold white with subtle blue shadow tones"
+      - tag: windpack
+        body: "wind-packed snow with sastrugi ridges, sharp wind-carved striations, bright white"
+      - tag: firn_dense
+        body: "dense firn snow, compacted granular surface, off-white with grey crystalline texture"
+      - tag: hoar_crystals
+        body: "surface hoar frost crystals on packed snow, sparkly cold-white with faint blue undertones"
+      - tag: old_drift
+        body: "old wind-drifted snow with subtle dune shape, bright cold white, smooth and slightly rippled"
+      - tag: icy_crust
+        body: "icy crust over snow, hard glassy surface with reflective crystalline patches, cold blue-white"
+      - tag: shallow_powder_dirt
+        body: "shallow powder snow over dark earth, mottled white-and-brown patches, melting interface"
+      - tag: boot_compacted
+        body: "boot-compacted snow path texture, ridged compressed snow with grain detail, cold white"
+      - tag: wind_swept_thin
+        body: "thin wind-swept snow over rocky substrate, scattered ice patches and grey stone, cold palette"
+      - tag: granular_glacier
+        body: "glacial granular firn, near-ice density, faint blue-white with crystal facets"
+      - tag: fresh_blanket
+        body: "fresh untouched snow blanket, soft uniform white, subtle drifts, pristine"
+      - tag: melting_patchy
+        body: "melting patchy snow with exposed dark wet earth and frosted edges, half-cold-half-warm mix"
+      - tag: deep_crystals
+        body: "deep snow with prominent ice crystal sparkle, cold white with violet shadow tones"
+      - tag: windrim_sastrugi
+        body: "sharp sastrugi wind-ridges in hard snow, alternating bright crest and shadow trough"
+      - tag: compact_blue
+        body: "compact glacial blue-white snow, dense smooth surface with subtle blue ice undertones"
+      - tag: dusty_old_snow
+        body: "old snow with thin dust film, faintly tan-grey white, weathered alpine surface"
+
+  mid:
+    category: Snow
+    candidates:
+      - tag: lichen_thin_snow
+        body: "thin snow patches over lichen-spotted dark rock, cool grey-blue palette, mixed alpine surface"
+      - tag: moss_grey_rock
+        body: "patchy moss on grey alpine rock with snow remnants, muted cool palette, weathered"
+      - tag: exposed_bedrock_ice
+        body: "exposed dark bedrock fringed with ice and snow crusts, sharp grey-and-white contrast"
+      - tag: lichen_yellow_rock
+        body: "yellow-green lichen splotches on weathered grey rock with snow dust, alpine high-altitude"
+      - tag: frosted_lichen
+        body: "frosted lichen on cold-grey alpine rock, frost-rim accents, mostly grey with faint green-blue"
+      - tag: mixed_scree_snow
+        body: "loose scree fragments mixed with crusty snow, mid-grey rock and bright snow patches"
+      - tag: mossy_wet_slate
+        body: "wet dark slate with dense moss carpet, cool damp palette of dark green and slate grey"
+      - tag: alpine_grass_snow
+        body: "tufts of brown alpine grass poking through thin snow, muted earth-brown and cold white"
+      - tag: lichen_orange_blue
+        body: "vivid orange lichen and grey-blue lichen mosaic on alpine rock with snow trim"
+      - tag: shattered_rock_snow
+        body: "shattered rock fragments with snow filling cracks, sharp dark edges against bright snow"
+      - tag: moss_meltwater
+        body: "moss-covered rock with meltwater pooling, wet dark-green moss and grey rock, subtle highlights"
+      - tag: lichen_dense_carpet
+        body: "dense pale lichen carpet on dark alpine rock, faded mint and grey palette, weathered"
+      - tag: permafrost_polygon
+        body: "polygonal permafrost terrain with frost cracks and small stones, muted ochre and grey"
+      - tag: scree_with_lichen
+        body: "scree slope with sparse lichen growth, mid-grey rock fragments and pale green spots"
+      - tag: snowmelt_mineral
+        body: "snowmelt rivulets over mineral-stained alpine rock, rusty streaks and grey base"
+      - tag: boulder_snow_caps
+        body: "scattered alpine boulders with snow caps and lichen flanks, dark rock and bright snow"
+      - tag: tundra_dwarf
+        body: "alpine tundra with dwarf shrubs and crusty snow patches, brown vegetation and cold white"
+      - tag: frost_heaved
+        body: "frost-heaved soil with stone polygons, cracked alpine ground, muted browns and greys"
+      - tag: wet_lichen_quartz
+        body: "wet lichen on quartz-veined rock, dark surface with bright white veins and green patches"
+      - tag: windscoured_ice
+        body: "wind-scoured ice over rock fragments, glassy clear ice with embedded grey stones"
+      - tag: spring_thaw
+        body: "spring thaw transition: patchy snow, wet rock, emerging moss, mixed cold-and-warm tones"
+
+  rock:
+    category: Rock
+    candidates:
+      - tag: dark_slate
+        body: "weathered dark slate rock with sharp cleavage planes, cool grey palette, alpine bedrock"
+      - tag: shattered_granite
+        body: "shattered alpine granite with angular fractures, mid-grey with subtle pink-feldspar grain"
+      - tag: quartz_veined
+        body: "dark alpine rock with bright white quartz veins running through, cool grey with high contrast"
+      - tag: weathered_basalt
+        body: "weathered dark basalt outcrop with frost-shattered surface, cool grey-blue palette"
+      - tag: lichen_streaked
+        body: "alpine rock heavily streaked with yellow and grey lichen, cool grey base with dappled accents"
+      - tag: frost_shattered
+        body: "frost-shattered alpine bedrock, sharp angular fragments, mid-grey palette, weathered"
+      - tag: mossy_dark_slate
+        body: "dark slate with patchy moss in cracks, near-black rock with bright green crack-fill"
+      - tag: glacial_polished
+        body: "glacially polished alpine rock, smooth grey surface with faint striations, cool palette"
+      - tag: talus_face
+        body: "tightly packed talus rock face, angular fragments of dark grey alpine stone"
+      - tag: iron_stained
+        body: "iron-stained alpine rock with rusty streaks over grey bedrock, weathered alpine surface"
+      - tag: schist_layered
+        body: "layered schist rock with shimmering mica flecks, mid-grey foliation with subtle sparkle"
+      - tag: cracked_bedrock
+        body: "cracked alpine bedrock with deep frost-cracks and lichen in fissures, cool grey palette"
+      - tag: snow_dusted_rock
+        body: "alpine rock lightly dusted with snow in surface depressions, dark grey with bright accents"
+      - tag: verglas_glaze
+        body: "verglas ice glaze over dark alpine rock, glassy reflective surface with subtle grey base"

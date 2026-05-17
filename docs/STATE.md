@@ -8,13 +8,14 @@
 
 ## One-sentence summary
 
-**Phase 4.9.c closed — Phase 4.9 fully done.** Walking demo ships
-`macro_albedo.json` + alpine purpose-preset PNG; renderer's
-"bundle missing macro_albedo.json" warning is gone, far-field reads
-as a broad snowfield instead of olive fallback. Preflight gained
-`macro_albedo_*` checks. Pytest 143 passed; verify 5/5 layers green
-stable in 61.0s. Next: Phase 5.4.b (sibling tune + detail overlays
-+ per-biome YAMLs) — directly attacks tile-to-tile + chunk-to-chunk.
+**Phase 5.4.b partial closed: sibling tune (C3) + per-biome YAMLs
+(S7).** `terrain_sibling_blend_freq` per-tier knob added (high
+ships 0.30 — 3× finer noise than the old 0.10 default → tile
+repeat at standing eye height broken up). `pipeline/biomes/
+alpine.yaml` + `forest.yaml` ported from W4. Verify 5/5 green
+stable in 60.0s. Remaining 5.4.b.3 (detail overlay ComfyUI batches;
+audit S3) deferred. Next: 5.4.b.3 OR Phase 6 forest OR Phase 5.7
+erosion sprint.
 
 ## Per-tier state
 
@@ -163,6 +164,19 @@ sweep runs against the most-evolved spec set).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
+- 2026-05-17 (Phase 5.4.b partial closed — C3 + S7):
+  `terrain_sibling_blend_freq` added per-tier in quality_tiers.json
+  (low 0.20 → cinematic 0.40; high 0.30 was 0.10).
+  `MaterialPipeline.bind_sibling_blend_freq` binder (+2 TDD tests)
+  + TerrainWorld wire-up in `_bind_slots_with_catalog` reads
+  `QualityTiers.get_current()`. Visible tile-to-tile repeat at
+  standing eye height broken up — 3× finer noise wavelength means
+  sibling switch every ~3 m instead of every ~10 m.
+  `pipeline/biomes/alpine.yaml` (51 candidates) + `forest.yaml`
+  (21 mid-only) ported from W4 — fresh devs unblocked end-to-end.
+  Verify 5/5 green stable in 60.0s. Build note
+  phase_5_4_b_partial_2026_05_17.md. Sub-task 5.4.b.3 (detail
+  overlay ComfyUI batches) deferred to separate session.
 - 2026-05-17 (Phase 4.9.c closed — Phase 4.9 fully done):
   walking_demo now ships `macro_albedo.json` at world root +
   `materials/biome_alpine/ground/macro_albedo.png` via

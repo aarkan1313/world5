@@ -604,11 +604,20 @@ func _bind_slots_with_catalog(sta: SiblingTextureArray,
 		"rings": _rings.size(),
 	})
 
+	# Phase 5.4.b audit C3 fix: bind per-tier sibling_blend_freq from
+	# quality_tiers.json. Higher tiers afford finer-frequency noise =
+	# less visible tile repeat at standing eye height.
+	var tier: Dictionary = QualityTiers.get_tier(quality_tier_override) \
+		if quality_tier_override != "" else QualityTiers.get_current()
+	var blend_freq: float = float(tier.get("terrain_sibling_blend_freq", 0.30))
+
 	for ring in _rings:
 		var rmat: Material = ring.mesh_instance.material_override
 		if rmat is ShaderMaterial:
 			_material_pipeline.bind_all_slots(rmat as ShaderMaterial,
 				sta.texture, windows, elev_bands, slope_bands)
+			_material_pipeline.bind_sibling_blend_freq(
+				rmat as ShaderMaterial, blend_freq)
 
 
 func _all_rings_have_pages() -> bool:

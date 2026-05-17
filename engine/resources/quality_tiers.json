@@ -1,6 +1,6 @@
 {
   "_schema_version": 1,
-  "_note": "Phase 4.5 calibration (2026-05-17): terrain_rings adjusted per RTX 5090 Laptop measurement + 3060 F2 conservative extrapolation (see docs/build-notes/phase_4_5_calibration_2026_05_17.md). Other values still placeholder pending per-system Phase 5+ measurement. Per-system specs cite via QualityTiers.get_current().",
+  "_note": "Phase 4.5 calibration (2026-05-17): terrain_rings adjusted per RTX 5090 Laptop measurement + 3060 F2 conservative extrapolation (see docs/build-notes/phase_4_5_calibration_2026_05_17.md). Phase 5.4.b (2026-05-17): added terrain_sibling_blend_freq per-tier knob (audit C3 fix; spec 24 §Layer 1 stochastic-UV noise wavelength; higher tiers afford finer-frequency variation). Other values still placeholder pending per-system Phase 5+ measurement. Per-system specs cite via QualityTiers.get_current().",
   "tiers": {
     "low": {
       "tier_name": "low",
@@ -25,6 +25,7 @@
       "terrain_collision_rings": 1,
       "terrain_pbr_tile_size_m": 8.0,
       "terrain_macro_tile_size_m": 256.0,
+      "terrain_sibling_blend_freq": 0.20,
 
       "visibility_ship_distance_m": 2000,
       "visibility_haze_start_fraction": 0.5,
@@ -68,6 +69,7 @@
       "terrain_collision_rings": 2,
       "terrain_pbr_tile_size_m": 8.0,
       "terrain_macro_tile_size_m": 256.0,
+      "terrain_sibling_blend_freq": 0.25,
 
       "visibility_ship_distance_m": 4000,
       "visibility_haze_start_fraction": 0.6,
@@ -111,6 +113,7 @@
       "terrain_collision_rings": 2,
       "terrain_pbr_tile_size_m": 8.0,
       "terrain_macro_tile_size_m": 256.0,
+      "terrain_sibling_blend_freq": 0.30,
 
       "visibility_ship_distance_m": 8000,
       "visibility_haze_start_fraction": 0.65,
@@ -154,6 +157,7 @@
       "terrain_collision_rings": 3,
       "terrain_pbr_tile_size_m": 8.0,
       "terrain_macro_tile_size_m": 256.0,
+      "terrain_sibling_blend_freq": 0.35,
 
       "visibility_ship_distance_m": 12000,
       "visibility_haze_start_fraction": 0.7,
@@ -197,6 +201,7 @@
       "terrain_collision_rings": 4,
       "terrain_pbr_tile_size_m": 8.0,
       "terrain_macro_tile_size_m": 256.0,
+      "terrain_sibling_blend_freq": 0.40,
 
       "visibility_ship_distance_m": 20000,
       "visibility_haze_start_fraction": 0.75,

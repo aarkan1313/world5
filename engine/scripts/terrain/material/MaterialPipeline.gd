@@ -148,6 +148,24 @@ func bind_sibling_array(mat: ShaderMaterial, array: Texture2DArray,
 	mat.set_shader_parameter("has_siblings", true)
 
 
+## Bind the sibling_blend_freq uniform — controls the stochastic-UV
+## noise wavelength for spec 24 Layer 1's 3-tap blend.
+##
+## Lower values = longer wavelength = same sibling reads further
+## across the surface = visible tile repeat at eye height.
+## Higher values = finer noise = siblings switch more often (audit C3).
+##
+## Per-tier in quality_tiers.json (terrain_sibling_blend_freq).
+## Plumbed by TerrainWorld via QualityTiers.get_current().
+##
+## Negative or zero values are clamped to 0.01 (a small positive so
+## the shader still produces some variation rather than freezing on
+## a single sibling).
+func bind_sibling_blend_freq(mat: ShaderMaterial, freq: float) -> void:
+	var clamped: float = max(0.01, freq)
+	mat.set_shader_parameter("sibling_blend_freq", clamped)
+
+
 ## Bind a per-biome detail Texture2DArray with N overlay layers.
 ## Flips has_detail on so the fragment shader's Layer 2 blend runs.
 ## detail_count of 0 leaves the material unmodified (caller should

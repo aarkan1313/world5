@@ -63,17 +63,20 @@ rebuilding from scratch.
   + `elevation`; bind ALL slot windows (start/count per slot, not
   just first); fragment computes weighted blend across active slots
 
-### C3 — Sibling 3-tap noise frequency too low → visible texture repeat at standing eye height
+### C3 — Sibling 3-tap noise frequency too low → visible texture repeat at standing eye height [✅ closed 2026-05-17 Phase 5.4.b.2]
 
 - **Spec violation**: spec 24 Quality bar "no obvious texture repeats"
-- **Root cause**: `engine/shaders/terrain_clipmap.gdshader:39`
+- **Root cause**: `engine/shaders/terrain_clipmap.gdshader`
   `sibling_blend_freq = 0.10` → 10 m wavelength on 4 m tiles. At
-  standing eye height looking 5-30 m ahead, same 4 m tile reads
-  2-3 times in a row before the noise switches sibling
-- **Effort**: 1 session (per-tier tune; possibly extend Heitz-Neyret
-  to full-derivative implementation if simple tune insufficient)
-- **Fix sketch**: bump `sibling_blend_freq` to 0.25-0.40 (per-tier
-  knob in `quality_tiers.json`); calibrate visually in demo
+  standing eye height looking 5-30 m ahead, same 4 m tile read
+  2-3 times in a row before the noise switched sibling
+- **Fixed by**: Phase 5.4.b.2 added `terrain_sibling_blend_freq`
+  per tier in `quality_tiers.json` (low 0.20, medium 0.25, high
+  0.30, ultra 0.35, cinematic 0.40). New `MaterialPipeline.bind_sibling_blend_freq`
+  binder + `TerrainWorld._bind_slots_with_catalog` wire-up via
+  `QualityTiers.get_current()`. +2 TDD tests. High tier now ships
+  3× finer noise wavelength = sibling switch every ~3 m vs old
+  ~10 m. Build note `phase_5_4_b_partial_2026_05_17.md`
 
 ### C4 — Spec 19 kernel system half-built; ErosionKernel + DemFeatureKernel + KernelComposer missing
 
@@ -160,12 +163,16 @@ rebuilding from scratch.
 - **Effort**: 1-2 sessions (carry-as-is W4 port + wire into
   diversity.py batch driver)
 
-### S7 — Per-biome YAML layout missing (`pipeline/biomes/`)
+### S7 — Per-biome YAML layout missing (`pipeline/biomes/`) [✅ closed 2026-05-17 Phase 5.4.b.1]
 
 - **Spec violation**: spec 25 §"Per-biome YAML layout" + plan 25 step 1
-- **Effort**: 1 session per biome (port W4 alpine + alpine_siblings
-  + extract PURPOSE_PRESETS to per-biome YAML)
-- **Fix**: implement alongside 5.1 module port
+- **Fixed by**: Phase 5.4.b.1 ported `pipeline/biomes/alpine.yaml`
+  (51 candidates across ground/mid/rock) + `pipeline/biomes/forest.yaml`
+  (21 mid-only — forest ground/rock are real-ortho not AI). Both
+  parse cleanly + match `diversity.py` schema. PURPOSE_PRESETS
+  extraction from `tx_macro_terrain.py` to YAML deferred — they're
+  only consumed by tx_macro_terrain itself, not by diversity.py, so
+  the in-code dict + YAML for diversity coexist without conflict
 
 ### S8 — Spec 23 biome_catalog.json missing from walking_demo
 
