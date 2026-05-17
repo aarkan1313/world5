@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://hwpetd3ofhxs"
+path="res://.godot/imported/terrain_page_gen.glsl-933dff1ded52d9a92bdb573484396c74.res"
+
+[deps]
+
+source_file="res://addons/world5/shaders/terrain_page_gen.glsl"
+dest_files=["res://.godot/imported/terrain_page_gen.glsl-933dff1ded52d9a92bdb573484396c74.res"]
+
+[params]
+
