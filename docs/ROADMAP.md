@@ -10,19 +10,18 @@
 
 ## One-paragraph current focus
 
-**Phase 4.10 closed — 3 W4 PITFALLS lifted into W5.** User screenshots
-showed three artifacts after 5.4.b shipped: (1) elevation cliff at
-ring boundary, (2) visible 20m blocky brightness patches, (3) "rings
-visible while moving". Per user redirect, looked up `D:/assets/world 4/docs/reference/PITFALLS.md`
-and matched each to a documented W4 failure mode + fix: PITFALLS #11
-(morph zones — fixed via per-vertex morph + ring_center + ring_half_extent
-uniforms), PITFALLS #14 (full-ring regen on snap — fixed via new
-`RingHeightArray.rebase` that retains in-window pages), PITFALLS #31-class
-(redundant `0.85 + 0.30 * nv` brightness modulator → killed; macro
-albedo + siblings provide all needed variation now). Verify 5/5
-green in 58.3s. **Next** (user picks): Phase 5.4.b.3 (detail
-overlays via ComfyUI batches) OR Phase 6 (forest second biome) OR
-Phase 5.7 (erosion sprint, plan written).
+**Phase 4.11 closed — heightmap clamp + slot-band tuning.** User
+re-tested post-4.10 and flagged two remaining artifacts: (a) sharp
+V-shape depression with straight-edge boundaries → was heightmap
+encoded value clamped to [0,1], producing flat plateau where fBm
+exceeded ±50m. Fix: removed the clamp (float32 texture handles
+arbitrary range). (b) Irregular white patches on near-flat snow →
+was mid slot's slope window starting at 2° (10-8° band), bleeding
+into ground territory on any tiny slope. Fix: tightened catalog
+bands so mid only activates at 21°+ slope. Verify 5/5 green in
+59.9s. **Tracked debt**: pop-in / streaming polish (W4 PITFALLS
+#15) deferred per user. **Next**: Phase 5.4.b.3 detail overlays OR
+Phase 6 forest OR Phase 5.7 erosion sprint.
 
 ## Phase status
 
@@ -41,6 +40,7 @@ Phase 5.7 (erosion sprint, plan written).
 | Phase 4.8 — Local RD refactor | ✅ done | [phase_4_8_local_rd_refactor.md](roadmap/phase_4_8_local_rd_refactor.md) | 1 session |
 | **Phase 4.9 — Renderer correctness (audit-driven)** | ✅ done (4.9.a + b + c + d all shipped) | [phase_4_9_close_2026_05_17.md](build-notes/phase_4_9_close_2026_05_17.md) + [phase_4_9_c_macro_albedo_2026_05_17.md](build-notes/phase_4_9_c_macro_albedo_2026_05_17.md) | 1 session |
 | **Phase 4.10 — Clipmap correctness (W4 PITFALLS lifted)** | ✅ done (4.10.a + b + c — cliff + ring chase + brightness modulator) | [phase_4_10_close_2026_05_17.md](build-notes/phase_4_10_close_2026_05_17.md) + [phase_4_10_clipmap_correctness.md](roadmap/phase_4_10_clipmap_correctness.md) | 1 session |
+| **Phase 4.11 — Heightmap clamp + slot bleed fixes** | ✅ done (.a removed [0,1] clamp → V-shape edges; .b tightened walking_demo slot bands → no white patch bleed) | [phase_4_11_2026_05_17.md](build-notes/phase_4_11_2026_05_17.md) | 1 session |
 | **Phase 5 — Ground texture pipeline** | 🚧 5.5 + 5.4 + 5.1 shipped (4.9 closed core gaps); 5.4.b + 5.6 + 5.7 pending | [25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md) | 5-10 |
 | Phase 5.5 — Variety shader Layer 1+2 | ✅ done (4.9.b finished slot selection); sibling_blend_freq tune pending (C3 → 5.4.b) | [phase_5_5_variety_shader.md](roadmap/phase_5_5_variety_shader.md) | 1 session |
 | Phase 5.4 — First biome (alpine) | ✅ done (4.9.c closed S2 macro_albedo; slot selection active via 4.9.b) | [build-notes/phase_5_4_first_biome_2026_05_17.md](build-notes/phase_5_4_first_biome_2026_05_17.md) | 1 session (incl brown-band fix) |

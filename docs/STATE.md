@@ -8,14 +8,14 @@
 
 ## One-sentence summary
 
-**Phase 4.10 closed — 3 W4 PITFALLS lifted into W5** (per user
-redirect to W4 reference docs). 4.10.a per-vertex morph (PITFALLS
-#11) eliminates ring-boundary cliff; 4.10.b `RingHeightArray.rebase`
-(PITFALLS #14) eliminates "rings visible while moving"; 4.10.c kills
-the redundant `0.85 + 0.30 * nv` brightness modulator (PITFALLS #31
-class) that read as 20m blocky patches. Verify 5/5 green in 58.3s.
-Next: 5.4.b.3 detail overlays OR Phase 6 forest OR Phase 5.7
-erosion sprint.
+**Phase 4.11 closed — heightmap clamp + slot-band tuning** (post-4.10
+re-test). 4.11.a removed the encoded-height [0,1] clamp that produced
+flat plateaus + straight-edge level-set boundaries where fBm exceeded
+±amplitude. 4.11.b tightened walking_demo catalog slot bands so mid
+only activates at 21°+ slope instead of 2°+ (was producing white
+patches on near-flat snow). Verify 5/5 green in 59.9s. Tracked debt:
+pop-in / streaming polish (W4 PITFALLS #15) deferred per user.
+Next: 5.4.b.3 detail overlays OR Phase 6 forest OR Phase 5.7 erosion.
 
 ## Per-tier state
 
@@ -164,6 +164,18 @@ sweep runs against the most-evolved spec set).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
+- 2026-05-17 (Phase 4.11 closed — heightmap clamp + slot bleed):
+  Post-4.10 user re-test surfaced two more artifacts. 4.11.a:
+  removed the [0,1] clamp in `_update_ring_height_array` height
+  encoding — fBm peaks past ±amplitude were clamping to flat plateau
+  with sharp level-set edges (V-shape depression in screenshot).
+  Float32 texture stores arbitrary range; shader decode handles it.
+  4.11.b: tightened walking_demo biome_catalog slot bands —
+  pre-fix mid slot's slope window [10°, 45°] with 8° band activated
+  at 2°+ slope = bled into near-flat ground as white patches. Now
+  mid starts at 21°, rock at 40°; clear separation. Verify 5/5
+  green in 59.9s. Build note phase_4_11_2026_05_17.md. Pop-in /
+  streaming polish (W4 PITFALLS #15) deferred per user direction.
 - 2026-05-17 (Phase 4.10 closed — W4 PITFALLS lifted):
   User screenshots after 5.4.b showed (1) elevation cliff at ring
   boundary, (2) 20m blocky brightness patches, (3) "rings visible

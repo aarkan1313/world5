@@ -31,22 +31,22 @@
 					"name": "ground",
 					"weight": 1.0,
 					"selector": {
-						"_note": "Low / flat terrain — alpine firn snow basin.",
-						"elevation_m": [-50.0, 5.0],
-						"slope_deg": [0.0, 20.0],
-						"band_width_elevation_m": 8.0,
-						"band_width_slope_deg": 5.0
+						"_note": "Low / flat terrain — alpine firn snow basin. Phase 4.11.b: widened slope window to 0..25 with a tight 3deg band so flat snow stays pure ground (no mid bleed).",
+						"elevation_m": [-50.0, 15.0],
+						"slope_deg": [0.0, 25.0],
+						"band_width_elevation_m": 5.0,
+						"band_width_slope_deg": 3.0
 					}
 				},
 				{
 					"name": "mid",
 					"weight": 1.0,
 					"selector": {
-						"_note": "Mid slopes — lichen + moss on transitional rock.",
-						"elevation_m": [-15.0, 30.0],
-						"slope_deg": [10.0, 45.0],
-						"band_width_elevation_m": 10.0,
-						"band_width_slope_deg": 8.0
+						"_note": "Mid slopes — lichen + moss on transitional rock. Phase 4.11.b: raised slope start to 25deg so mid only activates on real slopes; tightened bands to reduce bleed on near-flat ground.",
+						"elevation_m": [-5.0, 35.0],
+						"slope_deg": [25.0, 50.0],
+						"band_width_elevation_m": 5.0,
+						"band_width_slope_deg": 4.0
 					}
 				},
 				{
@@ -54,10 +54,10 @@
 					"weight": 1.0,
 					"selector": {
 						"_note": "High / steep — granite + lichen on exposed bedrock.",
-						"elevation_m": [10.0, 50.0],
-						"slope_deg": [30.0, 90.0],
-						"band_width_elevation_m": 12.0,
-						"band_width_slope_deg": 10.0
+						"elevation_m": [15.0, 60.0],
+						"slope_deg": [45.0, 90.0],
+						"band_width_elevation_m": 5.0,
+						"band_width_slope_deg": 5.0
 					}
 				}
 			],

@@ -521,7 +521,14 @@ func _update_ring_height_array(ring_idx: int, page_xz: Vector2,
 	else:
 		rha.set_min_corner(aligned_min)
 
-	# Build the normalized height image for this page
+	# Build the normalized height image for this page.
+	# Phase 4.11.a: dropped the [0,1] clamp. Pre-fix, fBm noise peaks
+	# beyond ±amplitude clamped to 0/1 = flat plateau with sharp
+	# straight-edge level-set boundaries visible in walking demo
+	# screenshots. Float32 texture stores arbitrary range fine; shader
+	# decode `(h - 0.5) * 2 * height_scale` handles out-of-[0,1] values
+	# correctly (just produces y beyond ±amplitude). Bilinear filter
+	# between in-range and out-of-range values is well-defined.
 	var n: int = int(sqrt(page.height_cpu.size()))
 	if n < 2:
 		return
@@ -532,7 +539,7 @@ func _update_ring_height_array(ring_idx: int, page_xz: Vector2,
 	bytes.resize(n * n * 4)
 	for i in range(page.height_cpu.size()):
 		var h: float = page.height_cpu[i]
-		var normalized: float = clamp((h / amp) * 0.5 + 0.5, 0.0, 1.0)
+		var normalized: float = (h / amp) * 0.5 + 0.5
 		bytes.encode_float(i * 4, normalized)
 	var img: Image = Image.create_from_data(n, n, false, Image.FORMAT_RF, bytes)
 	rha.add_page(page_xz, img)
