@@ -10,19 +10,18 @@
 
 ## One-paragraph current focus
 
-**Phase 5 (ground texture pipeline) is in progress.** Phase 4 (terrain
-MVP, 4.1-4.8) closed 2026-05-17 with the walking demo running
-standalone on Godot 4.6.2. Phase 5 entry shipped spec amendments
-(23/24/25) + bundle scaffold + MaterialVariants loader. **Phase 5.5
-shader infrastructure landed same day**: Layer 1 (siblings + 3-tap
-stochastic UV) + Layer 2 (detail overlays) primitives + binders +
-real-GPU verification — ready to consume textures when they land
-without further shader work. **Phase 5.1 (W4 module port) is held**
-because another chat is mid-edit on W4's `pipeline/textures/` +
-`pipeline/diversity_*.py`; porting now would snapshot a stale tree.
-User authoring textures offline in parallel. Plan doc at
-[plans/25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md);
-~5-10 sessions estimated.
+**Phase 5 alpine first-biome rendering live.** Phase 4 (terrain MVP,
+4.1-4.8) closed 2026-05-17. Phase 5 entry shipped spec amendments
+(23/24/25) + bundle scaffold + MaterialVariants loader. Phase 5.5
+shader infrastructure (Layer 1+2 primitives + binders + Texture2DArray
+loaders + TerrainWorld wire-up + promote.py + preflight) all shipped
+same day. **Phase 5.4 closed**: texture team delivered 91 candidates
+across alpine + forest biomes; alpine promoted into walking demo;
+three compounding bugs (AABB / normals / winding) fixed; walking
+demo now renders displaced firn-snow terrain. Phase 5.1 (W4 module
+port) still held — parallel chat. Phase 5.6 calibration + Phase 6
+forest are unblocked but not yet started. Plan doc at
+[plans/25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md).
 
 ## Phase status
 
@@ -39,8 +38,9 @@ User authoring textures offline in parallel. Plan doc at
 | Phase 4.6 — Walking demo | ✅ done (sub-phase of 4) | [phase_4_6_walking_demo.md](roadmap/phase_4_6_walking_demo.md) | 1 session |
 | Phase 4.7 — Autoload rename refactor | ✅ done | [phase_4_7_autoload_rename.md](roadmap/phase_4_7_autoload_rename.md) | 1 session |
 | Phase 4.8 — Local RD refactor | ✅ done | [phase_4_8_local_rd_refactor.md](roadmap/phase_4_8_local_rd_refactor.md) | 1 session |
-| **Phase 5 — Ground texture pipeline** | 🚧 in progress (entry + 5.5 shader infra shipped; 5.1 held) | [25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md) | 5-10 |
+| **Phase 5 — Ground texture pipeline** | 🚧 5.5 + 5.4 shipped; 5.1 held; 5.6 calibration pending | [25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md) | 5-10 |
 | Phase 5.5 — Variety shader Layer 1+2 | ✅ done (sub-phase of 5) | [phase_5_5_variety_shader.md](roadmap/phase_5_5_variety_shader.md) | 1 session |
+| Phase 5.4 — First biome (alpine) | ✅ done (sub-phase of 5) | [build-notes/phase_5_4_first_biome_2026_05_17.md](build-notes/phase_5_4_first_biome_2026_05_17.md) | 1 session (incl brown-band fix) |
 | Phase 6 — Second biome | pending | (write when starting) | 3-5 |
 | Phase 7 — Decoration end-to-end | pending | (write when starting) | 5-10 |
 | Phase 8 — Foliage system | pending | (write when starting) | 25-100 (see SA-S1) |

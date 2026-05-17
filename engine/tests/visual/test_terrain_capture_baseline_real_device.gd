@@ -138,3 +138,53 @@ func test_ring_materials_have_height_map_bound() -> void:
 	assert_true(height_tex is Texture2D,
 		"inner ring's height_map uniform is a populated Texture2D (caught: %s)"
 			% str(height_tex))
+
+
+# --- 2026-05-17 brown-band bug class regression guards ---
+#
+# The shader-state tests above all passed while the walking demo
+# rendered as a flat brown band because the rings were getting
+# culled before fragment shader ran. Two separate bugs (AABB Y=0
+# from un-displaced CPU verts + back-facing triangle winding + no
+# normals) compounded. These tests assert the mesh-level fixes that
+# prevent recurrence without needing SubViewport pixel capture.
+
+func test_ring_meshinstance_has_nonzero_y_aabb() -> void:
+	# Bug: ArrayMesh.custom_aabb is not honored by Godot 4.6 frustum
+	# culling — the override has to live on MeshInstance3D. Without
+	# it, the un-displaced y=0 CPU verts make culling reject the ring
+	# as soon as the vertex shader displaces height_map samples below
+	# y=0. Fix lives in ClipmapRing.configure.
+	for c in _tw.get_children():
+		if not c.name.begins_with("ClipmapRing_"):
+			continue
+		var mi: MeshInstance3D = c as MeshInstance3D
+		var aabb: AABB = mi.custom_aabb
+		assert_gt(aabb.size.y, 100.0,
+			"%s.custom_aabb.size.y must be > 100m to survive heightmap " +
+			"displacement (got %f). If 0, ArrayMesh.custom_aabb regression " +
+			"and frustum culling will reject every ring." % [mi.name, aabb.size.y])
+
+
+func test_ring_mesh_has_upward_normals() -> void:
+	# Bug: missing normals + back-facing triangle winding made the
+	# terrain mesh invisible from above (back-face culled even when
+	# inside the frustum). Fix lives in ClipmapGeometry._build_ring_mesh
+	# (Vector3.UP normals + tl,tr,bl + tr,br,bl winding).
+	for c in _tw.get_children():
+		if not c.name.begins_with("ClipmapRing_"):
+			continue
+		var mi: MeshInstance3D = c as MeshInstance3D
+		var mesh: ArrayMesh = mi.mesh as ArrayMesh
+		if mesh == null or mesh.get_surface_count() == 0:
+			continue
+		var arrays: Array = mesh.surface_get_arrays(0)
+		var normals: Variant = arrays[Mesh.ARRAY_NORMAL]
+		assert_true(normals is PackedVector3Array,
+			"%s mesh must have NORMAL array (was: %s)" % [
+				mi.name, str(typeof(normals))])
+		if normals is PackedVector3Array:
+			var n_arr: PackedVector3Array = normals
+			assert_gt(n_arr.size(), 0, "%s normals must be non-empty" % mi.name)
+			assert_gt(n_arr[0].dot(Vector3.UP), 0.99,
+				"%s normals must point up (sample[0]=%s)" % [mi.name, str(n_arr[0])])

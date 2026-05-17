@@ -36,7 +36,15 @@ func _make_ring(level: int = 0, grid_n: int = 16,
 
 func test_constructible() -> void:
 	var ring: ClipmapRing = ClipmapRing.new()
+	_rings_to_free.append(ring)
 	assert_not_null(ring)
+
+
+func test_ring_mesh_does_not_cast_self_shadows() -> void:
+	var ring: ClipmapRing = ClipmapRing.new()
+	_rings_to_free.append(ring)
+	assert_eq(ring.mesh_instance.cast_shadow,
+		GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
 
 
 func test_configure_sets_level_and_cell_size() -> void:
@@ -80,6 +88,7 @@ func test_world_aabb_reflects_position() -> void:
 
 func test_configure_with_null_mesh_fails_gracefully() -> void:
 	var ring: ClipmapRing = ClipmapRing.new()
+	_rings_to_free.append(ring)
 	ring.configure(null, 0, 1.0)
 	# Should not crash; mesh_instance.mesh remains null
 	assert_null(ring.mesh_instance.mesh)

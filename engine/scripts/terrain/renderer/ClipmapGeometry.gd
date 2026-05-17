@@ -42,8 +42,10 @@ func _build_ring_mesh(grid_n: int, cell_m: float) -> ArrayMesh:
 	# Vertex at (col, row) has world XZ = (col - (n-1)/2) * cell_m
 	var half_extent: float = float(grid_n - 1) * cell_m * 0.5
 	var verts: PackedVector3Array = PackedVector3Array()
+	var normals: PackedVector3Array = PackedVector3Array()
 	var uvs: PackedVector2Array = PackedVector2Array()
 	verts.resize(grid_n * grid_n)
+	normals.resize(grid_n * grid_n)
 	uvs.resize(grid_n * grid_n)
 	for row in range(grid_n):
 		for col in range(grid_n):
@@ -52,6 +54,7 @@ func _build_ring_mesh(grid_n: int, cell_m: float) -> ArrayMesh:
 			var idx: int = row * grid_n + col
 			# Y=0; vertex shader displaces from heightmap sample
 			verts[idx] = Vector3(x, 0.0, z)
+			normals[idx] = Vector3.UP
 			# UV in [0,1] for heightmap sampling
 			uvs[idx] = Vector2(float(col) / float(grid_n - 1),
 				float(row) / float(grid_n - 1))
@@ -66,25 +69,29 @@ func _build_ring_mesh(grid_n: int, cell_m: float) -> ArrayMesh:
 			var tr: int = tl + 1
 			var bl: int = tl + grid_n
 			var br: int = bl + 1
-			# Two triangles, CCW from above (Y-up)
+			# Two triangles, front-facing from above in Godot's renderer.
 			indices[ii] = tl;     ii += 1
-			indices[ii] = bl;     ii += 1
-			indices[ii] = tr;     ii += 1
 			indices[ii] = tr;     ii += 1
 			indices[ii] = bl;     ii += 1
+			indices[ii] = tr;     ii += 1
 			indices[ii] = br;     ii += 1
+			indices[ii] = bl;     ii += 1
 
 	var arrays: Array = []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = normals
 	arrays[Mesh.ARRAY_TEX_UV] = uvs
 	arrays[Mesh.ARRAY_INDEX] = indices
 
 	var mesh: ArrayMesh = ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	# Set explicit AABB so culling has the right size before vertex
-	# shader displaces; we don't know the height range here, use a
-	# generous Y bound (1000m peak-to-peak).
+	# Note: mesh.custom_aabb here does NOT affect frustum culling in
+	# Godot 4.6 — MeshInstance3D computes culling from CPU vertex data
+	# and ignores the ArrayMesh override. The live AABB override is on
+	# MeshInstance3D in ClipmapRing.configure (same ±500m Y intent).
+	# We keep this so the mesh resource carries the right metadata for
+	# any non-renderer consumer (raycast/physics setup, debug overlays).
 	var aabb: AABB = AABB(
 		Vector3(-half_extent, -500.0, -half_extent),
 		Vector3(float(grid_n - 1) * cell_m, 1000.0, float(grid_n - 1) * cell_m)

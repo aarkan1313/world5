@@ -8,16 +8,15 @@
 
 ## One-sentence summary
 
-**Phase 4 (terrain MVP) closed + Phase 5 entry shipped + Phase 5.5
-shader infrastructure landed.** Walking demo at
-`demo/scenes/walking_demo.tscn` runs standalone on Godot 4.6.2
-stable mono. Spec 24 Layer 1 (siblings + 3-tap stochastic UV) +
-Layer 2 (detail array overlay) shader primitives + binders shipped
-and verified on a real GPU; current walking demo still renders flat-
-brown because `has_siblings`/`has_detail` default false (no textures
-bound), but once textures land Phase 5.4 promotion will flip the
-binders on without any further shader work. 5/5 verify layers green
-stable.
+**Phase 5.4 alpine first-biome rendering live.** Walking demo at
+`demo/scenes/walking_demo.tscn` renders displaced firn-snow alpine
+terrain end-to-end on Godot 4.6.2 stable mono: BFL+local textures
+promoted into the world bundle, Layer 1 sibling-blend active, no
+visible repeat at standing-eye height. Brown-band bug class (AABB +
+normals + winding) fixed with 2 new mesh-level regression guards.
+Textures are author-supplied + gitignored (297 MB / ~12 MB per
+file); manifest + scaffold remain tracked. 5/5 verify layers green
+stable (139 pytest + gut + gut_real_gpu + preflight + capture).
 
 ## Per-tier state
 
@@ -136,6 +135,23 @@ sweep runs against the most-evolved spec set).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
+- 2026-05-17 (Phase 5.4 first-biome shipped + brown-band bug fix):
+  texture team delivered 91 candidates across 16 (biome, slot) pairs
+  at D:/tmp/w5_candidates/ (BFL flux-2-pro 2048² + local NVFP4 1024²).
+  promote.py ran for alpine ground/mid/rock with base + 3 siblings
+  each → 48 files into world bundle + manifest updated. Capture
+  initially still showed flat-brown band; two outside audits found
+  THREE compounding bugs all silently masking each other: (a) Godot
+  4.6 ignores ArrayMesh.custom_aabb so rings frustum-culled the
+  moment vertex shader displaced verts off y=0; (b) ClipmapGeometry
+  generated triangles without normals; (c) winding was back-facing
+  from above. Fixes in ClipmapRing.configure (set MeshInstance3D
+  .custom_aabb) + ClipmapGeometry (add normals + flip winding) +
+  cast_shadow=OFF on rings. Walking demo now renders gorgeous
+  displaced firn-snow alpine terrain. 2 new mesh-level regression
+  guards in test_terrain_capture_baseline_real_device.gd catch the
+  bug class without needing SubViewport pixel capture. Textures
+  themselves are gitignored (author-supplied, per-machine, 297 MB).
 - 2026-05-17 (Phase 5.5 TerrainWorld wire-up):
   TerrainWorld._load_world_bundle now calls MaterialVariants +
   DetailArray loaders, assembles Texture2DArrays via

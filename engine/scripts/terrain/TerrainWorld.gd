@@ -277,6 +277,8 @@ func _load_world_bundle(bundle_path: String) -> void:
 	# noise_stack kernel if present. Phase 4.6 expands to biome_catalog
 	# per spec 14. Missing files are logged warn (TR-SPEC-S2 fix —
 	# was silently no-op).
+	var mv_cfg: String = bundle_path + "material_variants.json"
+	var has_material_variants: bool = FileAccess.file_exists(mv_cfg)
 	var macro_cfg: String = bundle_path + "macro_albedo.json"
 	if FileAccess.file_exists(macro_cfg):
 		if _macro.load_from_path(macro_cfg):
@@ -288,8 +290,12 @@ func _load_world_bundle(bundle_path: String) -> void:
 			Log.warn("terrain_world", "macro_albedo.json failed to load",
 				{"path": macro_cfg})
 	else:
-		Log.warn("terrain_world", "bundle missing macro_albedo.json",
-			{"bundle": bundle_path})
+		if not has_material_variants:
+			Log.warn("terrain_world", "bundle missing macro_albedo.json",
+				{"bundle": bundle_path})
+		else:
+			Log.info("terrain_world", "bundle omits optional macro_albedo.json",
+				{"bundle": bundle_path})
 
 	var slots_cfg: String = bundle_path + "surface_slots.json"
 	if FileAccess.file_exists(slots_cfg):
@@ -304,13 +310,17 @@ func _load_world_bundle(bundle_path: String) -> void:
 	# Single-slot binding matches the shader's current Phase 5.5 contract
 	# (one active slot); Phase 6 multi-biome work widens this to
 	# per-slot windows.
-	var mv_cfg: String = bundle_path + "material_variants.json"
-	if FileAccess.file_exists(mv_cfg):
+	if has_material_variants:
 		var mv: MaterialVariants = MaterialVariants.from_file(mv_cfg)
 		if mv != null and mv.slots.size() > 0:
 			var materials_root: String = bundle_path + "materials"
 			var sta: SiblingTextureArray = SiblingTextureArray.build(
 				mv, materials_root, "albedo")
+			Log.info("terrain_world", "sibling array built", {
+				"slots": mv.slots.size(),
+				"layers": sta.layer_count(),
+				"materials_root": materials_root,
+			})
 			if sta.layer_count() > 0:
 				# Bind the first slot's window. (Phase 6 will pick per
 				# fragment; Phase 5.5 demo is single-biome single-slot.)
@@ -318,6 +328,13 @@ func _load_world_bundle(bundle_path: String) -> void:
 				var window: Dictionary = sta.window_for(
 					String(first_slot.get("biome", "")),
 					String(first_slot.get("slot", "")))
+				Log.info("terrain_world", "binding siblings on rings", {
+					"biome": String(first_slot.get("biome", "")),
+					"slot": String(first_slot.get("slot", "")),
+					"start": int(window.get("start", 0)),
+					"count": int(window.get("count", 0)),
+					"rings": _rings.size(),
+				})
 				for ring in _rings:
 					var rmat: Material = ring.mesh_instance.material_override
 					if rmat is ShaderMaterial:
@@ -325,6 +342,9 @@ func _load_world_bundle(bundle_path: String) -> void:
 							rmat as ShaderMaterial, sta.texture,
 							int(window.get("start", 0)),
 							int(window.get("count", 0)))
+	else:
+		Log.warn("terrain_world", "bundle missing material_variants.json",
+			{"path": mv_cfg})
 
 	# --- spec 24 Layer 2 (detail overlays) ---
 	#

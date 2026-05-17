@@ -1,32 +1,89 @@
 {
-	"_schema_version": 1,
-	"_note": "Walking demo sibling manifest (alpine, single-biome). Empty until Phase 5 promote.py wires real textures from the diversity batch. MaterialPipeline reads this at world-load + binds the sibling Texture2DArrays.",
-	"world_seed": 42,
-	"region_size_m": 512.0,
-	"edge_blend_m": 48.0,
-	"max_variants_per_slot": 8,
-	"max_total_variant_layers": 256,
-	"slots": [
-		{
-			"biome": "alpine",
-			"slot": "ground",
-			"variants": [
-				{ "id": "default", "source": "ground", "weight": 1.0 }
-			]
-		},
-		{
-			"biome": "alpine",
-			"slot": "mid",
-			"variants": [
-				{ "id": "default", "source": "mid", "weight": 1.0 }
-			]
-		},
-		{
-			"biome": "alpine",
-			"slot": "rock",
-			"variants": [
-				{ "id": "default", "source": "rock", "weight": 1.0 }
-			]
-		}
-	]
+  "_schema_version": 1,
+  "_note": "Walking demo sibling manifest (alpine, single-biome). Empty until Phase 5 promote.py wires real textures from the diversity batch. MaterialPipeline reads this at world-load + binds the sibling Texture2DArrays.",
+  "world_seed": 42,
+  "region_size_m": 512.0,
+  "edge_blend_m": 48.0,
+  "max_variants_per_slot": 8,
+  "max_total_variant_layers": 256,
+  "slots": [
+    {
+      "biome": "alpine",
+      "slot": "ground",
+      "variants": [
+        {
+          "id": "default",
+          "source": "ground",
+          "weight": 1.0
+        },
+        {
+          "id": "v0_firn_dense_s43",
+          "source": "ground_variants/v0_firn_dense_s43",
+          "weight": 1.0
+        },
+        {
+          "id": "v1_firn_dense_s44",
+          "source": "ground_variants/v1_firn_dense_s44",
+          "weight": 1.0
+        },
+        {
+          "id": "v2_firn_dense_s45",
+          "source": "ground_variants/v2_firn_dense_s45",
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "biome": "alpine",
+      "slot": "mid",
+      "variants": [
+        {
+          "id": "default",
+          "source": "mid",
+          "weight": 1.0
+        },
+        {
+          "id": "v0_lichen_moss_s43",
+          "source": "mid_variants/v0_lichen_moss_s43",
+          "weight": 1.0
+        },
+        {
+          "id": "v1_lichen_moss_s44",
+          "source": "mid_variants/v1_lichen_moss_s44",
+          "weight": 1.0
+        },
+        {
+          "id": "v2_lichen_moss_s45",
+          "source": "mid_variants/v2_lichen_moss_s45",
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "biome": "alpine",
+      "slot": "rock",
+      "variants": [
+        {
+          "id": "default",
+          "source": "rock",
+          "weight": 1.0
+        },
+        {
+          "id": "v0_granite_lichen_s43",
+          "source": "rock_variants/v0_granite_lichen_s43",
+          "weight": 1.0
+        },
+        {
+          "id": "v1_granite_lichen_s44",
+          "source": "rock_variants/v1_granite_lichen_s44",
+          "weight": 1.0
+        },
+        {
+          "id": "v2_granite_lichen_s45",
+          "source": "rock_variants/v2_granite_lichen_s45",
+          "weight": 1.0
+        }
+      ]
+    }
+  ]
 }

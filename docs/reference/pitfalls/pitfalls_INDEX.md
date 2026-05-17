@@ -87,6 +87,9 @@ links into the per-tier file.
 | meta-3 | [GDScript Dictionary iteration during erase is undefined; snapshot keys first](pitfalls_meta.md#3) | meta | 07, 11 | 2-audit |
 | meta-4 | [Autoload name collides with class_name global; use W5_ prefix + W5Lookup helper](pitfalls_meta.md#4) | meta | 07, 08a | 4.7 |
 | meta-5 | [Main RD rejects submit/sync in Godot 4.6; use create_local_rendering_device()](pitfalls_meta.md#5) | meta | 08a, 20 | 4.8 |
+| core-1 | [Clipmap rings frustum-culled — ArrayMesh.custom_aabb ignored; set on MeshInstance3D](pitfalls_core.md#1) | core | 21 | 5.4 |
+| core-2 | [Clipmap ring meshes need vertex normals; auto-computed degenerates to black](pitfalls_core.md#2) | core | 21 | 5.4 |
+| core-3 | [Clipmap ring triangle winding must be front-facing from above (tl,tr,bl + tr,br,bl)](pitfalls_core.md#3) | core | 21 | 5.4 |
 
 ## Doc cap status
 

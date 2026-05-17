@@ -82,3 +82,22 @@ func test_mesh_has_uv_for_heightmap_sampling() -> void:
 	var arrays: Array = meshes[0].surface_get_arrays(0)
 	var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
 	assert_eq(uvs.size(), 16 * 16, "one UV per vertex")
+
+
+func test_mesh_has_up_normals_and_front_faces_from_above() -> void:
+	var geom: ClipmapGeometry = ClipmapGeometry.new()
+	var meshes: Array = geom.build(1, 4, 1.0)
+	var arrays: Array = meshes[0].surface_get_arrays(0)
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	assert_eq(normals.size(), 4 * 4, "one normal per vertex")
+	assert_gt(normals[0].dot(Vector3.UP), 0.999,
+		"terrain normals point up for lighting")
+	assert_gt(normals[normals.size() - 1].dot(Vector3.UP), 0.999,
+		"all generated normals point up")
+	assert_eq(indices[0], 0)
+	assert_eq(indices[1], 1)
+	assert_eq(indices[2], 4)
+	assert_eq(indices[3], 1)
+	assert_eq(indices[4], 5)
+	assert_eq(indices[5], 4)

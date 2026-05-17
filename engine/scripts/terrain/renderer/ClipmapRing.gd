@@ -25,6 +25,10 @@ var mesh_instance: MeshInstance3D = null
 func _init() -> void:
 	mesh_instance = MeshInstance3D.new()
 	mesh_instance.name = "ClipmapRing"
+	# Phase 4 renders full square rings that overlap. Letting every
+	# overlapping LOD cast shadows produces view-dependent self-shadow
+	# wedges; terrain can still receive shadows from other scene objects.
+	mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
 ## Bind to a built mesh. cell_size_m matches ClipmapGeometry's
@@ -34,6 +38,18 @@ func configure(mesh: Mesh, ring_level: int, cell_m: float) -> void:
 	cell_size_m = cell_m
 	mesh_instance.mesh = mesh
 	mesh_instance.name = "ClipmapRing_L%d" % level
+	# Vertex shader displaces verts on Y per the heightmap — but CPU
+	# verts are flat at y=0, so the mesh's auto-AABB has zero Y extent
+	# and the whole ring frustum-culls the moment displacement pushes
+	# any visible vertex off the y=0 plane (e.g. unbound height_map
+	# samples to 0, then shader maps that to y = -height_scale).
+	# ArrayMesh.custom_aabb is not picked up by MeshInstance3D culling
+	# in Godot 4.6 — the override has to live on the MeshInstance3D.
+	# Match ClipmapGeometry's intended ±500 m Y bound.
+	var local_aabb: AABB = mesh.get_aabb() if mesh != null else AABB()
+	mesh_instance.custom_aabb = AABB(
+		Vector3(local_aabb.position.x, -500.0, local_aabb.position.z),
+		Vector3(local_aabb.size.x, 1000.0, local_aabb.size.z))
 
 
 ## Snap to the ring's cell grid + translate the mesh to that position.

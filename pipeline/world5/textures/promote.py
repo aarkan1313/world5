@@ -159,7 +159,7 @@ def promote(
         base_src = _candidate_dir(candidates_root, biome, p.slot, p.base)
         base_dst = materials_root / p.slot
         result.files_copied += _copy_pbr_set(base_src, base_dst)
-        result.summary.append(f"{p.slot}/base={p.base} → {base_dst}")
+        result.summary.append(f"{p.slot}/base={p.base} -> {base_dst}")
         # --- siblings ---
         variants_dir = materials_root / f"{p.slot}_variants"
         # Wipe stale sibling subdirs to make re-promote deterministic
@@ -176,7 +176,7 @@ def promote(
             sib_src = _candidate_dir(candidates_root, biome, p.slot, tag)
             sib_dst = variants_dir / f"v{i}_{tag}"
             result.files_copied += _copy_pbr_set(sib_src, sib_dst)
-            result.summary.append(f"{p.slot}/sib{i}={tag} → {sib_dst}")
+            result.summary.append(f"{p.slot}/sib{i}={tag} -> {sib_dst}")
 
         # --- manifest update ---
         # Per spec 24 schema: `source` is biome-relative (the engine
