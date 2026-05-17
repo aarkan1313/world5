@@ -57,6 +57,11 @@ var _adapter: TerrainBackendAdapter = null
 var _diag: RingDebugOverlay = null
 var _probes: PageDebugProbes = null
 var _kernel: NoiseStackKernel = null
+# Per-ring multi-page heightmap state (Phase 4.9.a, audit C1 fix).
+# Each ring has its own RingHeightArray maintaining a Texture2DArray
+# of resident pages; vertex shader picks the right layer per fragment
+# via world XZ → page coord → array layer.
+var _ring_height_arrays: Array = []  # Array[RingHeightArray]
 
 # Bookkeeping
 var _camera: Node3D = null
@@ -255,12 +260,20 @@ func _build_modules() -> void:
 		inner_cell_size_m)
 	for i in range(meshes.size()):
 		var ring: ClipmapRing = ClipmapRing.new()
-		ring.configure(meshes[i], i, inner_cell_size_m * pow(2.0, i))
+		var ring_cell_m: float = inner_cell_size_m * pow(2.0, i)
+		ring.configure(meshes[i], i, ring_cell_m)
 		var mat: ShaderMaterial = _material_pipeline.make_ring_material(
 			i, ring_vertex_grid)
 		ring.mesh_instance.material_override = mat
 		add_child(ring.mesh_instance)
 		_rings.append(ring)
+		# Phase 4.9.a multi-page heightmap: one RingHeightArray per ring.
+		# Ring extent = (grid_n - 1) * cell_size_m; conservative pages_per_side
+		# computed inside RingHeightArray.configure().
+		var rha: RingHeightArray = RingHeightArray.new()
+		var ring_extent_m: float = float(ring_vertex_grid - 1) * ring_cell_m
+		rha.configure(ring_extent_m, page_extent_m)
+		_ring_height_arrays.append(rha)
 
 	# Diagnostics overlay (off by default per @export var)
 	_diag = RingDebugOverlay.new()
@@ -433,21 +446,14 @@ func _on_page_actually_loaded(ring: int, page_xz: Vector2) -> void:
 	_page_load_times[_page_key(ring, page_xz)] = {
 		"ring": ring, "xz": page_xz, "loaded_at_ms": now,
 	}
-	# Bind heightmap to the matching ring's material if the page covers
-	# the ring's center (Phase 4.4 simplification: one page per ring at
-	# the center; outer-ring extents > page extent will show stretched
-	# texture at edges — calibration sprint 4.5 picks the right ratio).
+	# Phase 4.9.a: bind the loaded page into the ring's RingHeightArray
+	# (multi-page), then rebuild + push the Texture2DArray to the
+	# material. Replaces the pre-4.9.a single-page-per-ring binding
+	# which stretched outer-ring textures at edges (audit C1).
 	if ring >= 0 and ring < _rings.size():
-		var r: ClipmapRing = _rings[ring]
-		# Only bind if THIS page covers the ring's snapped center
-		var center_page_origin: Vector2 = Vector2(
-			floor(r.snapped_center.x / page_extent_m) * page_extent_m,
-			floor(r.snapped_center.y / page_extent_m) * page_extent_m,
-		)
-		if center_page_origin == page_xz:
-			var page: TerrainPageResult = _cache.get_page(ring, page_xz)
-			if page != null and not page.height_cpu.is_empty():
-				_bind_height_to_ring(r, page)
+		var page: TerrainPageResult = _cache.get_page(ring, page_xz)
+		if page != null and not page.height_cpu.is_empty():
+			_update_ring_height_array(ring, page_xz, page)
 
 	page_loaded.emit(ring, page_xz)
 
@@ -461,6 +467,11 @@ func _on_page_actually_loaded(ring: int, page_xz: Vector2) -> void:
 
 func _on_page_actually_evicted(ring: int, page_xz: Vector2) -> void:
 	_page_load_times.erase(_page_key(ring, page_xz))
+	# Phase 4.9.a: remove from the ring's array + rebuild.
+	if ring >= 0 and ring < _ring_height_arrays.size():
+		var rha: RingHeightArray = _ring_height_arrays[ring]
+		rha.remove_page(page_xz)
+		_rebuild_and_bind_ring_height_array(ring)
 	page_unloaded.emit(ring, page_xz)
 	# Demote full-detail if a ring just emptied (rare but possible
 	# under aggressive LRU pressure).
@@ -468,31 +479,65 @@ func _on_page_actually_evicted(ring: int, page_xz: Vector2) -> void:
 		_full_detail = false
 
 
-func _bind_height_to_ring(ring: ClipmapRing,
+## Add a freshly-loaded page to the ring's height array + rebuild +
+## bind the new Texture2DArray. Phase 4.9.a replacement for
+## _bind_height_to_ring (single-page).
+func _update_ring_height_array(ring_idx: int, page_xz: Vector2,
 		page: TerrainPageResult) -> void:
-	var mat: Material = ring.mesh_instance.material_override
-	if not (mat is ShaderMaterial):
-		return
-	# Convert PackedFloat32Array → ImageTexture for the shader uniform.
-	# Phase 4.5 will swap to Texture2DRD via height_gpu capability so
-	# the upload happens once on the render thread (TR-PERF-S2 path).
+	var rha: RingHeightArray = _ring_height_arrays[ring_idx]
+	var ring: ClipmapRing = _rings[ring_idx]
+	# Anchor the array's min_xz to the ring's CURRENT snapped center
+	# (the ring extent on each side of snapped_center). Floor to page
+	# boundary so page coords align with the world page grid.
+	var ring_extent_m: float = float(ring_vertex_grid - 1) * ring.cell_size_m
+	var raw_min: Vector2 = ring.snapped_center - Vector2(ring_extent_m, ring_extent_m) * 0.5
+	var aligned_min: Vector2 = Vector2(
+		floor(raw_min.x / page_extent_m) * page_extent_m,
+		floor(raw_min.y / page_extent_m) * page_extent_m,
+	)
+	# If min_xz drifted (ring snapped), drop old pages — their layer
+	# indices are now wrong relative to the new window.
+	if aligned_min != rha.min_xz and rha.layer_count() > 0:
+		# Discard everything; pages will be re-added as residency
+		# re-streams. Cheap because we hold images by reference.
+		rha = RingHeightArray.new()
+		rha.configure(ring_extent_m, page_extent_m)
+		_ring_height_arrays[ring_idx] = rha
+	rha.set_min_corner(aligned_min)
+
+	# Build the normalized height image for this page
 	var n: int = int(sqrt(page.height_cpu.size()))
 	if n < 2:
 		return
 	var amp: float = ring_vertex_grid * 1.0  # safe upper bound
 	if _kernel != null:
 		amp = _kernel.amplitude
-	# Normalize heights to [0, 1] for the shader's (h - 0.5) * 2 * scale
-	# decoding (matches terrain_clipmap.gdshader's vertex math).
 	var bytes: PackedByteArray = PackedByteArray()
-	bytes.resize(n * n * 4)  # RF format (single float per pixel)
+	bytes.resize(n * n * 4)
 	for i in range(page.height_cpu.size()):
 		var h: float = page.height_cpu[i]
 		var normalized: float = clamp((h / amp) * 0.5 + 0.5, 0.0, 1.0)
 		bytes.encode_float(i * 4, normalized)
 	var img: Image = Image.create_from_data(n, n, false, Image.FORMAT_RF, bytes)
-	var tex: ImageTexture = ImageTexture.create_from_image(img)
-	_material_pipeline.bind_height_map(mat as ShaderMaterial, tex, amp, 0.0)
+	rha.add_page(page_xz, img)
+	_rebuild_and_bind_ring_height_array(ring_idx)
+
+
+func _rebuild_and_bind_ring_height_array(ring_idx: int) -> void:
+	var rha: RingHeightArray = _ring_height_arrays[ring_idx]
+	var ring: ClipmapRing = _rings[ring_idx]
+	var mat: Material = ring.mesh_instance.material_override
+	if not (mat is ShaderMaterial):
+		return
+	var amp: float = ring_vertex_grid * 1.0
+	if _kernel != null:
+		amp = _kernel.amplitude
+	var tex: Texture2DArray = rha.build_texture_array()
+	if tex == null:
+		# No pages resident yet; leave material in unbound state
+		return
+	_material_pipeline.bind_height_array(mat as ShaderMaterial, tex,
+		rha.pages_per_side, rha.min_xz, rha.page_extent_m, amp, 0.0)
 
 
 ## Bind every slot's sibling window + selector bands on every ring

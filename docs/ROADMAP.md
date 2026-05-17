@@ -10,19 +10,19 @@
 
 ## One-paragraph current focus
 
-**Sub-phase 4.9 opening: re-audit found Phase 4 closed prematurely.**
-Walking demo Phase 5.4 alpine render exposed three critical bugs that
-violate specs 21+23+24: outer rings sample one heightmap page each
-→ chunk seams; per-fragment slot selection never built → mid/rock
-textures dead weight; sibling 3-tap noise too low → tile repeat at
-eye height. A 4-subagent re-audit (charter +
-[findings doc](AUDIT_FINDINGS_PHASE_0_5_2026_05_17.md)) found these
-+ 9 significant + 9 minor gaps across phases 0-5. Phase 0+2 are
-clean; phases 4 / 4.5 / 4.6 / 5.4 / 5.5 all claim ✅ done while
-shipping unfinished core systems. Build notes were honest about
-deferred work; ROADMAP+STATE glossed over the cuts. **Sub-phase 4.9
-(renderer correctness) is being opened to close the critical gaps
-before Phase 5.6 calibration or Phase 6 forest**. Plan doc pending.
+**Sub-phase 4.9 closed: audit C1 + C2 + S8 fixed.** Walking demo
+now binds per-fragment slot selection (mid + rock textures reach the
+GPU via the new BiomeCatalog → bind_all_slots → shader loop chain)
++ multi-page heightmap per ring (RingHeightArray → bind_height_array
+→ shader picks correct page per fragment from world XZ → no more
+outer-ring chunk seams). Built across 3 sub-phases (4.9.b, 4.9.d,
+4.9.a) with 27 new tests including 3 real-GPU visual regressions.
+**Phase 4.9.c (macro_albedo for walking_demo) remains deferred**
+pending Phase 5.1 W4 module port. **Next**: 5.1 unblock → 5.4.b
+detail overlays + sibling_blend_freq tune → 5.6 real-hardware
+calibration → 5.7 erosion sprint → Phase 6 forest. See
+[audit findings](AUDIT_FINDINGS_PHASE_0_5_2026_05_17.md) for the
+full punch-list and what remains.
 
 ## Phase status
 
@@ -34,20 +34,20 @@ before Phase 5.6 calibration or Phase 6 forest**. Plan doc pending.
 | Phase 2 — Foundation build (Tier 0) | ✅ done | [phase_2_foundations.md](roadmap/phase_2_foundations.md) | 1 (commits `bcb1d62` → `cb46ffc`) |
 | Phase 2 audit + fix | ✅ done | SELF_AUDIT_PHASE_2_FINDINGS | 1 (commits `17fce3d` → `d6d6c94`) |
 | Phase 3 — Renderer research sprint | ✅ done | [phase_3_renderer_research.md](roadmap/phase_3_renderer_research.md) + spec 15a | 1 (came in under 3-5 estimate) |
-| Phase 4 — Terrain MVP (one biome) | ⚠️ shipped with critical spec gaps — see 4.9 | [phase_4_terrain_mvp.md](roadmap/phase_4_terrain_mvp.md) | 6 sessions (4.1-4.6) |
-| Phase 4.5 — Calibration sprint | ⚠️ shipped; 3060 perf claim inverted (S1) | [phase_4_5_calibration.md](roadmap/phase_4_5_calibration.md) | 1 session |
-| Phase 4.6 — Walking demo | ⚠️ shipped; multi-page binding + slot selection deferred | [phase_4_6_walking_demo.md](roadmap/phase_4_6_walking_demo.md) | 1 session |
+| Phase 4 — Terrain MVP (one biome) | ✅ done (4.9 closed remaining gaps) | [phase_4_terrain_mvp.md](roadmap/phase_4_terrain_mvp.md) | 6 sessions (4.1-4.6) |
+| Phase 4.5 — Calibration sprint | ⚠️ shipped; 3060 perf claim still TBD (S1) — Phase 5.6 needs real hardware | [phase_4_5_calibration.md](roadmap/phase_4_5_calibration.md) | 1 session |
+| Phase 4.6 — Walking demo | ✅ done (4.9 closed multi-page binding + slot selection gaps) | [phase_4_6_walking_demo.md](roadmap/phase_4_6_walking_demo.md) | 1 session |
 | Phase 4.7 — Autoload rename refactor | ✅ done | [phase_4_7_autoload_rename.md](roadmap/phase_4_7_autoload_rename.md) | 1 session |
 | Phase 4.8 — Local RD refactor | ✅ done | [phase_4_8_local_rd_refactor.md](roadmap/phase_4_8_local_rd_refactor.md) | 1 session |
-| **Phase 4.9 — Renderer correctness (audit-driven)** | 🚧 opening | [phase_4_9_renderer_correctness.md](roadmap/phase_4_9_renderer_correctness.md) + [AUDIT_FINDINGS](AUDIT_FINDINGS_PHASE_0_5_2026_05_17.md) | 3-5 |
-| **Phase 5 — Ground texture pipeline** | 🚧 5.5 + 5.4 shipped (with gaps); 5.1 held; 5.6 pending | [25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md) | 5-10 |
-| Phase 5.5 — Variety shader Layer 1+2 | ⚠️ shipped; slot selection deferred (C2); sibling_blend_freq tune pending (C3) | [phase_5_5_variety_shader.md](roadmap/phase_5_5_variety_shader.md) | 1 session |
-| Phase 5.4 — First biome (alpine) | ⚠️ shipped; macro_albedo (S2) + detail/ (S3) + slot selection (C2) missing | [build-notes/phase_5_4_first_biome_2026_05_17.md](build-notes/phase_5_4_first_biome_2026_05_17.md) | 1 session (incl brown-band fix) |
-| Phase 5.1 — W4 module port (held) | ⏸ held; unblocks 5.4.b + 5.6 | [25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md) | 1-2 |
-| Phase 5.4.b — Detail overlays + sibling tune | pending (depends on 5.1 + 4.9) | — | 3-4 |
+| **Phase 4.9 — Renderer correctness (audit-driven)** | ✅ done (4.9.a + b + d shipped; 4.9.c deferred to 5.1) | [phase_4_9_close_2026_05_17.md](build-notes/phase_4_9_close_2026_05_17.md) | 1 session |
+| **Phase 5 — Ground texture pipeline** | 🚧 5.5 + 5.4 shipped (4.9 closed core gaps); 5.1 held; 5.6 pending | [25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md) | 5-10 |
+| Phase 5.5 — Variety shader Layer 1+2 | ✅ done (4.9.b finished slot selection); sibling_blend_freq tune pending (C3 → 5.6) | [phase_5_5_variety_shader.md](roadmap/phase_5_5_variety_shader.md) | 1 session |
+| Phase 5.4 — First biome (alpine) | ⚠️ shipped; macro_albedo (S2) + detail/ (S3) blocked on 5.1; slot selection now active | [build-notes/phase_5_4_first_biome_2026_05_17.md](build-notes/phase_5_4_first_biome_2026_05_17.md) | 1 session (incl brown-band fix) |
+| Phase 5.1 — W4 module port (held) | ⏸ held; unblocks 4.9.c + 5.4.b + 5.6 | [25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md) | 1-2 |
+| Phase 5.4.b — Detail overlays + sibling_blend_freq tune | pending (depends on 5.1) | — | 3-4 |
 | Phase 5.6 — Calibration on real hardware | pending | — | 1-2 |
 | Phase 5.7 — Erosion sprint (ErosionKernel + KernelComposer) | pending (was unscheduled; now placed before Phase 10) | spec 19 | multi-sprint |
-| Phase 6 — Second biome | pending (depends on 4.9 + 5.4.b) | (write when starting) | 3-5 |
+| Phase 6 — Second biome | pending (4.9 unblocked; awaits 5.4.b for detail completeness) | (write when starting) | 3-5 |
 | Phase 7 — Decoration end-to-end | pending | (write when starting) | 5-10 |
 | Phase 8 — Foliage system | pending | (write when starting) | 25-100 (see SA-S1) |
 | Phase 9 — Atmosphere + lighting | pending | (write when starting) | 3-5 |

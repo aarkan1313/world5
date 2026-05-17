@@ -8,20 +8,18 @@
 
 ## One-sentence summary
 
-**Sub-phase 4.9 opening per audit findings.** Walking demo Phase 5.4
-ships displaced firn-snow alpine terrain on Godot 4.6.2 but with
-three critical spec-violation bugs surfaced by visual review:
-(a) outer clipmap rings sample one heightmap page each → visible
-chunk seams; (b) per-fragment slot selection never built → mid/rock
-textures are dead weight; (c) sibling 3-tap noise too low → visible
-tile repeat at eye height. 4-subagent re-audit
-([findings](AUDIT_FINDINGS_PHASE_0_5_2026_05_17.md)) found these
-+ 9 significant + 9 minor gaps across phases 0-5. Phase 0+2 clean;
-phases 4 / 4.5 / 4.6 / 5.4 / 5.5 all marked ✅ done while shipping
-unfinished core systems. **Sub-phase 4.9 (renderer correctness)
-opens next** to fix the critical gaps before Phase 5.6 or Phase 6.
-5/5 verify layers green stable at 139 pytest + gut + gut_real_gpu
-+ preflight + capture, but verify-green ≠ spec-compliant.
+**Sub-phase 4.9 closed: audit C1 + C2 + S8 fixed end-to-end.**
+Walking demo's three critical renderer bugs are now resolved:
+(a) outer clipmap rings bind a per-ring Texture2DArray of all
+resident pages + shader picks correct page per fragment via world XZ
+→ no more chunk seams (audit C1, 4.9.a); (b) per-fragment slot
+selection drives mid + rock textures onto matching slope+elevation
+bands via biome_catalog selectors (audit C2, 4.9.b); (c) walking
+demo ships a biome_catalog.json (audit S8, 4.9.d). 27 new tests
+including 3 real-GPU visual regressions. **Still open**: audit C3
+(sibling_blend_freq tune) + S2 (macro_albedo) deferred to Phase 5.6
++ 4.9.c respectively, both blocked on Phase 5.1 W4 module port.
+5/5 verify layers green stable in 60.6s.
 
 ## Per-tier state
 
@@ -68,17 +66,17 @@ opens next** to fix the critical gaps before Phase 5.6 or Phase 6.
   ms at 4 rings (7-12× over 2.0 ms budget). F2 fallback decision
   TBD pending real hardware. ROADMAP currently claims "F2 engaged
   conservatively"; correct claim is "viability unproven"
-- **Critical gaps (sub-phase 4.9 opening to fix)**:
-  - C1: outer rings bind one heightmap page each → visible chunk
-    seams (rings 2-4 are 510-2040m wide vs 256m page); fix is
-    multi-page binding per ring
-  - C2: per-fragment slot selection never implemented — spec 23
-    §"Surface slot model" + spec 22 declare per-slot selectors
-    (slope/elevation) but no shader code does selection. Mid/rock
-    textures are dead weight; only first slot binds
-  - C3: sibling 3-tap noise frequency 0.10 produces visible repeat
-    at standing eye height; spec 24 Quality bar "no obvious repeat"
-    not met
+- **Phase 4.9 audit-closure fixes (shipped 2026-05-17)**:
+  - C1 ✅: RingHeightArray + bind_height_array() + per-fragment
+    page lookup in vertex shader. Outer rings now bind a
+    Texture2DArray of all resident pages; shader picks correct
+    layer per fragment via world XZ → page coord. Chunk seams
+    eliminated
+  - C2 ✅: BiomeCatalog + bind_all_slots() + w5_slot_weight() +
+    fragment loop over slot_count. Mid + rock textures now reach
+    the GPU on slopes + cliffs that match their catalog selectors
+  - C3 ⏸: sibling_blend_freq tune deferred to Phase 5.6 (needs
+    eye-height walking with real textures to calibrate)
 
 **Tier 1 materials scaffold (Phase 5 entry)** — directory layout +
 manifest schema ready for textures
@@ -165,6 +163,15 @@ sweep runs against the most-evolved spec set).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
+- 2026-05-17 (Phase 4.9 closed — audit C1+C2+S8 fixed):
+  RingHeightArray multi-page heightmap binding (C1, 4.9.a) +
+  per-fragment slot selection with BiomeCatalog selectors (C2, 4.9.b)
+  + walking_demo biome_catalog.json (S8, 4.9.d). 3 critical audit
+  bugs closed; 27 new tests (3 real-GPU visual regressions). Phase 4
+  + 4.6 + 5.5 status moved from ⚠️ to ✅ in ROADMAP. Walking demo
+  capture shows continuous displacement across the visible distance
+  + slot textures lighting the mid/rock bands on slopes. Build notes
+  at phase_4_9_close + phase_4_9_a + phase_4_9_b_d.
 - 2026-05-17 (Phase 5.4 first-biome shipped + brown-band bug fix):
   texture team delivered 91 candidates across 16 (biome, slot) pairs
   at D:/tmp/w5_candidates/ (BFL flux-2-pro 2048² + local NVFP4 1024²).

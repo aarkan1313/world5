@@ -13,9 +13,31 @@ shader_type spatial;
 #include "res://addons/world5/shaders/variety_common.gdshaderinc"
 
 // --- heightmap (per-ring) ---
+//
+// Legacy single-page binding (Phase 4.4-4.8): `height_map` Texture2D
+// covers the ring's snapped_center page; sampled with UV (mesh-local).
+// Stretches at outer-ring edges when ring extent > page_extent_m;
+// caused chunk seams pre-Phase-4.9.a.
 uniform sampler2D height_map : repeat_disable, filter_linear;
 uniform float height_scale: hint_range(0.0, 1000.0) = 50.0;
 uniform float height_offset: hint_range(-500.0, 500.0) = 0.0;
+
+// --- multi-page heightmap (Phase 4.9.a, audit C1 fix) ---
+//
+// When `has_height_array` is true, the vertex shader samples from
+// `height_array` (Texture2DArray) instead of `height_map`. Each layer
+// holds one page; layer index = page_y * height_pages_per_side +
+// page_x, where (page_x, page_y) are page-grid coords relative to
+// `height_array_min_xz`. Pages span `height_array_page_extent_m` of
+// world XZ each.
+//
+// This lets outer rings sample the correct page per fragment instead
+// of stretching one page across the whole ring.
+uniform sampler2DArray height_array : repeat_disable, filter_linear;
+uniform bool has_height_array = false;
+uniform int height_pages_per_side = 1;
+uniform vec2 height_array_min_xz = vec2(0.0, 0.0);
+uniform float height_array_page_extent_m = 256.0;
 
 // --- macro albedo (world-spanning) ---
 uniform sampler2D macro_albedo : repeat_disable, filter_linear;
@@ -115,47 +137,93 @@ vec2 w5_parent_uv(vec2 uv, float n) {
     return floor(uv / parent_cell + 0.5) * parent_cell;
 }
 
+// Sample heightmap at world XZ, picking from height_array or the
+// legacy height_map per `has_height_array`. Returns normalized [0,1]
+// height value matching the shader's encoding (caller decodes via
+// (h - 0.5) * 2 * scale + offset).
+//
+// For the array path: compute page coord from world XZ → array layer
+// (spatially packed, no lookup table needed) + UV within the page.
+// Out-of-window samples return 0.5 (= world y = 0) so missing pages
+// look like flat ground instead of black/garbage.
+float w5_sample_height(vec2 world_xz, vec2 fallback_uv) {
+    if (has_height_array) {
+        vec2 ring_local = world_xz - height_array_min_xz;
+        vec2 page_coord_f = ring_local / max(height_array_page_extent_m, 0.01);
+        ivec2 page_coord = ivec2(floor(page_coord_f));
+        // Reject out-of-window (shouldn't happen at runtime but defensive)
+        if (page_coord.x < 0 || page_coord.y < 0 ||
+            page_coord.x >= height_pages_per_side ||
+            page_coord.y >= height_pages_per_side) {
+            return 0.5;
+        }
+        int layer = page_coord.y * height_pages_per_side + page_coord.x;
+        vec2 uv_within_page = page_coord_f - vec2(float(page_coord.x), float(page_coord.y));
+        return texture(height_array, vec3(uv_within_page, float(layer))).r;
+    }
+    return texture(height_map, fallback_uv).r;
+}
+
 void vertex() {
-    // This vertex's own height (own-ring resolution)
-    float h_self = texture(height_map, UV).r;
-    // Parent-ring height (next-coarser resolution at this XZ)
-    float h_parent = texture(height_map, w5_parent_uv(UV, grid_n)).r;
+    // Compute world XZ for THIS vertex (pre-displacement; model matrix
+    // is XZ-translate-only so VERTEX.y doesn't affect it).
+    vec2 vertex_world_xz = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
+    // This vertex's own height (own-ring resolution). For the
+    // height_array path, use world XZ → page → layer; for the legacy
+    // single-page path, use the mesh-local UV.
+    float h_self = w5_sample_height(vertex_world_xz, UV);
+    // Parent-ring height (next-coarser resolution at this XZ). For the
+    // array path, we need to snap world XZ to the parent grid (vs UV
+    // snapping which is fine for single-page). Approximate by snapping
+    // to a 2× cell in world XZ.
+    vec2 parent_world_xz = vertex_world_xz;
+    if (has_height_array) {
+        // Cell size in world meters for own-ring ≈ page_extent /
+        // (grid_n - 1). Parent grid is 2× coarser, so snap to 2× cell.
+        float own_cell_m = height_array_page_extent_m / max(grid_n - 1.0, 1.0);
+        float parent_cell_m = own_cell_m * 2.0;
+        parent_world_xz = floor(vertex_world_xz / parent_cell_m + vec2(0.5)) * parent_cell_m;
+    }
+    float h_parent = has_height_array
+        ? w5_sample_height(parent_world_xz, UV)
+        : texture(height_map, w5_parent_uv(UV, grid_n)).r;
     // Morph: 0 = own ring, 1 = parent ring. Smooth blend hides LOD
     // boundary; ClipmapDispatch drives morph_factor toward 1 as the
     // vertex approaches the ring's outer edge.
     float h = mix(h_self, h_parent, morph_factor);
     // Heightmap stored as [0,1] normalized fraction → world height
     VERTEX.y = (h - 0.5) * 2.0 * height_scale + height_offset;
-    // Compute world_xz ONCE in vertex (was per-fragment matmul)
-    v_world_xz = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
+    // World XZ unchanged by Y displacement; cache for fragment.
+    v_world_xz = vertex_world_xz;
     v_world_y = VERTEX.y;
 
-    // Slope derivation (Phase 4.9.b): sample heightmap at ±eps in U/V,
-    // compute world-space dY/dX and dY/dZ, then slope = angle from
-    // horizontal. eps = 1 cell in UV space; cell size in world meters
-    // matches the parent-uv math (cell = 2 / (grid_n - 1) for the
-    // PARENT grid; for own-ring it's 1 / (grid_n - 1)).
-    float own_cell_uv = 1.0 / max(grid_n - 1.0, 1.0);
-    float h_u_pos = texture(height_map, UV + vec2(own_cell_uv, 0.0)).r;
-    float h_u_neg = texture(height_map, UV - vec2(own_cell_uv, 0.0)).r;
-    float h_v_pos = texture(height_map, UV + vec2(0.0, own_cell_uv)).r;
-    float h_v_neg = texture(height_map, UV - vec2(0.0, own_cell_uv)).r;
+    // Slope derivation (Phase 4.9.b): 4-tap finite difference. For the
+    // array path, sample at ±1 cell in world XZ; for the legacy path,
+    // sample at ±1 UV-cell.
+    float h_u_pos, h_u_neg, h_v_pos, h_v_neg;
+    float cell_m;
+    if (has_height_array) {
+        cell_m = height_array_page_extent_m / max(grid_n - 1.0, 1.0);
+        h_u_pos = w5_sample_height(vertex_world_xz + vec2(cell_m, 0.0), UV);
+        h_u_neg = w5_sample_height(vertex_world_xz - vec2(cell_m, 0.0), UV);
+        h_v_pos = w5_sample_height(vertex_world_xz + vec2(0.0, cell_m), UV);
+        h_v_neg = w5_sample_height(vertex_world_xz - vec2(0.0, cell_m), UV);
+    } else {
+        float own_cell_uv = 1.0 / max(grid_n - 1.0, 1.0);
+        h_u_pos = texture(height_map, UV + vec2(own_cell_uv, 0.0)).r;
+        h_u_neg = texture(height_map, UV - vec2(own_cell_uv, 0.0)).r;
+        h_v_pos = texture(height_map, UV + vec2(0.0, own_cell_uv)).r;
+        h_v_neg = texture(height_map, UV - vec2(0.0, own_cell_uv)).r;
+        cell_m = 1.0;  // approximation (see Phase 4.9.b note)
+    }
     // World-space heights at the offset samples
     float wy_u_pos = (h_u_pos - 0.5) * 2.0 * height_scale + height_offset;
     float wy_u_neg = (h_u_neg - 0.5) * 2.0 * height_scale + height_offset;
     float wy_v_pos = (h_v_pos - 0.5) * 2.0 * height_scale + height_offset;
     float wy_v_neg = (h_v_neg - 0.5) * 2.0 * height_scale + height_offset;
-    // dY per cell — UV → world meters scale is implicit (one UV
-    // cell = one world cell on the ring, scale cancels in atan2).
     float dyx = (wy_u_pos - wy_u_neg) * 0.5;
     float dyz = (wy_v_pos - wy_v_neg) * 0.5;
-    // Approximate cell size: use a fixed reasonable value; the ratio
-    // matters not the absolute scale because atan operates on slope
-    // ratios. 1.0m is a safe baseline that gives correct slope_deg
-    // for inner ring (cell ≈ 0.5m, error ≈ 2:1) but real slope still
-    // reads correctly within the smoothstep tolerance.
-    float cell_m = 1.0;
-    float gradient_mag = length(vec2(dyx, dyz) / cell_m);
+    float gradient_mag = length(vec2(dyx, dyz) / max(cell_m, 0.001));
     v_slope_deg = degrees(atan(gradient_mag));
 }
 

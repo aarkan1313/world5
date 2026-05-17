@@ -110,10 +110,12 @@ func test_full_detail_ready_fires() -> void:
 	assert_true(ready, "is_full_detail_ready() flips true within 180 frames")
 
 
-func test_ring_materials_have_height_map_bound() -> void:
-	# Per OA-C2: confirm the height_map uniform on each ring's material
-	# is actually a populated Texture2D — not null (which is the
-	# pre-bind state) and not the shader's default value.
+func test_ring_materials_have_height_bound() -> void:
+	# Per OA-C2 + Phase 4.9.a: confirm each ring's height data IS
+	# reaching the shader. Pre-4.9.a this checked the legacy `height_map`
+	# Texture2D uniform; post-4.9.a we bind a Texture2DArray + flip
+	# `has_height_array=true`. Either path means heightmap data is
+	# live on the GPU.
 	if _skip_if_no_rd():
 		return
 	_camera.global_position = Vector3.ZERO
@@ -132,12 +134,23 @@ func test_ring_materials_have_height_map_bound() -> void:
 				inner = c
 				break
 	assert_not_null(inner, "inner ring MeshInstance3D exists")
-	var mat: Material = (inner as MeshInstance3D).material_override
-	assert_true(mat is ShaderMaterial)
-	var height_tex: Variant = (mat as ShaderMaterial).get_shader_parameter("height_map")
-	assert_true(height_tex is Texture2D,
-		"inner ring's height_map uniform is a populated Texture2D (caught: %s)"
-			% str(height_tex))
+	var mat: ShaderMaterial = (inner as MeshInstance3D).material_override as ShaderMaterial
+	assert_not_null(mat, "ring has ShaderMaterial override")
+	var has_array: bool = mat.get_shader_parameter("has_height_array") as bool
+	if has_array:
+		# Phase 4.9.a path: height_array Texture2DArray must be populated
+		var array_tex: Variant = mat.get_shader_parameter("height_array")
+		assert_true(array_tex is Texture2DArray,
+			"inner ring's height_array uniform is a Texture2DArray (got: %s)"
+				% str(array_tex))
+		assert_gt(int(mat.get_shader_parameter("height_pages_per_side")), 0,
+			"height_pages_per_side must be > 0 when has_height_array is true")
+	else:
+		# Legacy path: single Texture2D
+		var height_tex: Variant = mat.get_shader_parameter("height_map")
+		assert_true(height_tex is Texture2D,
+			"inner ring's height_map uniform is a populated Texture2D (caught: %s)"
+				% str(height_tex))
 
 
 # --- 2026-05-17 brown-band bug class regression guards ---

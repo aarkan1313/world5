@@ -53,6 +53,12 @@ func make_ring_material(_ring_index: int,
 	# Layer 2 defaults: detail overlay disabled until bind_detail_array()
 	mat.set_shader_parameter("detail_count", 0)
 	mat.set_shader_parameter("has_detail", false)
+	# Multi-page heightmap (Phase 4.9.a) defaults: not bound, legacy
+	# height_map path active.
+	mat.set_shader_parameter("has_height_array", false)
+	mat.set_shader_parameter("height_pages_per_side", 1)
+	mat.set_shader_parameter("height_array_min_xz", Vector2(0.0, 0.0))
+	mat.set_shader_parameter("height_array_page_extent_m", 256.0)
 	# Per-fragment slot selection (Phase 4.9.b): defaults to 0 slots
 	# active. bind_all_slots() sets slot_count + the band arrays.
 	mat.set_shader_parameter("slot_count", 0)
@@ -70,9 +76,44 @@ func make_ring_material(_ring_index: int,
 
 
 ## Bind the heightmap texture + amplitude params for this ring.
+##
+## Legacy single-page path (Phase 4.4-4.8). Caller passes one Texture2D
+## covering the ring's center page; outer rings stretch this at edges
+## → chunk seams. Phase 4.9.a fix is bind_height_array (below).
 func bind_height_map(mat: ShaderMaterial, height_tex: Texture2D,
 		scale_m: float, offset_m: float) -> void:
 	mat.set_shader_parameter("height_map", height_tex)
+	mat.set_shader_parameter("height_scale", scale_m)
+	mat.set_shader_parameter("height_offset", offset_m)
+
+
+## Bind a multi-page heightmap Texture2DArray for the ring (Phase 4.9.a,
+## audit C1 fix). Each layer holds one page; layer index = page_y *
+## pages_per_side + page_x relative to `min_xz`. Vertex shader uses
+## world XZ to pick the correct layer per fragment, eliminating the
+## outer-ring chunk seams the legacy single-page binding produced.
+##
+## Caller passes:
+##   array: Texture2DArray with pages_per_side² layers (RingHeightArray.build)
+##   pages_per_side: width of the page grid (>= 1)
+##   min_xz: world-space corner where page (0,0) starts
+##   page_extent_m: width of one page in world meters
+##   scale_m / offset_m: same amplitude/offset as bind_height_map
+##
+## Flips `has_height_array=true` so the vertex shader takes the array
+## path. Call bind_height_map() with a single-page texture (or do
+## nothing) to leave it false.
+func bind_height_array(mat: ShaderMaterial, array: Texture2DArray,
+		pages_per_side: int, min_xz: Vector2, page_extent_m: float,
+		scale_m: float, offset_m: float) -> void:
+	if array == null or pages_per_side <= 0:
+		mat.set_shader_parameter("has_height_array", false)
+		return
+	mat.set_shader_parameter("height_array", array)
+	mat.set_shader_parameter("has_height_array", true)
+	mat.set_shader_parameter("height_pages_per_side", pages_per_side)
+	mat.set_shader_parameter("height_array_min_xz", min_xz)
+	mat.set_shader_parameter("height_array_page_extent_m", page_extent_m)
 	mat.set_shader_parameter("height_scale", scale_m)
 	mat.set_shader_parameter("height_offset", offset_m)
 

@@ -137,3 +137,42 @@ func test_vertex_derives_slope_from_heightmap() -> void:
 	assert_true(src.contains("v_slope_deg") or src.contains("v_world_y"),
 		"vertex must publish slope (v_slope_deg) or world Y (v_world_y) " +
 		"for per-fragment slot selection")
+
+
+# --- Phase 4.9.a: multi-page heightmap binding ---
+
+func test_shader_declares_height_array_uniforms() -> void:
+	# Phase 4.9.a (audit C1). Outer rings span > page_extent_m so a
+	# single Texture2D heightmap stretches at edges → chunk seams.
+	# Fix: bind a Texture2DArray per ring + sample correct layer
+	# per fragment via world XZ → page coord → layer lookup.
+	var f: FileAccess = FileAccess.open(
+		"res://addons/world5/shaders/terrain_clipmap.gdshader",
+		FileAccess.READ)
+	var src: String = f.get_as_text()
+	f.close()
+	assert_true(src.contains("height_array"),
+		"shader must declare height_array sampler2DArray for multi-page binding")
+	# page_table uniforms (or equivalent): pages_per_side + min_xz +
+	# page_extent + a per-page layer-index table so vertex can map
+	# world XZ → array layer.
+	assert_true(src.contains("height_pages_per_side"),
+		"shader must declare height_pages_per_side uniform")
+	assert_true(src.contains("height_array_min_xz"),
+		"shader must declare height_array_min_xz uniform (world-space corner)")
+
+
+func test_shader_vertex_samples_height_array_when_bound() -> void:
+	# Vertex shader must read from height_array (not just height_map)
+	# when has_height_array flag is true. Legacy height_map path
+	# preserved as fallback for the unbound case (Phase 4.5 tests).
+	var f: FileAccess = FileAccess.open(
+		"res://addons/world5/shaders/terrain_clipmap.gdshader",
+		FileAccess.READ)
+	var src: String = f.get_as_text()
+	f.close()
+	assert_true(src.contains("has_height_array"),
+		"shader must branch on has_height_array flag in vertex")
+	# Sample on the array sampler somewhere in the file (vertex)
+	assert_true(src.contains("texture(height_array"),
+		"vertex must call texture(height_array, ...) at least once")
