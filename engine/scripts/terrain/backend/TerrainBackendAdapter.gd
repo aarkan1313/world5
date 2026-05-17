@@ -34,9 +34,9 @@ func _init() -> void:
 ## Owner MUST call before drop, OR before RenderingDevice teardown
 ## (per spec 08a rule 5; TB-REV-C2). Idempotent.
 func shutdown() -> void:
-	if _backend != null:
+	if _backend != null and is_instance_valid(_backend):
 		_backend.shutdown()
-		_backend = null
+	_backend = null
 
 
 func _notification(what: int) -> void:

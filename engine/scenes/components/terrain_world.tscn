@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bw5tterrainworld001"]
+
+[ext_resource type="Script" path="res://addons/world5/scripts/terrain/TerrainWorld.gd" id="1_terrainworld"]
+
+[node name="TerrainWorld" type="Node3D"]
+script = ExtResource("1_terrainworld")

@@ -34,7 +34,9 @@ func test_request_unknown_path_marked_failed() -> void:
 	# Per Godot: load_threaded_request returns ERR_CANT_OPEN or similar
 	# synchronously OR fails during the poll. Either way our wrapper
 	# should reflect FAILED status after the first tick or two.
-	for i in range(10):
+	# Bumped from 10 → 60 frames to absorb suite-level timing variance
+	# (CI / heavy-test-suite scenarios saw 10 sometimes insufficient).
+	for i in range(60):
 		await get_tree().process_frame
 		if _stream.get_status(rid) == AssetStream.Status.FAILED:
 			break
