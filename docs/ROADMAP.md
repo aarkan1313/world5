@@ -29,9 +29,10 @@ multi-biome material blend, validates with one biome demo.
 | Phase 2 — Foundation build (Tier 0) | ✅ done | [phase_2_foundations.md](roadmap/phase_2_foundations.md) | 1 (commits `bcb1d62` → `cb46ffc`) |
 | Phase 2 audit + fix | ✅ done | SELF_AUDIT_PHASE_2_FINDINGS | 1 (commits `17fce3d` → `d6d6c94`) |
 | Phase 3 — Renderer research sprint | ✅ done | [phase_3_renderer_research.md](roadmap/phase_3_renderer_research.md) + spec 15a | 1 (came in under 3-5 estimate) |
-| **Phase 4 — Terrain MVP (one biome)** | 🚧 in progress (4.1-4.4 done, 4.5 in flight, 4.6 next) | [phase_4_terrain_mvp.md](roadmap/phase_4_terrain_mvp.md) | 5-10 |
-| Phase 4.5 — **Calibration sprint** | 🚧 in progress (sub-phase of 4) | [phase_4_5_calibration.md](roadmap/phase_4_5_calibration.md) | 1-2 |
-| Phase 5 — Ground texture pipeline | pending | (write when starting) | 5-10 |
+| Phase 4 — Terrain MVP (one biome) | ✅ done | [phase_4_terrain_mvp.md](roadmap/phase_4_terrain_mvp.md) | 6 sessions (4.1-4.6) |
+| Phase 4.5 — Calibration sprint | ✅ done (sub-phase of 4) | [phase_4_5_calibration.md](roadmap/phase_4_5_calibration.md) | 1 session |
+| Phase 4.6 — Walking demo | ✅ done (sub-phase of 4) | [phase_4_6_walking_demo.md](roadmap/phase_4_6_walking_demo.md) | 1 session |
+| **Phase 5 — Ground texture pipeline** | 🚧 next | (write when starting) | 5-10 |
 | Phase 6 — Second biome | pending | (write when starting) | 3-5 |
 | Phase 7 — Decoration end-to-end | pending | (write when starting) | 5-10 |
 | Phase 8 — Foliage system | pending | (write when starting) | 25-100 (see SA-S1) |
@@ -124,6 +125,15 @@ Phase 14 (persistence)
 Phase 15 (bake recipes) + Phase 16 (forkability) — can parallelize
 ```
 
+### Cross-phase kernel deliveries
+
+`ErosionKernel` (spec 19 sprint 2) is unscheduled in the phase table
+above but **must ship before Phase 10 water** (Phase 10 rivers consume
+its `drainage_map` + `flow_direction` + `flow_accumulation` outputs
+per spec 35). Natural fit is alongside Phase 5 (texture pipeline) since
+both are pre-bake; otherwise insert a Phase 5.5 erosion sprint. Lock
+the placement when Phase 5 plan-doc is written.
+
 ## Doc cap status
 
-- This file: ~110 lines (well under 200 cap)
+- This file: ~120 lines (well under 200 cap)

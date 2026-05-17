@@ -103,3 +103,34 @@ quality tier).
    CPU→ImageTexture encode bottleneck (M2)
 3. Cap `terrain_pages_max` in production at per-tier values informed
    by measurement (4 rings × ~10 pages × tier factor)
+
+## Phase 4.6 stationary-baseline result (2026-05-17)
+
+The stationary baseline measurement (item 1 above) flipped the
+diagnosis. See `engine/tests/perf/test_terrain_stationary_real_device.gd`
++ `user://_calibration/stationary_<ts>.json`. Results:
+
+| Rings | Motion avg | Stationary avg | Settled? |
+|-------|-----------|----------------|----------|
+| 4     | 4.16 ms   | 4.43 ms        | yes (26 frames) |
+| 5     | 4.17 ms   | 4.37 ms        | yes (90 frames) |
+| 6     | 6.08 ms   | 5.57 ms        | no (>239 frames) |
+| 7     | 26.93 ms  | 25.90 ms       | no (>239 frames) |
+
+**Stationary cost ≈ motion cost** at every ring count. The 7→8
+cliff is **rasterization-bound**, not streaming-bound. The bounded-
+concurrency window fix (TR-PERF-C2 / Phase 4.5) was reasonable
+defensive engineering but did NOT address the actual bottleneck.
+
+**Implication**: the render cost itself is what blows the 3060
+budget. Going from 7→6→5 rings buys back enough budget; per-tier
+`terrain_rings` (3/4/5/6/7 from low to cinematic) per Phase 4.5
+close is the right call.
+
+The "settled: false" at 6 + 7 rings is interesting — it means
+the streaming pipeline can't fully drain even when the camera is
+stationary for 240 frames. That's the LRU thrashing against the
+ring footprint OR the bounded-concurrency window starving outer
+rings. Worth investigating in Phase 5, but not blocking — the
+rendered output is still correct; it's just that not every page in
+the footprint is fully resident.

@@ -1,0 +1,9 @@
+{
+	"_schema_version": 1,
+	"_note": "Walking demo NoiseStack kernel config. Modest 50m amplitude + 512m base wavelength produces visible terrain at the demo's walking scale without overwhelming the camera at default Y=50.",
+	"octaves": 6,
+	"frequency": 0.001953125,
+	"lacunarity": 2.0,
+	"gain": 0.5,
+	"amplitude": 50.0
+}

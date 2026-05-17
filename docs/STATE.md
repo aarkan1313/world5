@@ -8,13 +8,16 @@
 
 ## One-sentence summary
 
-**Phase 3 (renderer research sprint) shipped.** Decision:
-**clipmap** per spec 15a — 3 of 5 candidates F3-eliminated by
-Godot 4.5 capability survey (mesh shaders not exposed, nanite-style
-design-phase only, VT requires extensions). Prototype renders
-130k-tri 1km × 1km in ~0.7 ms on RTX 5090 Laptop (extrapolated
-2-3 ms on RTX 3060; fits X_FRAME_BUDGET). 242 tests pass via
-`verify --full`. Ready for Phase 4 (terrain MVP).
+**Phase 4 (terrain MVP) closed.** Walking demo at
+`demo/scenes/walking_demo.tscn` launches end-to-end with a real
+world bundle on Godot 4.6.2 stable mono; user walks WASD through
+a clipmap-rendered 5-ring terrain with real heightmap displacement +
+lighting. Phase 4.5 calibration + Phase 4.6 stationary baseline
+measured cost at 4-6 ms on RTX 5090 Laptop (rasterization-bound, not
+streaming); F2 engaged for 3060-class hardware via per-tier
+ring_count of 3/4/5/6/7. 5/5 verify layers green. Two outside
+audits actioned. Next: **Phase 5 (texture pipeline)** so the
+terrain stops being fallback-color and gets real ground textures.
 
 ## Per-tier state
 
@@ -89,6 +92,11 @@ key open questions, where each system's W4.1 reference lives).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
+- 2026-05-17: cohesion review (docs-only). 3 cross-spec seams
+  tightened: ROADMAP now notes ErosionKernel must ship before Phase 10
+  water (was implicit); spec 22 documents climate moisture-degradation
+  window (Phase 4-9 flat-per-biome until Phase 10 water) + clarifies
+  `auto_biome_rules` is intentionally geometry-only.
 - 2026-05-16: **Phase 3 shipped** — clipmap renderer committed in
   spec 15a; working prototype at
   `engine/examples/renderer_research_prototype/`; 130k-tri scene

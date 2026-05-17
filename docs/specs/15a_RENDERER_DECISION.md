@@ -364,14 +364,21 @@ serialization) is closed, or (b) a stationary-camera baseline shows
 pure render cost is in budget. Pure-render-cost isolation deferred
 to Phase 4.6.
 
-Caveat: the calibration measurement bundled streaming-under-motion
-cost with pure render cost. The 109ms 8-ring number is dominated by
-the bounded-concurrency window (4 in-flight pages) not keeping up
-with the outer ring's page demand under continuous motion — that's
-a streaming-throughput problem, not a rasterization problem. The
-"is clipmap a viable primitive?" question stays answered yes;
-"can the current streaming layer feed it at 60fps?" is the open
-question Phase 4.5 partially answered (no, not at 8 rings).
+Caveat (initial Phase 4.5 hypothesis): the calibration measurement
+bundled streaming-under-motion cost with pure render cost.
+
+**Phase 4.6 stationary baseline overturned this hypothesis**: with
+the camera parked + waiting for full_detail_ready, the cost is the
+SAME (within 5-10%) as the motion case at every ring count. The
+7→8 ring cliff is **rasterization-bound**, not streaming-bound. The
+bounded-concurrency window fix (TR-PERF-C2) was reasonable defensive
+engineering but did not address the actual bottleneck — which is
+the rasterizer geometry throughput at high vertex counts.
+
+This makes the F2 decision firmer: dropping ring_count is the
+correct mitigation (not a streaming-pipeline rewrite). The Phase 4.5
+quality_tiers.json terrain_rings of 3/4/5/6/7 per tier directly
+addresses the actual constraint.
 
 **Why 1.5 ms not 2.0 ms**: spec 21:97 reserves 2.0 ms for terrain at
 high tier; the 0.5 ms gap is buffer for the cache + residency layers

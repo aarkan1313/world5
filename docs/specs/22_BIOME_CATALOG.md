@@ -63,6 +63,14 @@ inventory decision.
         "elevation_m": [800, 1400],
         "slope_deg":   [0, 60]
       },
+      // NOTE: auto_biome_rules is intentionally geometry-only
+      // (elevation + slope). Per-XZ climate (temperature / moisture /
+      // wind) is a CONSEQUENCE of biome assignment + position via
+      // climate_rules below, not an INPUT to it. If you want
+      // climate-driven biome selection (e.g. "tropical at any
+      // elevation if temp > 25C"), add a climate field to the rule
+      // set here in a future schema bump — v1 stays geometry-only
+      // to keep the assignment deterministic + cheap.
       "nav_default": "walkable"
     },
     {
@@ -159,7 +167,9 @@ the base climate per (x, z) location:
 The kernel composer (spec 19) reads `climate_base` + `climate_rules`
 and computes **per-XZ climate** as (note SA-M3.6: distance-to-water
 rule degrades to base moisture if spec 35 water hasn't shipped or
-the world has no water bodies):
+the world has no water bodies — this degraded state persists from
+Phase 4 through Phase 9, since water ships in Phase 10; weather in
+Phase 11 will read flat-per-biome moisture until water lands):
 
 - `temperature_c(x, z) = climate_base.temperature_c + (elevation(x,z) - reference_elevation_m) * (lapse / 1000)`
 - `moisture(x, z) = base_moisture interpolated by distance_to_nearest_water`
@@ -240,3 +250,7 @@ Each biome declares which surface slots it uses (`ground`, `mid`,
   distance, wind from local slope/aspect). Delivers within-biome
   regional variation that inventory promised. Catalog schema updated;
   weather spec 36 reads computed values.
+- 2026-05-17: cohesion review. Added explicit duration window for
+  moisture-degradation gap (Phase 4 → Phase 9, until water lands in
+  Phase 10); added in-schema note that `auto_biome_rules` is
+  intentionally geometry-only with climate as consequence-not-input.

@@ -82,7 +82,7 @@ or scripted moments.
 
 | Spec | System | Budget | Justification |
 |---|---|---|---|
-| 21 | Terrain renderer geometry + draws | 2.0 ms ⚠️ | Largest visible surface; nanite/clipmap-class cost. **Phase 4.5 calibration WARNING**: measured 4-6 ms on RTX 5090 Laptop under continuous-motion streaming load at 4-6 rings; extrapolated 13-25 ms on RTX 3060 (blows budget 7-12×). Streaming-throughput limited, not rasterization. quality_tiers.json terrain_rings dropped to 3/4/5/6/7 per tier (F2 conservative). Stationary-camera pure-render baseline + Texture2DRD upload pathway pending Phase 4.6 to confirm budget achievability. |
+| 21 | Terrain renderer geometry + draws | 2.0 ms ⚠️ | Largest visible surface; nanite/clipmap-class cost. **Phase 4.5+4.6 calibration WARNING**: measured 4-6 ms on RTX 5090 Laptop at 4-6 rings (stationary OR motion — Phase 4.6 baseline showed cost is rasterization-bound, NOT streaming-bound). Extrapolated 13-25 ms on RTX 3060 (blows budget 7-12×). quality_tiers.json terrain_rings dropped to 3/4/5/6/7 per tier (F2 engaged). True 3060 measurement pending hardware. |
 | 23+24 | Materials + ground variety shader pass | 0.8 ms | Per-pixel tile blend + macro |
 | 28 | Decoration (LOD pass + MMI draws) | 0.8 ms | LOD pass + batched MMI draws; W4 measured ~0.6 ms LOD pass alone |
 | 29 | Foliage (geometry + wind shader + LOD) | 0.8 ms | Geometry draws dominate; wind shader trivial |

@@ -1,5 +1,5 @@
 ; Engine configuration file.
-; W5 demo consumer project. Phase 0 scaffold — no demo scenes yet.
+; W5 demo consumer project.
 ;
 ; Format: 5 = Godot 4.5+.
 
@@ -8,9 +8,10 @@ config_version=5
 [application]
 
 config/name="W5 Demo"
-config/description="Consumer Godot project that uses the W5 plugin. Validates engine works as an addon. Demo scenes land in Phase 4+."
+config/description="Consumer Godot project that uses the W5 plugin. Validates engine works as an addon. Phase 4.6 walking demo at res://scenes/walking_demo.tscn."
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
+run/main_scene="res://scenes/walking_demo.tscn"
 
 [editor_plugins]
 

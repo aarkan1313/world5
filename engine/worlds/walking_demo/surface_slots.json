@@ -1,0 +1,10 @@
+{
+	"_schema_version": 1,
+	"_note": "Walking demo placeholder. Phase 5 texture pipeline produces real siblings; Phase 6 second biome adds a second slot. Today: one slot, no siblings — shader falls back to fallback_color + macro_albedo modulation.",
+	"slots": [
+		{
+			"name": "grass",
+			"siblings": []
+		}
+	]
+}
