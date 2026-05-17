@@ -47,16 +47,21 @@ Run: `pytest tests/ pipeline/*/tests/`.
 ### Layer 2: gut (GDScript)
 
 [github.com/bitwes/Gut](https://github.com/bitwes/Gut) installed as a
-Godot addon under `engine/addons/gut/`. Test files at
-`engine/tests/unit/`, `engine/tests/integration/`. Covers:
+Godot addon under `demo/addons/gut/` (Phase 2.1 lesson: gut needs to
+live at the Godot project root's addons/, not nested inside the W5
+plugin — Godot expects `addons/gut/...` paths, so it must sit beside
+the world5 addon link, not inside it). Test files for W5's engine
+classes still live at `engine/tests/unit/` etc. — gut finds them via
+the `-gdir=res://addons/world5/tests/` argument. Covers:
 - GDScript class behavior (job system, spatial index, async streaming,
   decoration runtime, etc.)
 - Per-system logic correctness
 - Mock-friendly tests for systems that need Godot runtime without
   full scene tree
 
-Run: `godot --headless --script engine/addons/gut/cmd_tool.gd`
-(wrapped by `python -m world5.verify`).
+Run: `godot --headless --path demo --script res://addons/gut/gut_cmdln.gd
+-gdir=res://addons/world5/tests/ -gexit` (wrapped by
+`python -m world5.verify`).
 
 **Why gut not custom**: gut is the established Godot test framework.
 Building our own would duplicate effort. The fact that W4.1 didn't

@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "world5-workspace"
+version = "0.0.1"
+description = "W5 workspace meta-package — installs the pipeline + test deps. The actual pipeline package is at pipeline/. This top-level pyproject exists so `pytest` runs from repo root, finds the world5 package via the pipeline install."
+requires-python = ">=3.12"
+
+# The actual world5 package is at pipeline/world5/.
+# Install via `pip install -e ./pipeline`.
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "pipeline"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "gpu: requires GPU; skip on CPU-only CI",
+    "integration: cross-system tests; runs in default verify mode",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]  # line length — let ruff format handle it

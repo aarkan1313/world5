@@ -26,7 +26,7 @@ shipped + pushed (commit `f73b4f8`).
 | Phase 1 — Spec layer | ✅ done | (47 specs in `specs/`) | ~30 |
 | Phase 1.5 — Audits | ✅ done | AUDIT_FINDINGS + SELF_AUDIT_FINDINGS | ~2 |
 | Phase 0 — Repo setup | ✅ done | [phase_0_repo_setup.md](roadmap/phase_0_repo_setup.md) | 1 (shipped commit `f73b4f8`) |
-| **Phase 2 — Foundation build (Tier 0)** | 🚧 next | (write at start) | 8-15 |
+| **Phase 2 — Foundation build (Tier 0)** | 🚧 in progress | [phase_2_foundations.md](roadmap/phase_2_foundations.md) | 8-15 |
 | Phase 3 — Renderer research sprint | pending | spec 15 brief | 3-5 |
 | Phase 4 — Terrain MVP (one biome) | pending | (write when starting) | 5-10 |
 | Phase 4.5 — **Calibration sprint** | pending | (write when starting) | 2-3 |
