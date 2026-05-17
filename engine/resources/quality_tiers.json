@@ -1,6 +1,6 @@
 {
   "_schema_version": 1,
-  "_note": "Phase 2.3: placeholder values. Calibration sprint at Phase 4.5 re-measures every number on real RTX 3060 hardware. Per-system specs cite these via QualityTiers.get_current().",
+  "_note": "Phase 4.5 calibration (2026-05-17): terrain_rings adjusted per RTX 5090 Laptop measurement + 3060 F2 conservative extrapolation (see docs/build-notes/phase_4_5_calibration_2026_05_17.md). Other values still placeholder pending per-system Phase 5+ measurement. Per-system specs cite via QualityTiers.get_current().",
   "tiers": {
     "low": {
       "tier_name": "low",
@@ -18,7 +18,7 @@
       "frame_budget_peak_ms": 33.0,
       "frame_budget_engine_share_ms": 4.0,
 
-      "terrain_rings": 6,
+      "terrain_rings": 3,
       "terrain_grid_n": 128,
       "terrain_step0_m": 4.0,
       "terrain_stepN_m": 128.0,
@@ -61,7 +61,7 @@
       "frame_budget_peak_ms": 33.0,
       "frame_budget_engine_share_ms": 6.0,
 
-      "terrain_rings": 7,
+      "terrain_rings": 4,
       "terrain_grid_n": 192,
       "terrain_step0_m": 3.0,
       "terrain_stepN_m": 96.0,
@@ -104,7 +104,7 @@
       "frame_budget_peak_ms": 33.0,
       "frame_budget_engine_share_ms": 8.0,
 
-      "terrain_rings": 8,
+      "terrain_rings": 5,
       "terrain_grid_n": 256,
       "terrain_step0_m": 2.0,
       "terrain_stepN_m": 64.0,
@@ -147,7 +147,7 @@
       "frame_budget_peak_ms": 33.0,
       "frame_budget_engine_share_ms": 10.0,
 
-      "terrain_rings": 10,
+      "terrain_rings": 6,
       "terrain_grid_n": 256,
       "terrain_step0_m": 1.5,
       "terrain_stepN_m": 48.0,
@@ -190,7 +190,7 @@
       "frame_budget_peak_ms": 66.0,
       "frame_budget_engine_share_ms": 20.0,
 
-      "terrain_rings": 12,
+      "terrain_rings": 7,
       "terrain_grid_n": 256,
       "terrain_step0_m": 1.0,
       "terrain_stepN_m": 32.0,
