@@ -3,21 +3,43 @@
 > Phase 4.6 deliverable. Launches the W5 terrain renderer end-to-end
 > with a real world bundle. Walk around with WASD.
 
+## ⚠️ Known issue — autoload bootstrap
+
+The Tier 0 autoloads (StreamingBudget / JobScheduler / etc.) are
+registered by `engine/plugin.gd` via `EditorPlugin.add_autoload_singleton`.
+Per Godot 4 semantics this only persists to `project.godot` after
+an interactive editor session (open + save). **Standalone runs
+(F5 from a fresh checkout, or `godot --path demo res://scenes/...`)
+fail with `JobScheduler autoload missing` until the editor has
+been opened + the project saved once.**
+
+The "obvious" fix (add an `[autoload]` section to `project.godot`
+manually with the same names) hits a Godot 4 parse error: autoload
+globals can't share a name with the underlying scripts' `class_name`
+declarations ("X is an invalid name. Must not collide with an
+existing global script class name."). The proper fix is renaming
+all autoloads to a `W5_` prefix while keeping `class_name` for tests
+— scoped as Phase 4.7 (see `docs/roadmap/phase_4_7_autoload_rename.md`).
+
+**Workaround until Phase 4.7 ships**:
+1. Open `demo/project.godot` in Godot once
+2. In the Project Settings → Plugins, ensure World5 is enabled
+3. Settings → Autoload should show 5 entries (added by the plugin)
+4. Save the project (Ctrl + S)
+5. From now on, standalone runs work
+
 ## Launch
 
-### From command line (recommended for the first run)
+### From Godot editor (works on any checkout)
+
+1. Open `demo/project.godot` in Godot 4.6.2+
+2. Press F5 (run main scene)
+
+### From command line (only after editor bootstrap)
 
 ```powershell
 & "C:\Godot\v4.6.2\Godot_v4.6.2-stable_mono_win64\Godot_v4.6.2-stable_mono_win64.exe" --path demo
 ```
-
-Godot opens the `demo/` project; the main scene
-(`res://scenes/walking_demo.tscn`) launches automatically.
-
-### From Godot editor
-
-1. Open `demo/project.godot` in Godot 4.6.2+
-2. Press F5 (run main scene)
 
 ## Controls
 
