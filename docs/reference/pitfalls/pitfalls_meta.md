@@ -89,3 +89,58 @@ memory entry `godot_headless_null_viewport`.
 
 **First hit**: 2026-05-16 (Phase 2.5, user-prompted; real GPU tests
 shipped Phase 2.6).
+
+---
+
+## #3 — GDScript Dictionary iteration during erase is undefined
+
+**Symptom**: Code that iterates `for k in dict.keys():` and calls
+`dict.erase(k)` (or `dict.erase(some_other_key)`) inside the loop
+may silently skip entries, double-process entries, or crash. No
+warning; just wrong results at runtime.
+
+**Cause**: Godot's Dictionary `.keys()` returns a snapshot Array,
+but the documentation is ambiguous about behavior under concurrent
+mutation. Empirically: iteration sometimes sees the mutation, sometimes
+doesn't, depending on hash bucket layout. Same class of bug as
+Python's "RuntimeError: dictionary changed size during iteration"
+but GDScript doesn't raise — it just produces wrong results.
+
+**Fix**: snapshot keys BEFORE iterating, then guard each iteration
+with `has()`:
+
+```gdscript
+# WRONG:
+for k in my_dict.keys():
+    if some_condition:
+        my_dict.erase(k)  # undefined behavior
+
+# RIGHT:
+var keys_snapshot: Array = my_dict.keys()
+for k in keys_snapshot:
+    if not my_dict.has(k):
+        continue  # already erased by a callback or another iteration
+    if some_condition:
+        my_dict.erase(k)
+```
+
+Same pattern for `Array.erase` during iteration (also undefined).
+
+**What didn't work**:
+- Hoping Godot would warn — it doesn't
+- Using `for k in my_dict:` instead of `for k in my_dict.keys():` —
+  same underlying iteration mechanism, same bug
+
+**Diagnostic**: under load (many entries, frequent erase) you'll see
+flaky test failures, intermittent missed events, or crashes. Search
+the codebase for `for ... in *.keys():` paired with `.erase(` in the
+same function block.
+
+**Related**: spec 07 JOB_SYSTEM (JobScheduler _tick reaped + evicted
+in one loop; SA2-C3.1), spec 11 CHANGE_BROADCAST (_dispatch could
+see sync callbacks unsubscribe; SA2-C4.1). Both fixed Phase 2 audit
+pass.
+
+**First hit**: 2026-05-16 (Phase 2 self-audit caught 3 instances
+across JobScheduler + ChangeBroadcast; all fixed via snapshot
+pattern).

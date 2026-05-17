@@ -190,11 +190,17 @@ func _deps_satisfied(job: Job) -> bool:
 
 func _tick() -> void:
 	# Move newly-ready jobs into queues (dep-satisfied)
+	# SA2-S3.3: snapshot all_queued ONCE per tick instead of per-pending
+	# (was O(N²); now O(N + queued))
+	var all_queued: Array = _enumerate_all_queued()
+	var all_queued_set: Dictionary = {}
+	for q in all_queued:
+		all_queued_set[q] = true
 	for jid in _jobs.keys():
 		var job: Job = _jobs[jid]
 		if job.status != Job.Status.PENDING:
 			continue
-		if job.id in _enumerate_all_queued():
+		if all_queued_set.has(job.id):
 			continue
 		if _deps_satisfied(job):
 			_queues[job.priority].append(jid)
@@ -209,12 +215,16 @@ func _tick() -> void:
 			break  # one per tick
 
 	# Reap completed tasks (WTP for plain Job; render-thread for GpuJob)
-	for jid in _running.keys():
+	# SA2-C3.1: snapshot keys before iterating + erasing (GDScript
+	# Dictionary iteration during erase is undefined). See pitfall meta-3.
+	var reap_jids: Array = _running.keys()
+	for jid in reap_jids:
+		if not _running.has(jid):
+			continue
 		var wtp_id: int = _running[jid]
 		var job: Job = _jobs[jid]
 		if wtp_id == -1:
 			# GpuJob: render thread runs synchronously per frame.
-			# Check job status directly.
 			if job.is_done():
 				_running.erase(jid)
 		else:
@@ -222,12 +232,15 @@ func _tick() -> void:
 				WorkerThreadPool.wait_for_task_completion(wtp_id)
 				_running.erase(jid)
 
-	# Evict ancient terminal jobs
+	# Evict ancient terminal jobs (SA2-C3.1: snapshot first)
 	var now := Time.get_ticks_msec()
+	var evict_jids: Array = []
 	for jid in _jobs.keys():
 		var job: Job = _jobs[jid]
 		if job.is_done() and (now - job.completed_at_ms) > _RESULT_EVICTION_TTL_MS:
-			_jobs.erase(jid)
+			evict_jids.append(jid)
+	for jid in evict_jids:
+		_jobs.erase(jid)
 
 	_publish_to_budget()
 

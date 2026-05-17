@@ -84,6 +84,7 @@ links into the per-tier file.
 |---|---|---|---|---|
 | meta-1 | [Static methods named `get`/`load`/etc. shadow Godot builtins](pitfalls_meta.md#1) | meta | 13 | 2.3 |
 | meta-2 | [`--headless` disables RenderingDevice; use `--display-driver windows` for GPU tests](pitfalls_meta.md#2) | meta | 06, 08a | 2.5 |
+| meta-3 | [GDScript Dictionary iteration during erase is undefined; snapshot keys first](pitfalls_meta.md#3) | meta | 07, 11 | 2-audit |
 
 ## Doc cap status
 

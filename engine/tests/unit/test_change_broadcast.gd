@@ -150,6 +150,31 @@ func test_get_subscribers_for_source_filters() -> void:
 	assert_eq(for_foo.size(), 2, "foo subscriber + all-source subscriber")
 
 
+# --- SA2-C4.1: unsubscribe-during-dispatch must not crash ---
+
+var _unsubbed_count: int = 0
+
+
+func _on_change_and_unsub(_change) -> void:
+	_unsubbed_count += 1
+	for sid in _bus._subs.keys():
+		_bus.unsubscribe(sid)
+
+
+func test_unsubscribe_during_dispatch_does_not_crash() -> void:
+	_unsubbed_count = 0
+	_bus.subscribe(_on_change_and_unsub)
+	_bus.subscribe(_on_change_and_unsub)
+	_bus.subscribe(_on_change_and_unsub)
+	_bus.publish(Rect2(0, 0, 5, 5), "src", {})
+	# First callback nukes all subs; snapshot+has() guard skips the
+	# rest. No crash.
+	assert_eq(_unsubbed_count, 1,
+		"first callback unsubs all; remaining iterations guarded")
+	assert_eq(_bus.get_subscriber_count(), 0,
+		"all subs cleaned up")
+
+
 # --- audit C3.17: placement_exclusion contract ---
 
 func test_placement_exclusion_metadata_shape() -> void:

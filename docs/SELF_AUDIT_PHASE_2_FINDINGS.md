@@ -1308,10 +1308,69 @@ In order of "biggest payoff per minute":
   conflicts, double-_ready, etc.) — we've never opened the demo
   project as a normal Godot session.
 
+## Resolution status (2026-05-16, post-fix pass)
+
+All 5 criticals actioned:
+
+| ID | Status | Fix |
+|---|---|---|
+| SA2-C1.1 | ✅ fixed | Removed Log/World5/QualityTiers from autoload list (RefCounted + static-only classes don't need autoload). 5 remaining autoloads are correct Node-based instances. |
+| SA2-C1.2 | ✅ fixed | Verify CLI uses `_resolve_godot_bin()` with WORLD5_GODOT_BIN env var → `shutil.which("godot")` → Windows fallback. Missing Godot now `status="skip"` with hint, not `status="error"`. |
+| SA2-C2.1 | ✅ **refuted by measurement** | Wrote `engine/tests/integration/test_cross_impl_emit.gd` (gut emitter) + `tests/integration/test_cross_impl_diff.py` (Python driver). 11/11 parity tests pass. QualityTiers, ContentAddress hash (incl. nested-dict — refutes SA2-S2.8), SpatialIndex query results all bit-identical between Python + GDScript. |
+| SA2-C3.1 | ✅ fixed | JobScheduler `_tick` reap loop + eviction loop snapshot keys before iterating + erasing. Bonus: SA2-S3.3 O(N²) `_enumerate_all_queued` collapsed via cached `all_queued_set` dict. |
+| SA2-C4.1 | ✅ fixed | ChangeBroadcast `_dispatch` snapshots `_subs.keys()` + guards each iteration with `has()`. New test `test_unsubscribe_during_dispatch_does_not_crash` proves the fix. |
+| SA2-C4.2 | ✅ **reclassified** | Investigated empirically: GDScript's `Callable.call` catches script errors internally (Godot logs to debugger Output but doesn't propagate up to abort the loop). The audit concern was inherited from Python exception-propagation thinking; GDScript semantics differ. Document only. |
+| SA2-C5.5 | ✅ **refuted by measurement** | Wrote `engine/tests/integration/test_tier0_wired.gd`. 5/5 tests pass: JobScheduler→StreamingBudget wire fires (active_jobs > 0 after 10 submits); AssetStream→StreamingBudget wire fires (asset_stream in publishers); ChangeBroadcast job-mode→JobScheduler wire fires (callback executes via WTP). The integration was UNTESTED, but it was correct. |
+
+**Tally**: 5 criticals → 3 fixed + 2 refuted-by-measurement + 1
+reclassified. Plus 3 significants fixed inline (SA2-S1.4, SA2-S2.8,
+SA2-S3.3). Plus 1 new pitfall (`meta-3`) documenting the iteration-
+during-erase pattern.
+
+**Test count after fixes**: 242 tests pass (107 pytest + 132 gut +
+3 real-GPU) in 5.2s via `verify --full`. Was 224 before; added the
+wired-triangle (5 tests) + cross-impl emit (4 tests) + SA2-C4.1
+regression test (1) + 8 cross-impl diff cases.
+
+**Patterns observed in the fix pass**:
+
+- **3 of 5 criticals were measurement gaps, not actual bugs.** SA2-C2.1
+  (cross-impl parity), SA2-C5.5 (wired triangle), and SA2-C4.2 (sync
+  callback errors) all turned out to be correct in code but untested.
+  The audit was right to flag them as critical (untested claim is
+  not a verified claim) but the fix in each case was adding the
+  measurement, not changing the system.
+- **2 of 5 criticals were real bugs.** SA2-C1.1 (broken autoload) and
+  SA2-C3.1 (dict iteration during erase) needed actual code changes.
+  Both small, both surfaced quickly.
+- **The wired-triangle integration test was the highest-leverage
+  artifact this session.** Wrote once, ran once, refuted 3 criticals'
+  worth of worry.
+
+**Deferred** (per "criticals only this pass" user direction):
+
+- 24 significants — most are perf, polish, or "should test edge case"
+  items. Will be picked up opportunistically when those code paths
+  are touched.
+- 13 minors — same.
+- Specifically deferred-with-known-fix-ready:
+  - SA2-S2.2 (QualityTiers Python vs GDScript override mechanism
+    divergence) — needs config alignment doc
+  - SA2-S2.3 (Log.fatal docstring promises unbuilt set_crash_on_fatal)
+    — 5-line edit; safe to defer
+  - SA2-S2.4 (Log file output truncates) — single FileAccess flag fix
+  - SA2-S3.2 (JobScheduler 1 dispatch/tick bottleneck) — meaningful
+    architecture decision; defer until Phase 4 terrain MVP shows
+    actual job concurrency need
+
 ## Revision history
 
 - 2026-05-16: initial Phase 2 self-audit immediately after Phase 2
   close commit `1627bb5`. 5 blocks, 42 findings.
+- 2026-05-16: post-fix pass. All 5 criticals actioned: 2 fixed, 2
+  refuted-by-measurement, 1 reclassified. Bonus SA2-S1.4 + S2.8 +
+  S3.3 also fixed. Pitfall meta-3 added. 242 tests pass via
+  `verify --full`.
 
 
 

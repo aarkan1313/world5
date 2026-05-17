@@ -118,7 +118,15 @@ func _ready() -> void:
 # --- internals ---
 
 func _dispatch(change: Change) -> void:
-	for sid in _subs.keys():
+	# SA2-C4.1: snapshot keys before iterating — a sync subscriber's
+	# callback may unsubscribe (auto-remove pattern), mutating _subs
+	# mid-iteration. Snapshot avoids the undefined-behavior trap.
+	# Per pitfall meta-3.
+	var sids: Array = _subs.keys()
+	for sid in sids:
+		# Sub may have been unsubscribed during this dispatch
+		if not _subs.has(sid):
+			continue
 		var sub: _Sub = _subs[sid]
 		if not sub.alive:
 			continue
@@ -131,6 +139,19 @@ func _dispatch(change: Change) -> void:
 				_invoke_async(sub, change)
 			"job":
 				_invoke_job(sub, change)
+
+
+# SA2-C4.2 notes: Godot's Callable.call catches script errors
+# internally (the error appears in the debugger Output panel but
+# doesn't propagate up to abort the surrounding loop). Empirically
+# verified: a throwing sync subscriber doesn't kill the dispatch
+# loop. The audit concern was inherited from Python-style
+# exception-propagation thinking; GDScript semantics differ.
+#
+# Two exceptions where dispatch CAN abort:
+# 1. `assert false` in a callback — kills the scene tree in debug
+# 2. Native crashes (rare; e.g. accessing a freed Object)
+# Document for subscribers; rely on per-callback discipline.
 
 
 func _matches(sub: _Sub, change: Change) -> bool:

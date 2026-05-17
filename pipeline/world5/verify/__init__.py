@@ -111,6 +111,32 @@ def _run_pytest() -> LayerResult:
     )
 
 
+def _resolve_godot_bin() -> Path | None:
+    """Locate the Godot binary for gut runs (SA2-C1.2).
+
+    Order of preference:
+    1. WORLD5_GODOT_BIN env var (explicit override)
+    2. `godot` on PATH (Unix convention)
+    3. C:/Godot/Godot_v4.5-stable_win64.exe (this dev's Windows install)
+
+    Returns None if Godot cannot be located; gut layer skips with a
+    clear reason in that case.
+    """
+    import os
+    env_bin = os.environ.get("WORLD5_GODOT_BIN")
+    if env_bin:
+        p = Path(env_bin)
+        if p.exists():
+            return p
+    on_path = shutil.which("godot")
+    if on_path:
+        return Path(on_path)
+    fallback = Path("C:/Godot/Godot_v4.5-stable_win64.exe")
+    if fallback.exists():
+        return fallback
+    return None
+
+
 def _run_gut(real_gpu: bool = False) -> LayerResult:
     """Run gut. Returns LayerResult.
 
@@ -131,14 +157,18 @@ def _run_gut(real_gpu: bool = False) -> LayerResult:
             duration_s=time.monotonic() - start,
             details={"reason": "gut not installed at demo/addons/gut/"},
         )
-    godot_bin = shutil.which("godot") or "C:/Godot/Godot_v4.5-stable_win64.exe"
-    if not Path(godot_bin).exists() and not shutil.which(godot_bin):
+    godot_path = _resolve_godot_bin()
+    if godot_path is None:
         return LayerResult(
             name=name,
-            status="error",
+            status="skip",
             duration_s=time.monotonic() - start,
-            details={"reason": f"Godot binary not found at {godot_bin}"},
+            details={
+                "reason": "Godot binary not found",
+                "hint": "Set WORLD5_GODOT_BIN env var, OR add `godot` to PATH, OR install Godot 4.5 at C:/Godot/",
+            },
         )
+    godot_bin = str(godot_path)
     if real_gpu:
         cmd = [
             godot_bin,
