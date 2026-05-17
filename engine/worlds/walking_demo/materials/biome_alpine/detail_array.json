@@ -1,0 +1,11 @@
+{
+	"_schema_version": 1,
+	"_note": "Per-biome detail overlays (spec 24 Layer 2). Empty until Phase 5 diversity batch produces overlay tiles + promote.py wires them. detail_tiles[] lists tile names (filenames stem without _albedo.png etc.); slot_blends[] gives per-slot per-detail blend weight in [0,1].",
+	"biome": "alpine",
+	"detail_tiles": [],
+	"slot_blends": {
+		"ground": {},
+		"mid": {},
+		"rock": {}
+	}
+}

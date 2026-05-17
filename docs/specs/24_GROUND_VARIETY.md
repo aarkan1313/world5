@@ -128,6 +128,49 @@ Spec-21 walking-demo acceptance criteria for Phase 4.6 are adjusted
 accordingly: "no obvious far-field repeat" (macro-albedo job) instead
 of "no obvious repeat at any distance".
 
+## Layer 1 sibling manifest schema (Phase 5 amendment 2026-05-17)
+
+Per-world `material_variants.json` carries the sibling pool that
+Layer 1's stochastic-UV blend samples. Schema absorbed from W4
+(validated 2026-05-17 staging test); locked here as the canonical
+Layer 1 contract:
+
+```json
+{
+  "schema_version": 1,
+  "world_seed": 42,
+  "region_size_m": 512.0,
+  "edge_blend_m": 48.0,
+  "max_variants_per_slot": 8,
+  "max_total_variant_layers": 256,
+  "slots": [
+    {
+      "biome": "alpine",
+      "slot": "ground",
+      "variants": [
+        { "id": "default",  "source": "ground",                   "weight": 1.0 },
+        { "id": "firn_s09", "source": "ground_variants/firn_s09", "weight": 1.0 },
+        { "id": "firn_s07", "source": "ground_variants/firn_s07", "weight": 1.0 },
+        { "id": "firn_s05", "source": "ground_variants/firn_s05", "weight": 1.0 }
+      ]
+    }
+  ]
+}
+```
+
+**Validation rules** (W4-proven; world contract enforces):
+- `region_size_m > 0`; `edge_blend_m < region_size_m / 4` (sanity)
+- per-slot variants ≤ `max_variants_per_slot` (shader cap, 8)
+- sum of variants across all slots ≤ `max_total_variant_layers`
+- each `source` path must exist under the world's materials/ tree
+- `world_seed` is the deterministic salt; same seed → same sibling
+  selection at any (x, z)
+
+**Authoring vs runtime split**: `material_variants_config.json` is the
+*authoring input* fed to the manifest builder; `material_variants.json`
+is the *runtime artifact* MaterialPipeline reads. Spec 25's
+`promote.py` writes the manifest from author selections.
+
 ## Producer / consumer contract
 
 - **Produces**: shader uniforms + texture bindings that drive
@@ -199,3 +242,6 @@ of "no obvious repeat at any distance".
   arithmetic added; per-layer Phase 4 vs Phase 5 split documented.
 - 2026-05-17 (later): amended — Layer 1 deferred from Phase 4 to
   Phase 5 (TR-SPEC-C2 audit response). Phase 4 ships Layer 3 only.
+- 2026-05-17 (Phase 5 plan): absorbed `material_variants.json` schema
+  as the canonical Layer 1 contract (carried from W4, validated
+  2026-05-17 staging). Authoring vs runtime artifact split documented.

@@ -462,7 +462,9 @@ Per [subagent_review_prompt.md](../workflows/subagent_review_prompt.md):
 
 ## Doc cap status
 
-This file: ~365 lines (~15 over 350 plan-doc cap; the overage carries
-2026-05-17 staging-test evidence + the locked sibling-manifest schema.
-Trim opportunity if it grows further: W4-reference reading-order
-could move to a sub-doc).
+This file: ~370 lines (over 350 plan-doc cap; the overage carries
+2026-05-17 staging-test evidence + the locked sibling-manifest schema
++ the per-step workflow walkthrough that's the doc's whole point.
+Acceptable per spec 05: plan docs MAY exceed 350 when they encode
+load-bearing decisions the implementer needs in one read; trim only
+if the doc grows further past 400.

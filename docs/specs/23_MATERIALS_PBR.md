@@ -55,6 +55,58 @@ materials/biome_alpine/
 Per-tier resolution: high tier expects 2048², ultra 4096², low 1024².
 World contract enforces sizes per tier.
 
+### Sibling sets + detail overlays (Phase 5 amendment 2026-05-17)
+
+Per-slot **sibling variants** live in a parallel directory next to
+the base slot, named `<slot>_variants/`. Per spec 24 Layer 1
+stochastic-UV blend:
+
+```
+biome_<biome>/
+├── ground/
+│   ├── albedo.png      (base — slot's "default" variant)
+│   ├── normal.png
+│   ├── roughness.png
+│   └── ao.png
+├── ground_variants/
+│   ├── v0_albedo.png   (sibling 0 — different prompt, same palette family)
+│   ├── v0_normal.png
+│   ├── v0_roughness.png
+│   ├── v0_ao.png
+│   ├── v1_albedo.png   (sibling 1)
+│   ├── v1_normal.png
+│   ├── ...
+│   └── v3_ao.png       (typically 4 siblings; max 8 per shader cap)
+├── mid/
+├── mid_variants/
+├── rock/
+└── rock_variants/
+```
+
+Per-biome **detail overlays** (spec 24 Layer 2) live at the biome
+root in a `detail/` subdir, since detail tiles are biome-wide
+(applicable across all slots), not slot-specific:
+
+```
+biome_<biome>/
+├── detail/
+│   ├── wet_albedo.png
+│   ├── wet_normal.png
+│   ├── wet_roughness.png
+│   ├── moss_albedo.png
+│   ├── moss_normal.png
+│   ├── ...
+│   └── (typically 5-7 detail tiles per biome)
+└── (slot dirs as above)
+```
+
+Per-biome `detail_array.json` lists the detail tiles + per-slot blend
+weights (which detail applies to which slot at what strength).
+
+Runtime: MaterialPipeline reads `material_variants.json` (the
+sibling manifest, schema in spec 24) + per-biome `detail_array.json`
++ binds them all into the shader's Texture2DArrays.
+
 ## Surface slot model
 
 Each biome declares its slot list in the catalog (spec 22):
@@ -179,3 +231,7 @@ class MaterialBindings:
 ## Revision history
 
 - 2026-05-16: initial draft
+- 2026-05-17 (Phase 5 plan): added on-disk layout for sibling sets
+  (`<slot>_variants/v*_*.png`) + per-biome detail overlays
+  (`detail/<tag>_*.png` + `detail_array.json`). Both consumed by
+  MaterialPipeline at world-load via spec 24 Layer 1+2 contracts.

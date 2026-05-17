@@ -34,7 +34,7 @@ multi-biome material blend, validates with one biome demo.
 | Phase 4.6 — Walking demo | ✅ done (sub-phase of 4) | [phase_4_6_walking_demo.md](roadmap/phase_4_6_walking_demo.md) | 1 session |
 | Phase 4.7 — Autoload rename refactor | ✅ done | [phase_4_7_autoload_rename.md](roadmap/phase_4_7_autoload_rename.md) | 1 session |
 | Phase 4.8 — Local RD refactor | ✅ done | [phase_4_8_local_rd_refactor.md](roadmap/phase_4_8_local_rd_refactor.md) | 1 session |
-| **Phase 5 — Ground texture pipeline** | 🚧 next | (write when starting) | 5-10 |
+| **Phase 5 — Ground texture pipeline** | 🚧 in progress (scaffold + spec amendments shipped) | [25_TEXTURE_PIPELINE_PLAN.md](plans/25_TEXTURE_PIPELINE_PLAN.md) | 5-10 |
 | Phase 6 — Second biome | pending | (write when starting) | 3-5 |
 | Phase 7 — Decoration end-to-end | pending | (write when starting) | 5-10 |
 | Phase 8 — Foliage system | pending | (write when starting) | 25-100 (see SA-S1) |

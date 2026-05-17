@@ -147,6 +147,60 @@ baseline).
 listing slot prompts × candidate count, generates all candidates,
 ranks by QA composite, writes contact sheet for review.
 
+## Per-biome YAML layout (Phase 5 amendment 2026-05-17)
+
+Each biome ships **two** YAMLs, both at `pipeline/biomes/`:
+
+| File | Purpose | Candidate count |
+|---|---|---|
+| `<biome>.yaml` | Discovery pool — diverse prompts across all slots | 40-60 (W4 alpine = 51) |
+| `<biome>_siblings.yaml` | Sibling pool — N prompts describing the same anchor concept with phrasing variation | 30 (W4 convention) |
+
+YAML shape (W4-locked, validated 2026-05-17 staging test):
+```yaml
+biome: <biome>
+prompt_prefix: "tileable seamless texture, "
+prompt_suffix: ", overhead perspective"
+slots:
+  <slot>:
+    category: Snow | Sand | Mixed | Rock | Concrete | Foliage | Ground | ...
+    candidates:
+      - tag: <short_id>
+        body: "<descriptive prompt body>"
+```
+
+Two YAMLs because: discovery pool gives 5-10× more candidates than
+ship, so promotion has real options. Sibling pool produces the
+palette-locked family that Layer 1 of spec 24 stochastic-UV needs.
+Writing 80-90 prompts per biome IS the creative bottleneck; Pillar 4
+allows the time investment.
+
+## Operator model: dev-only (Phase 5 amendment 2026-05-17)
+
+The texture pipeline is **author-side / dev-only**:
+- Runs on dev hardware (RTX 5090 Laptop)
+- Produces PBR sets baked into world bundles
+- Consumer games receive baked artifacts in `worlds/<world>/materials/`,
+  NOT pipeline access
+- `pipeline/textures/` is NOT part of the shipped Godot addon (`engine/`)
+
+This means the 90s-per-material Quality bar target below (originally
+framed against RTX 3060/4060) should be read as "author-hardware
+perf" instead. Phase 5.6 calibration replaces the 3060 number with
+measured author-hardware reality. The pipeline is offline + occasional;
+its perf doesn't appear in the consumer's runtime budget.
+
+## Macro mode default: purpose (Phase 5 amendment 2026-05-17)
+
+`tx_macro_terrain.py` ships two modes:
+- **Derived**: blur + downsample the promoted ground tile (fallback)
+- **Purpose**: generate new low-frequency biome image from a palette +
+  noise (W4 evidence: reads better at far distance)
+
+**Default for v1: purpose mode.** Per-biome palette configs extracted
+from W4's `PURPOSE_PRESETS` dict to per-biome YAML alongside
+`<biome>.yaml`. Derived mode stays as the no-palette fallback.
+
 ## GPU mutex with TRELLIS pipeline (audit S12)
 
 TRELLIS (spec 26) and ComfyUI cannot share GPU (per W4 memory entry
@@ -306,3 +360,7 @@ cache-collide. Per SA-C2.3.
   macro_albedo). Added GPU mutex contract with TRELLIS via
   `pipeline/core/gpu_mutex.py` (was a W4 memory entry; now spec
   contract).
+- 2026-05-17 (Phase 5 plan amendments): added two-YAML per-biome
+  layout (discovery + sibling pools); committed purpose-mode macro
+  as default; documented dev-only operator model so Quality-bar
+  perf framing is against author hardware, not consumer 3060.
