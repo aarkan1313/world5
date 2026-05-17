@@ -33,7 +33,9 @@ var grid_n: int = 256                  # samples per side
 var seed: int = 0
 var tier: String = "high"
 var capabilities: PackedStringArray = PackedStringArray()
-var kernel_config_hash: String = ""    # spec 19 kernel config stamp (for cache key)
+## NoiseStackKernel config (spec 19). If null, backend uses its default
+## kernel config. kernel_config_hash is computed from this when present.
+var kernel: NoiseStackKernel = null
 
 
 ## Build from a plain Dictionary (test fixtures, JSON payloads).
@@ -51,8 +53,12 @@ static func from_dict(d: Dictionary) -> TerrainPageRequest:
 		req.tier = String(d["tier"])
 	if d.has("capabilities"):
 		req.capabilities = PackedStringArray(d["capabilities"])
-	if d.has("kernel_config_hash"):
-		req.kernel_config_hash = String(d["kernel_config_hash"])
+	if d.has("kernel"):
+		var kv: Variant = d["kernel"]
+		if kv is NoiseStackKernel:
+			req.kernel = kv
+		elif kv is Dictionary:
+			req.kernel = NoiseStackKernel.from_dict(kv)
 	return req
 
 
@@ -75,9 +81,14 @@ func validate() -> Array:
 
 ## Content-addressed cache key (per spec 12). Capabilities are sorted
 ## so order doesn't affect the key — same fields → same cache hit.
+## Kernel is hashed via its config_hash so different kernel configs
+## produce different cache keys (TB-REV-S3).
 func cache_key() -> String:
 	var sorted_caps := Array(capabilities)
 	sorted_caps.sort()
+	var khash: String = ""
+	if kernel != null:
+		khash = kernel.config_hash()
 	var inputs := {
 		"world_xz_x": world_xz.x,
 		"world_xz_y": world_xz.y,
@@ -86,6 +97,6 @@ func cache_key() -> String:
 		"seed": seed,
 		"tier": tier,
 		"capabilities": sorted_caps,
-		"kernel_config_hash": kernel_config_hash,
+		"kernel_config_hash": khash,
 	}
 	return ContentAddress.compute_stamp(inputs)

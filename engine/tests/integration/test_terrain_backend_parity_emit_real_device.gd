@@ -60,6 +60,21 @@ const _CASES := [
 		"grid_n": 8,
 		"seed": 0xFFFFFFFF,
 	},
+	# Phase 4.3: exercise the kernel field — custom octaves + amplitude
+	{
+		"name": "custom_kernel",
+		"world_xz": [0.0, 0.0],
+		"extent_m": 256.0,
+		"grid_n": 16,
+		"seed": 42,
+		"kernel": {
+			"octaves": 4,
+			"frequency": 1.0 / 256.0,
+			"lacunarity": 2.0,
+			"gain": 0.5,
+			"amplitude": 100.0,
+		},
+	},
 ]
 
 
@@ -85,31 +100,40 @@ func test_emit_all_cases() -> void:
 
 	var backend: GpuTerrainBackend = _backend
 	for case in _CASES:
-		var req: TerrainPageRequest = TerrainPageRequest.from_dict({
+		# Build request — kernel field is optional (defaults are used)
+		var req_dict := {
 			"world_xz": Vector2(case["world_xz"][0], case["world_xz"][1]),
 			"extent_m": case["extent_m"],
 			"grid_n": case["grid_n"],
 			"seed": case["seed"],
 			"tier": "high",
 			"capabilities": ["height_cpu"],
-		})
+		}
+		if case.has("kernel"):
+			req_dict["kernel"] = case["kernel"]
+		var req: TerrainPageRequest = TerrainPageRequest.from_dict(req_dict)
 		var res: TerrainPageResult = backend.generate_page(req)
 		assert_true(res.has_capability("height_cpu"),
 			"case %s emitted heights" % case["name"])
 
-		# Write JSON: { params, heights: [...] }
+		# Emit the kernel config we actually used (defaults if absent)
+		var k: NoiseStackKernel
+		if req.kernel != null:
+			k = req.kernel
+		else:
+			k = NoiseStackKernel.new()
+
 		var payload := {
 			"name": case["name"],
 			"world_xz": case["world_xz"],
 			"extent_m": case["extent_m"],
 			"grid_n": case["grid_n"],
 			"seed": case["seed"],
-			# fBm hard-coded params from GpuTerrainBackend Phase 4.2:
-			"octaves": 6,
-			"frequency": 1.0 / 512.0,
-			"lacunarity": 2.0,
-			"gain": 0.5,
-			"amplitude": 50.0,
+			"octaves": k.octaves,
+			"frequency": k.frequency,
+			"lacunarity": k.lacunarity,
+			"gain": k.gain,
+			"amplitude": k.amplitude,
 			"heights": Array(res.height_cpu),
 		}
 		var path: String = "%s/%s.json" % [OUT_DIR, case["name"]]

@@ -52,6 +52,7 @@ func generate_page(request: TerrainPageRequest) -> TerrainPageResult:
 		"backend": "gpu",
 		"backend_version": VERSION,
 		"kernel_version": KERNEL_VERSION,
+		"kernel_config_hash": (request.kernel.config_hash() if request.kernel else ""),
 	}
 
 	# 1. Validate request
@@ -59,6 +60,12 @@ func generate_page(request: TerrainPageRequest) -> TerrainPageResult:
 	if errors.size() > 0:
 		res.version_stamp["error"] = "invalid_request: " + str(errors)
 		return res
+	# 1b. Validate kernel config if supplied
+	if request.kernel != null:
+		var kerrs: Array = request.kernel.validate()
+		if kerrs.size() > 0:
+			res.version_stamp["error"] = "invalid_kernel: " + str(kerrs)
+			return res
 
 	# 2. Get RenderingDevice (skip gracefully if unavailable)
 	var rd: RenderingDevice = RenderingServer.get_rendering_device()
@@ -114,18 +121,15 @@ func _generate_heights(rd: RenderingDevice,
 		if not _compile_shader(rd):
 			return PackedFloat32Array()
 
-	# Hard-coded kernel params for Phase 4.2 (NoiseStack v1 defaults).
-	# These match the Python NoiseStackKernel reference.
-	# TODO Phase 4.3 (TB-REV-S3): read params from the request's
-	# kernel_config_hash + assert it matches the backend's compiled
-	# shader. Today: cache_key includes kernel_config_hash but backend
-	# silently ignores it — collision-vector if consumer passes a hash
-	# of a different kernel.
-	var octaves: int = 6
-	var frequency: float = 1.0 / 512.0   # cycles/m (~512m wavelength base)
-	var lacunarity: float = 2.0
-	var gain: float = 0.5
-	var amplitude: float = 50.0          # 50m peak-to-peak
+	# Kernel config: request-supplied or default. Per spec 19 + TB-REV-S3.
+	var kernel: NoiseStackKernel = request.kernel
+	if kernel == null:
+		kernel = NoiseStackKernel.new()
+	var octaves: int = kernel.octaves
+	var frequency: float = kernel.frequency
+	var lacunarity: float = kernel.lacunarity
+	var gain: float = kernel.gain
+	var amplitude: float = kernel.amplitude
 
 	var n: int = request.grid_n
 	var total_samples: int = n * n
