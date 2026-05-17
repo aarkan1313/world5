@@ -74,7 +74,7 @@ func get_job(job_id: int) -> Job:
 ## push_error) on FAILED or CANCELLED; result is null in those cases.
 func await_completion(job_id: int) -> Variant:
 	if not _jobs.has(job_id):
-		push_error("await_completion: unknown job id %d" % job_id)
+		Log.error(SYSTEM_NAME, "await_completion: unknown job id", {"id": job_id})
 		return null
 	var job: Job = _jobs[job_id]
 	# Spin until done (yielding each frame)
@@ -83,7 +83,8 @@ func await_completion(job_id: int) -> Variant:
 		if _shutting_down:
 			return null
 	if job.status == Job.Status.FAILED:
-		push_error("Job %d (%s) FAILED: %s" % [job_id, job.name, job.error])
+		Log.error(SYSTEM_NAME, "job FAILED",
+			{"id": job_id, "name": job.name, "error": job.error})
 	if job.status == Job.Status.CANCELLED:
 		Log.info(SYSTEM_NAME, "job cancelled", {"id": job_id, "name": job.name})
 	return job.result

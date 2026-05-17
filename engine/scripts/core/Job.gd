@@ -35,7 +35,7 @@ var _cancellation_requested: bool = false
 ## check is_cancelled() + JobScheduler.is_shutting_down()
 ## periodically and return null early.
 func _execute() -> Variant:
-	push_error("Job._execute() must be overridden in subclass: " + name)
+	Log.error("job", "Job._execute() must be overridden in subclass", {"name": name})
 	return null
 
 

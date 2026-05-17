@@ -182,15 +182,20 @@ def _run_gut(real_gpu: bool = False) -> LayerResult:
 
 
 def _run_preflight() -> LayerResult:
-    """Run preflight checks (godot_root_check, doc_health, logging_lint).
-
-    Stub for Phase 2.1: scripts not built yet. Returns 'skip' until
-    Phase 2.11 lands the preflight scripts.
-    """
+    """Run world_contract preflight (allowlist, doc_health, logging_lint)."""
+    from world5.world_contract import validate
+    start = time.monotonic()
+    result = validate()
+    duration = time.monotonic() - start
+    status = "pass" if result.passed else "fail"
     return LayerResult(
         name="preflight",
-        status="skip",
-        details={"reason": "preflight scripts not built yet (Phase 2.11)"},
+        status=status,
+        duration_s=duration,
+        details={
+            "errors": len(result.errors),
+            "warnings": len(result.warnings),
+        },
     )
 
 

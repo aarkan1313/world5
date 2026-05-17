@@ -125,7 +125,7 @@ func get_cached(path: String) -> Resource:
 ## on FAILED — caller checks get_error).
 func await_ready(req_id: int) -> Resource:
 	if not _requests.has(req_id):
-		push_error("await_ready: unknown req id %d" % req_id)
+		Log.error(SYSTEM_NAME, "await_ready: unknown req id", {"id": req_id})
 		return null
 	var req: _Request = _requests[req_id]
 	while req.status == Status.LOADING or req.status == Status.NOT_LOADED:
