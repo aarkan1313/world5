@@ -27,11 +27,12 @@ forkable into 3+ independent game projects.
 ## Where to start
 
 ### If you're new (human)
-1. [SYSTEM_INVENTORY.md](SYSTEM_INVENTORY.md) — high-level map of all
+1. [USAGE.md](USAGE.md) — how to run / test / open the project
+2. [SYSTEM_INVENTORY.md](SYSTEM_INVENTORY.md) — high-level map of all
    systems in 5 tiers
-2. [specs/03_PILLARS.md](specs/03_PILLARS.md) — the decision tiebreakers
-3. [STATE.md](STATE.md) — what exists right now
-4. [ROADMAP.md](ROADMAP.md) — what's next
+3. [specs/03_PILLARS.md](specs/03_PILLARS.md) — the decision tiebreakers
+4. [STATE.md](STATE.md) — what exists right now
+5. [ROADMAP.md](ROADMAP.md) — what's next
 
 ### If you're a fresh LLM agent
 1. [ORCHESTRATOR_PLANNING_GUIDE.md](ORCHESTRATOR_PLANNING_GUIDE.md) —
@@ -53,6 +54,7 @@ forkable into 3+ independent game projects.
 ```
 docs/
 ├── README.md                    ← you are here
+├── USAGE.md                     ← how to run / test / open (user-facing)
 ├── STATE.md                     ← index of per-tier state
 ├── ROADMAP.md                   ← index of per-phase roadmap
 ├── CONTRIBUTING.md              ← pointer to spec 02 lifecycle
@@ -76,6 +78,8 @@ docs/
 ├── build-notes/                 ← what shipped per session
 │   (created after each shipped piece of work)
 ├── workflows/                   ← recurring task recipes
+│   ├── running_tests.md         ← verify CLI + tiers
+│   └── godot_rendering_modes.md ← headless vs real-GPU
 ├── reference/
 │   ├── pitfalls/                ← per-tier pitfalls
 │   │   └── pitfalls_INDEX.md

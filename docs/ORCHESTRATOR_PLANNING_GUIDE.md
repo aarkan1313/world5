@@ -94,6 +94,7 @@ D:/assets/world 5/docs/
 ├── AUDIT_FINDINGS.md             ← outside audit output (2026-05-16)
 ├── SELF_AUDIT_FINDINGS.md        ← self-audit + resolution table
 ├── README.md                     ← docs front door (post-Phase-0-prep)
+├── USAGE.md                      ← how to run / test / open (Phase 2.6+)
 ├── STATE.md                      ← index of per-tier state
 ├── ROADMAP.md                    ← index of phase status
 ├── CONTRIBUTING.md               ← pointer to spec 02 lifecycle
@@ -104,7 +105,11 @@ D:/assets/world 5/docs/
 │   ├── state_world.md
 │   └── state_output.md
 ├── roadmap/                      ← per-phase checklists
-│   └── phase_0_repo_setup.md     ← current phase
+│   ├── phase_0_repo_setup.md
+│   └── phase_2_foundations.md    ← current phase
+├── workflows/                    ← user-facing recipes (Phase 2.6+)
+│   ├── running_tests.md
+│   └── godot_rendering_modes.md
 ├── reference/
 │   └── pitfalls/
 │       └── pitfalls_INDEX.md

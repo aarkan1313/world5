@@ -7,6 +7,7 @@
   "sections": {
     "entry": [
       "README.md",
+      "USAGE.md",
       "STATE.md",
       "ROADMAP.md",
       "CONTRIBUTING.md"
@@ -29,7 +30,12 @@
       "state/state_output.md"
     ],
     "roadmap": [
-      "roadmap/phase_0_repo_setup.md"
+      "roadmap/phase_0_repo_setup.md",
+      "roadmap/phase_2_foundations.md"
+    ],
+    "workflows": [
+      "workflows/running_tests.md",
+      "workflows/godot_rendering_modes.md"
     ],
     "specs_meta": [
       "specs/00_SPEC_TEMPLATE.md",
@@ -89,10 +95,12 @@
       "specs/44_FORKABILITY_VALIDATION.md"
     ],
     "plans": [],
-    "build_notes": [],
-    "workflows": [],
+    "build_notes": [
+      "build-notes/phase_0_repo_setup_2026_05_16.md"
+    ],
     "reference": [
-      "reference/pitfalls/pitfalls_INDEX.md"
+      "reference/pitfalls/pitfalls_INDEX.md",
+      "reference/pitfalls/pitfalls_meta.md"
     ],
     "handoffs": [],
     "historical": []
