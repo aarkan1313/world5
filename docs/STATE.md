@@ -4,7 +4,7 @@
 > contract. Per spec 05 doc architecture: this file is the index; per-tier
 > details live in `state/*.md`.
 >
-> Last updated: 2026-05-16.
+> Last updated: 2026-05-17.
 
 ## One-sentence summary
 
@@ -66,12 +66,11 @@ design-phase only, VT requires extensions). Prototype renders
 
 ## What's blocked
 
-- **Spec 21 (Terrain Renderer)** — BLOCKED on spec 15 renderer research
-  sprint output (`docs/specs/15a_RENDERER_DECISION.md`)
-- **Spec 24 (Ground Variety)** — BLOCKED on same (variety architecture
-  is renderer-coupled)
-
-Both unblock when Phase 3 (renderer research sprint) completes.
+Nothing. Spec 15a (renderer decision: clipmap) shipped at Phase 3
+close. Spec 21 (Terrain Renderer) + spec 24 (Ground Variety) unblocked
+2026-05-17 at Phase 4.1 start; both now `draft` with committed
+architecture. Implementation in progress per
+[plans/21_TERRAIN_RENDERER_PLAN.md](plans/21_TERRAIN_RENDERER_PLAN.md).
 
 ## Per-spec status snapshot
 

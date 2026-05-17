@@ -4,7 +4,7 @@
 > ship.
 >
 > Cap: ≤ 300 lines (spec 05).
-> Last updated: 2026-05-16.
+> Last updated: 2026-05-17.
 
 ## Tier 1 core systems (19-34)
 
@@ -12,10 +12,10 @@
 |---|---|---|---|---|
 | 19 | KERNEL_SYSTEM | draft | none | 3 kernels in v1: NoiseStack + Erosion + DemFeature. ErosionKernel exposes drainage/flow_direction/flow_accumulation (post-self-audit) for water + roads consumers. World-size cap 10km × 10km for full pre-bake erosion |
 | 20 | TERRAIN_BACKEND | draft | none | GPU-only in v1; `TerrainPageRequest`/`TerrainPageResult` contract; capability vocabulary enumerated (post-self-audit). Runtime overlay layer (R32F sparse per-chunk) documented for deformation |
-| 21 | TERRAIN_RENDERER | **BLOCKED** | none | Blocked on spec 15 renderer research output. Module decomposition locked (composer ≤ 800 lines, modules ≤ 1500). Frame budget: 2.0 ms at high tier |
+| 21 | TERRAIN_RENDERER | draft | [21_TERRAIN_RENDERER_PLAN.md](../plans/21_TERRAIN_RENDERER_PLAN.md) | Unblocked 2026-05-17 by spec 15a (clipmap). Module decomposition expanded with per-module responsibilities + parameter defaults. Frame budget: 2.0 ms at high tier |
 | 22 | BIOME_CATALOG | draft | none | Hybrid auto-biome + splat overrides. Climate is per-XZ via climate_base + climate_rules (post-audit C5) |
 | 23 | MATERIALS_PBR | draft | none | Variable per-biome slots (1-8); macro_albedo REQUIRED when visibility_ship_distance > 2km |
-| 24 | GROUND_VARIETY | **BLOCKED** | none | Blocked on spec 15. 5 candidate architectures documented; detail overlays from spec 25 ship regardless |
+| 24 | GROUND_VARIETY | draft | none | Unblocked 2026-05-17 by spec 15a. Committed: Layer 1 siblings+stochastic UV (C) + Layer 2 detail array (B) + Layer 3 macro albedo (E). Layer 1+3 ship Phase 4; Layer 2 Phase 5 |
 | 25 | TEXTURE_PIPELINE | draft | none | 4 output modes: tileable PBR / detail overlays / tx_subject / macro_albedo. GPU mutex via `pipeline/core/gpu_mutex.py` (cross-pipeline) |
 | 26 | TRELLIS_3D_PIPELINE | draft | none | Review-per-subject carry-over from W4.1 (~120 COPY / 40 REGEN / 26 DROP estimate). GPU mutex coordination with spec 25 |
 | 27 | LOD_BAKE | draft | none | 3 tiers (LOD0/1/2); impostors handle distant. Sync orphan-file preflight check (post-self-audit) |
@@ -58,10 +58,12 @@ Verified consistent post-self-audit:
 
 ## Known open questions
 
-- **Spec 21 renderer primitive**: clipmap / virtual texturing / hybrid
-  / nanite-style / mesh-shader. Decided by Phase 3 sprint. Clipmap is
-  the committed fallback if sprint inconclusive
-- **Spec 24 variety architecture**: 5 candidates. Decided post spec 21
+- **Spec 21 renderer primitive**: ✅ resolved 2026-05-16 — clipmap
+  committed in spec 15a (3 of 5 candidates eliminated by Godot 4.5
+  capability survey)
+- **Spec 24 variety architecture**: ✅ resolved 2026-05-17 — Layers
+  1+2+3 committed (siblings + detail array + macro albedo). Compositor
+  (D) deferred to Phase 7+
 - **Foliage branch generator algorithm**: L-systems vs recursive vs
   space-colonization. Decided in foliage Phase B plan doc
 

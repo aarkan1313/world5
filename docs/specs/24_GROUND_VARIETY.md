@@ -1,9 +1,8 @@
 # Spec: Ground Variety System
 
-> Status: draft (BLOCKED on `15a_RENDERER_DECISION.md` — variety
-> architecture is renderer-primitive-dependent)
+> Status: draft (Phase 4 in progress)
 > Tier: 1 (core)
-> Depends on: 15_RENDERER_RESEARCH_BRIEF (output), 21_TERRAIN_RENDERER,
+> Depends on: 15a_RENDERER_DECISION (clipmap), 21_TERRAIN_RENDERER,
 > 23_MATERIALS_PBR, 25_TEXTURE_PIPELINE
 > Consumed by: terrain renderer; world contract
 
@@ -13,16 +12,25 @@ The architecture that prevents "same texture endlessly repeated"
 across the world — W4.1's biggest visible failure mode. Per user
 direction, this is **Tier 0 day-1 ambition**, not Tier 2 polish.
 
-Why this spec is blocked: the variety architecture is **bound up
-with the renderer primitive choice (spec 15)**. Virtual texturing
-eliminates repeat by construction; clipmap needs a layered solution
-on top; nanite-style has its own answer. Committing to a variety
-architecture before the renderer is decided risks redundant or
-incompatible work.
+**Committed architecture** (per spec 15a section D): **Option C
+(siblings + stochastic UV) as the foundation, plus Option B (detail
+texture array) as a layer on top, plus Option E (multi-frequency +
+macro albedo) for far-field repeat hiding.** The clipmap primitive
+makes virtual texturing (A) infeasible; building-block compositor (D)
+remains a Phase 7+ upgrade path if visual quality demands it.
 
-The spec captures the candidate architectures + the decision criteria,
-and resolves to a committed approach once the renderer-research
-output (spec 15a) exists.
+Why this combination:
+- **C (siblings + stochastic UV, Heitz-Neyret 2018)**: gives ~48
+  effective variants from 4 sibling textures with zero new pipeline
+  work (existing tx_* pipeline already produces sibling sets).
+  Per-fragment shader cost ~0.3 ms.
+- **B (detail texture array, Cyberpunk pattern)**: 10-20× multiplier
+  on top of the base. Detail overlays (grunge, moss, wet, cracks) are
+  tileable PBR sets, also from the existing pipeline. ~0.2 ms
+  additional shader cost.
+- **E (macro albedo + multi-frequency)**: low-res world-spanning
+  albedo sampled at far rings breaks distance-repeat that no per-
+  fragment trick can hide. W4 had part of this and it survived audit.
 
 ## Non-goals
 
@@ -32,63 +40,67 @@ output (spec 15a) exists.
 - Hero-quality "this specific 5m × 5m area is unique" textures
   (that's decoration's job, not ground)
 
-## Candidate architectures (decision pending)
+## Architecture (committed)
 
-In rough order of visual ceiling:
+### Layer 1 — Siblings + stochastic UV (per-slot foundation)
 
-### Option A — Virtual texturing (if spec 15 picks it)
-Texture data streamed at sub-pixel resolution per visible fragment.
-Eliminates repeat by construction. Used in Genshin Impact, RDR2.
-**Free if the renderer is virtual-textured; impossible if not.**
+Per surface slot, the world bundle supplies 4-8 sibling PBR sets
+(palette-locked, edge-matched). The shader samples 3 offset UVs per
+fragment and blends them via a world-noise mask (Heitz-Neyret 2018).
+~48 effective variants per slot.
 
-### Option B — Detail texture array + per-fragment selection (Cyberpunk pattern)
-One base PBR set per slot + N detail overlays (grunge, wet, moss,
-snow, cracks) blended per-fragment via world-noise. Detail textures
-are normal tileable PBR sets (no SAM segmentation needed). Each base
-set becomes ~10-20× variety. Works with any renderer primitive.
+- **Author cost**: existing tx_* pipeline already produces sibling sets
+  from one base prompt
+- **Shader cost**: ~0.3 ms per fragment at high tier (3 albedo + 3
+  normal samples per slot)
+- **Schema**: `surface_slots.json` lists sibling texture paths per slot
 
-### Option C — Siblings + stochastic UV (MVP-good per WISHLIST)
-Per slot: 4-8 sibling variants (palette-locked + edge-matched
-family). Per-fragment: 3 UV offsets sampled + blended by world-noise
-(Heitz-Neyret 2018). ~48 effective variants from 4 siblings. Works
-with any renderer primitive. Adds shader cost.
+### Layer 2 — Detail texture array (cross-slot multiplier)
 
-### Option D — Building-block compositor (AAA-target per WISHLIST)
-Per slot: 5-7 single-purpose layers (base, wet, moss, lichen, cracks,
-debris). Procedural composer combines layers per-tile using
-world-noise inputs. Every tile mathematically unique. Requires SAM
-segmentation for layer-alpha generation; significant per-biome
-art-direction work. Highest visual ceiling, highest cost.
+Per biome, the world bundle supplies a Texture2DArray of detail
+overlays (grunge, moss, wet, lichen, cracks, dust). The shader
+blends one or two detail layers per fragment, selected by world-noise
+and slot-specific weights.
 
-### Option E — Multi-frequency + triplanar (W4-style + extensions)
-Macro albedo + detail texture + triplanar projection on steep slopes
-+ multi-octave noise blending. Hides repeat at distance via mip
-selection; disguises it at close via projection variation. Doesn't
-eliminate repeat — manages perception. W4 had part of this (macro
-albedo); extending to triplanar + multi-frequency is low-cost
-addition.
+- **Author cost**: ~5-7 detail tiles per biome (one-time per biome,
+  reusable across slots)
+- **Shader cost**: ~0.2 ms (1-2 detail samples)
+- **Schema**: `detail_array.json` per biome lists detail textures +
+  per-slot blend weights
 
-## Decision criteria
+### Layer 3 — Macro albedo + multi-frequency (far-field hider)
 
-When spec 15's renderer decision lands, this spec picks variety
-architecture by:
+The world bundle supplies one low-res (2048²) world-spanning macro
+albedo. Far rings sample this at world-XZ to break per-page repeat
+at distance. Multi-frequency blending in the fragment shader uses
+two noise octaves (high-freq for grain rotation, low-freq for tint
+modulation) — both cheap and pure-shader.
 
-1. **If virtual texturing wins renderer**: ship A (free with the
-   renderer). Maybe layer E for far-field polish.
-2. **If clipmap wins renderer**: ship C (siblings + stochastic UV) as
-   the foundation. D (compositor) becomes a deferred-but-real upgrade
-   plan; B (detail array) folds in as a "free win" addition since it
-   needs minimal pipeline work.
-3. **If nanite-style wins renderer**: investigate; nanite's geometry
-   density potentially changes the variety calculus (more triangles
-   per material sample = less texture repeat visible).
+- **Author cost**: macro albedo baked once per world from the biome
+  catalog colors
+- **Shader cost**: ~0.05 ms (1 sample + 2 noise calls)
+- **Schema**: `macro_albedo.png` + `macro_albedo.json` (world AABB
+  mapping) at the world bundle root
 
-## Implementation phases (resolved post-decision)
+### Total shader budget
 
-Phase contents depend on chosen architecture. Common to all:
-- Per-fragment world-noise sampling primitive (shared shader function)
-- Per-region selection contract (world-anchored hash, deterministic)
-- Integration with materials spec 23's MaterialBindings
+~0.55 ms per fragment at high tier across all three layers, comfortably
+within the 1 ms variety budget allocated in X_FRAME_BUDGET.
+
+## Implementation phases
+
+Phase 4 (terrain MVP, one biome):
+- Layer 1 (siblings + stochastic UV) — required for first walking demo
+- Layer 3 (macro albedo) — required to validate far-field perception
+
+Phase 5 (texture pipeline):
+- Layer 2 (detail array) — folds in once pipeline produces detail
+  overlays
+
+Common shader primitives (built in Phase 4):
+- `variety_sample_3tap(uv, world_xz, slot)` — Heitz-Neyret 3-tap blend
+- `variety_macro_albedo(world_xz)` — far-field sample
+- `variety_world_noise(world_xz, freq)` — shared noise primitive
 
 ## Producer / consumer contract
 
@@ -99,10 +111,11 @@ Phase contents depend on chosen architecture. Common to all:
 
 ## Dependencies
 
-- `15_RENDERER_RESEARCH_BRIEF` output (gates architecture choice)
-- `21_TERRAIN_RENDERER` (consumer)
+- `15a_RENDERER_DECISION` (clipmap, committed)
+- `21_TERRAIN_RENDERER` (consumer; MaterialPipeline module owns the shader)
 - `23_MATERIALS_PBR` (material binding layer)
-- `25_TEXTURE_PIPELINE` (asset producer)
+- `25_TEXTURE_PIPELINE` (asset producer for siblings + detail overlays
+  + macro albedo)
 
 ## Quality bar
 
@@ -115,25 +128,31 @@ Phase contents depend on chosen architecture. Common to all:
 
 ## Discoverability
 
-- **Entry point**: TBD once architecture decided; likely a
-  `VarietyBinding` resource consumed by MaterialPipeline
-- **Schema**: TBD — depends on architecture (sibling family JSON vs
-  detail-array config vs compositor block library)
-- **Validator / preflight**: world contract adds checks per-architecture
-- **Example**: TBD; the 2-biome demo is the working reference
-- **Deterministic outputs**: yes — world-anchored seeded selection
-  required (no per-frame randomness)
+- **Entry point**: `engine/scripts/terrain/material/MaterialPipeline.gd`
+  binds the variety shader uniforms; sibling + detail + macro come
+  from the world bundle
+- **Schema**: `surface_slots.json` (sibling list per slot),
+  `detail_array.json` (per-biome detail overlays + per-slot weights),
+  `macro_albedo.json` (world AABB mapping for the macro texture)
+- **Validator / preflight**: world contract checks sibling count
+  per slot ≥ 1; detail array indices in range; macro albedo present
+  if quality_tier ≥ medium
+- **Example**: `engine/worlds/walking_demo/` is the working reference
+  once Phase 4 ships
+- **Deterministic outputs**: yes — all selection is world-anchored
+  hash (no per-frame randomness)
 
-## Open questions
+## Open questions (to lock during Phase 4)
 
-- **All architecture details** — see "Candidate architectures" above.
-  Decided post spec 15.
-- **Detail texture authoring**: if we go B or E, the texture pipeline
-  needs to generate detail overlays in addition to base PBR sets.
-  Update texture pipeline spec accordingly post-decision.
-- **Building-block compositor as deferred upgrade**: regardless of v1
-  choice, compositor stays planned as a real Phase 6+ upgrade if v1
-  ships and visual quality demands it.
+- **Sibling count per slot** — default 4; measure visual quality at
+  4 vs 6 vs 8 during 4.6 walking demo
+- **Detail-array vs Phase 5 deferral** — decide before 4.4
+  MaterialPipeline ships whether to land Layer 2 in Phase 4 or wait
+  for Phase 5 texture pipeline to make authoring trivial
+- **Macro albedo resolution** — 2048² default; 4096² for ultra tier?
+  Calibrate in 4.5
+- **Building-block compositor (option D)** — stays planned as a
+  Phase 7+ upgrade if Layers 1+2+3 don't reach the visual bar
 
 ## References
 
@@ -148,3 +167,7 @@ Phase contents depend on chosen architecture. Common to all:
 ## Revision history
 
 - 2026-05-16: initial draft (status BLOCKED pending spec 15 output)
+- 2026-05-17: unblocked by spec 15a. Committed to Layers 1+2+3
+  (siblings + stochastic UV / detail texture array / macro albedo);
+  building-block compositor (D) deferred to Phase 7+. Shader-budget
+  arithmetic added; per-layer Phase 4 vs Phase 5 split documented.
