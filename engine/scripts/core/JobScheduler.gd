@@ -256,12 +256,18 @@ func _dispatch(job_id: int) -> void:
 		_running[job_id] = wtp_id
 
 
+var _streaming_budget_node: Node = null
+
 func _publish_to_budget() -> void:
-	# Debounced publish to StreamingBudget (Phase 2.8 will add the
-	# actual call; for now, this is a stub.)
 	var now := Time.get_ticks_msec()
 	if (now - _last_publish_ms) < _PUBLISH_DEBOUNCE_MS:
 		return
 	_last_publish_ms = now
-	# StreamingBudget.publish(SYSTEM_NAME, {"active_jobs": get_running_count() + _get_queued_count()})
-	# Uncommented in Phase 2.8 when StreamingBudget exists
+	# Lazy lookup so tests (which don't have /root/StreamingBudget)
+	# silently no-op. Integration tests that instantiate both nodes
+	# as siblings can set _streaming_budget_node directly via inject.
+	if _streaming_budget_node == null:
+		_streaming_budget_node = get_node_or_null("/root/StreamingBudget")
+	if _streaming_budget_node != null:
+		_streaming_budget_node.call("publish", SYSTEM_NAME,
+			{"active_jobs": get_running_count() + _get_queued_count()})

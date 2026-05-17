@@ -329,13 +329,18 @@ func _enforce_budget() -> void:
 		evict(oldest)
 
 
+var _streaming_budget_node: Node = null
+
 func _publish_to_budget() -> void:
 	var now := Time.get_ticks_msec()
 	if (now - _last_publish_ms) < _PUBLISH_DEBOUNCE_MS:
 		return
 	_last_publish_ms = now
-	# StreamingBudget.publish(SYSTEM_NAME, {"asset_cache_mb": get_cache_usage_mb()})
-	# Uncommented in Phase 2.8 when StreamingBudget exists
+	if _streaming_budget_node == null:
+		_streaming_budget_node = get_node_or_null("/root/StreamingBudget")
+	if _streaming_budget_node != null:
+		_streaming_budget_node.call("publish", SYSTEM_NAME,
+			{"asset_cache_mb": get_cache_usage_mb()})
 
 
 ## Test helper: clear all state.
