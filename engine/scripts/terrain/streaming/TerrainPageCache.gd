@@ -62,14 +62,39 @@ func evict(ring: int, page_xz: Vector2) -> bool:
 	var k: String = _key(ring, page_xz)
 	if not _entries.has(k):
 		return false
+	_free_gpu_rids(_entries[k])
 	_entries.erase(k)
 	_lru_order.erase(k)
 	return true
 
 
 func clear() -> void:
+	for res in _entries.values():
+		_free_gpu_rids(res)
 	_entries.clear()
 	_lru_order.clear()
+
+
+# Free any GPU RIDs the TerrainPageResult owns + unregister with the
+# tracker. Today only height_cpu is populated (Phase 4.4 scope) so
+# this is mostly no-op; lights up when Phase 4.5+ delivers
+# height_gpu / biome_mask_gpu / drainage_map per spec 20 capabilities.
+# Audit S1 fix: was a silent GPU leak path the moment GPU caps land.
+func _free_gpu_rids(res: TerrainPageResult) -> void:
+	if res == null:
+		return
+	var rd: RenderingDevice = RenderingServer.get_rendering_device()
+	if rd == null:
+		return
+	var loop: SceneTree = Engine.get_main_loop() as SceneTree
+	var tracker: Node = null
+	if loop != null:
+		tracker = loop.root.get_node_or_null("/root/GpuResourceTracker")
+	for rid in [res.height_gpu, res.biome_mask_gpu, res.drainage_map]:
+		if rid.is_valid():
+			rd.free_rid(rid)
+			if tracker != null:
+				tracker.unregister(rid)
 
 
 ## Approximate total CPU-page bytes held. Used by StreamingBudget
@@ -103,5 +128,7 @@ func _enforce_budget() -> void:
 	while over > 0 and _lru_order.size() > 0:
 		var k: String = _lru_order[0]
 		_lru_order.pop_front()
+		# Free GPU RIDs before dropping the result (audit S1 fix)
+		_free_gpu_rids(_entries[k])
 		_entries.erase(k)
 		over -= 1

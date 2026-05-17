@@ -220,10 +220,13 @@ func _build_modules() -> void:
 	_probes = PageDebugProbes.new()
 	_probes.configure(_cache, page_extent_m)
 
-	# ResidencyManager + PageStreamingJob are Nodes — children of self
+	# ResidencyManager + PageStreamingJob are Nodes — children of self.
+	# Order: create both, then configure residency with the streaming
+	# back-ref so residency can suppress in-flight re-emits per
+	# TR-INTEG-C3 fix. (Single configure call — M1 audit fix collapsed
+	# the pre-/post-streaming double-configure.)
 	_residency = ResidencyManager.new()
 	_residency.name = "ResidencyManager"
-	_residency.configure(_cache, page_extent_m)
 	add_child(_residency)
 
 	_streaming = PageStreamingJob.new()
@@ -236,8 +239,7 @@ func _build_modules() -> void:
 		0, "high", _kernel, ["height_cpu"])
 	add_child(_streaming)
 
-	# Residency knows about streaming so it can skip re-emitting load
-	# requests for in-flight pages (TR-INTEG-C3 fix).
+	# Now configure residency with the streaming back-ref.
 	_residency.configure(_cache, page_extent_m, _streaming)
 
 	# Wire residency → streaming for actual page work

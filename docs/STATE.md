@@ -55,14 +55,16 @@ design-phase only, VT requires extensions). Prototype renders
 
 ## What does NOT exist yet
 
-- Any vertical system code (terrain, materials, decoration, foliage,
-  etc.) — those land in Phase 4+
-- Spec 15a renderer decision doc (Phase 3 output)
-- Capture-based renderer tests (Phase 4 land)
-- Any plans (no system has moved to plan stage yet; first plan likely
-  the Phase 3 renderer research)
-- Spec status sweep (all 47 specs still `draft`; planned for Phase 3
-  start)
+- Materials / decoration / foliage / atmosphere / water vertical
+  code (those land in Phase 5+; terrain is the only vertical that
+  exists today)
+- Spec status sweep (all 48 specs still `draft`; the lifecycle move
+  to `reviewed` slipped through Phases 2-4, scheduled for Phase 5
+  open)
+- Real RTX 3060 measurement (Phase 4.5 calibration measures on
+  dev RTX 5090 Laptop; 3060 measurement deferred until hardware
+  available)
+- Walking demo scene (Phase 4.6)
 
 ## What's blocked
 

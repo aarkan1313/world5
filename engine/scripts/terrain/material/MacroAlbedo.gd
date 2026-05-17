@@ -49,10 +49,18 @@ func load_from_path(config_path: String) -> bool:
 	)
 	# Texture is optional: loaded via ResourceLoader if path is valid.
 	# If load fails, leave texture null — fragment shader can fall back
-	# to a default color uniform.
+	# to a default color uniform. Log warn when the path was provided
+	# but the texture can't be loaded (audit M3 fix: was silent).
 	var tex_path: String = String(data["texture"])
-	if ResourceLoader.exists(tex_path):
-		texture = load(tex_path)
+	if tex_path != "":
+		if ResourceLoader.exists(tex_path):
+			texture = load(tex_path)
+			if texture == null:
+				Log.warn("macro_albedo", "load returned null",
+					{"path": tex_path})
+		else:
+			Log.warn("macro_albedo", "texture path missing",
+				{"path": tex_path, "config": config_path})
 	return true
 
 

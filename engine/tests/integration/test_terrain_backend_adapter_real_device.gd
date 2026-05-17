@@ -31,10 +31,10 @@ func after_all() -> void:
 
 
 func before_each() -> void:
-	# Reset adapter's last-job tracker so dependencies don't reference
+	# Reset adapter's in-flight window so dependencies don't reference
 	# job ids from the now-destroyed previous scheduler instance.
 	if _shared_adapter != null:
-		_shared_adapter._last_job_id = -1
+		_shared_adapter._in_flight_window.clear()
 	# Spawn the autoloads we depend on so /root/X lookups resolve
 	# (same pattern as test_tier0_wired.gd — plugin autoloads only fire
 	# in editor; in test runs we re-create them).

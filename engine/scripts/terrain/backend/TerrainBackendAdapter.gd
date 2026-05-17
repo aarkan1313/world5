@@ -19,12 +19,18 @@ class_name TerrainBackendAdapter extends RefCounted
 # Singleton backend reused across requests (compiles shader once)
 var _backend: GpuTerrainBackend = null
 
-# Last-submitted job id, used to serialize page generation behind itself
-# (TB-REV-C1: each page generation does rd.submit() + rd.sync() which
-# blocks the render thread; capping concurrent in-flight pages at 1
-# bounds the per-frame stall to one page until Phase 4.4's
-# ResidencyManager + async readback split the work across frames).
-var _last_job_id: int = -1
+# Bounded-concurrency window for page generation. Each page does
+# rd.submit() + rd.sync() on the render thread (~2-10ms each). Strict
+# serialization (window=1) was Phase 4.4's defensive default + auditor
+# called out the perf cost. Phase 4.5 raises to 4 — render thread
+# still serializes the calls, but the JobScheduler scheduling latency
+# (1 page per scheduler tick) is amortized.
+#
+# Acts as a circular buffer of recent job ids — each new job depends
+# on the (N-th oldest) job in the window so at most max_in_flight
+# pages are unfinished at any time.
+var _in_flight_window: Array = []          # Array[int] (job ids)
+var _max_in_flight: int = 4
 
 
 func _init() -> void:
@@ -68,15 +74,24 @@ func request_page(request: TerrainPageRequest) -> int:
 	job.request = request
 	job.name = "terrain_page_%s" % request.cache_key().substr(0, 8)
 	job.priority = Job.Priority.NORMAL
-	# Serialize: this job depends on the previous one finishing so the
-	# render thread only stalls on one page at a time. Drops the dep
-	# if the previous job has already completed (scheduler treats
-	# unknown ids as satisfied).
-	if _last_job_id != -1:
-		job.dependencies = [_last_job_id]
+	# Bounded concurrency: if the window is full, this job depends on
+	# the oldest job in the window. When that one completes, this one
+	# unblocks. Result: at most max_in_flight pages in flight at once.
+	# (Phase 4.5 TR-PERF-C2 fix; was strict serialization in Phase 4.4.)
+	if _in_flight_window.size() >= _max_in_flight:
+		var oldest: int = _in_flight_window[0]
+		_in_flight_window.pop_front()
+		job.dependencies = [oldest]
 	var jid: int = scheduler.submit(job)
-	_last_job_id = jid
+	_in_flight_window.append(jid)
 	return jid
+
+
+## Configure the in-flight window. Defaults to 4 (Phase 4.5 sweet
+## spot for 4-ring renderer). Set to 1 for strict serialization
+## (Phase 4.4 behavior, useful for debugging).
+func set_max_in_flight(n: int) -> void:
+	_max_in_flight = max(1, n)
 
 
 func _get_scheduler() -> Node:

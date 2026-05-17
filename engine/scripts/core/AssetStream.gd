@@ -26,6 +26,14 @@ class _Request:
 	var error: String = ""
 	var adapter: String = ""  # "" | "mesh" | "texture" | future adapters
 	var size_bytes: int = 0  # estimated; populated on READY
+	var terminal_at_ms: int = 0  # set when status reaches READY/FAILED;
+	                             # _tick sweeps stale entries past TTL
+	                             # (audit S2: cancel() was leaving zombies)
+
+
+# Mirror JobScheduler._RESULT_EVICTION_TTL_MS — terminal-state
+# requests dropped after this much time.
+const _TERMINAL_EVICTION_TTL_MS: int = 60_000
 
 # id → _Request
 var _requests: Dictionary = {}
@@ -149,6 +157,7 @@ func cancel(req_id: int) -> bool:
 	# cancelled + drop the resource when it eventually arrives.
 	req.status = Status.FAILED
 	req.error = "cancelled"
+	req.terminal_at_ms = Time.get_ticks_msec()
 	_path_to_id.erase(req.path)
 	return true
 
@@ -236,16 +245,37 @@ func _tick() -> void:
 			ResourceLoader.THREAD_LOAD_FAILED:
 				req.status = Status.FAILED
 				req.error = "load_threaded_get_status FAILED"
+				req.terminal_at_ms = Time.get_ticks_msec()
 				_path_to_id.erase(req.path)
 				Log.error(SYSTEM_NAME, "load FAILED", {"path": req.path})
 			ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
 				req.status = Status.FAILED
 				req.error = "INVALID_RESOURCE"
+				req.terminal_at_ms = Time.get_ticks_msec()
 				_path_to_id.erase(req.path)
 				Log.error(SYSTEM_NAME, "load INVALID",
 					{"path": req.path})
 			# IN_PROGRESS → keep polling
+	# Audit S2: sweep terminal-state requests past TTL so cancel()
+	# doesn't leave permanent zombies in _requests.
+	_sweep_terminal()
 	_publish_to_budget()
+
+
+func _sweep_terminal() -> void:
+	var now: int = Time.get_ticks_msec()
+	# Snapshot keys before iterating (pitfall meta-3)
+	var keys: Array = _requests.keys()
+	for rid in keys:
+		var req: _Request = _requests[rid]
+		if req.status == Status.READY or req.status == Status.FAILED:
+			if req.terminal_at_ms == 0:
+				# Older record without timestamp — stamp it now so it's
+				# evictable next pass (graceful upgrade path).
+				req.terminal_at_ms = now
+				continue
+			if (now - req.terminal_at_ms) > _TERMINAL_EVICTION_TTL_MS:
+				_requests.erase(rid)
 
 
 func _promote_to_ready(req: _Request) -> void:
@@ -253,6 +283,7 @@ func _promote_to_ready(req: _Request) -> void:
 	if raw == null:
 		req.status = Status.FAILED
 		req.error = "load_threaded_get returned null"
+		req.terminal_at_ms = Time.get_ticks_msec()
 		_path_to_id.erase(req.path)
 		return
 	# Apply adapter
@@ -262,12 +293,14 @@ func _promote_to_ready(req: _Request) -> void:
 		if resource == null:
 			req.status = Status.FAILED
 			req.error = "mesh adapter: no MeshInstance3D in PackedScene"
+			req.terminal_at_ms = Time.get_ticks_msec()
 			Log.error(SYSTEM_NAME, "mesh adapter failed",
 				{"path": req.path})
 			_path_to_id.erase(req.path)
 			return
 	req.resource = resource
 	req.status = Status.READY
+	req.terminal_at_ms = Time.get_ticks_msec()
 	req.size_bytes = _estimate_bytes(resource)
 	_cache[req.path] = resource
 	_touch_lru(req.path)

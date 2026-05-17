@@ -348,6 +348,31 @@ decision is re-opened (the only other Godot-4.5-viable primitive is
 "raymarched terrain in fragment shader" which has worse visual
 ceiling per spec 15 candidate analysis).
 
+**Phase 4.5 calibration result (2026-05-17, RTX 5090 Laptop,
+Godot 4.6.2)** — see `docs/build-notes/phase_4_5_calibration_2026_05_17.md`
+for full table. Continuous-motion measurement (figure-8 walk, 60
+frames) showed:
+- 4 rings: 4.16 ms avg
+- 6 rings: 6.08 ms avg
+- 8 rings: catastrophic (109 ms)
+
+5090 Laptop → 3060 extrapolation (~3-4× perf factor): 4 rings ≈
+13-17 ms on 3060, 6 rings ≈ 18-25 ms. Both blow the 2.0 ms terrain
+budget by 7-12×. **F2 is engaged on 3060 by default** until either
+(a) the streaming bottleneck (TR-PERF-C2 partially-fixed render-thread
+serialization) is closed, or (b) a stationary-camera baseline shows
+pure render cost is in budget. Pure-render-cost isolation deferred
+to Phase 4.6.
+
+Caveat: the calibration measurement bundled streaming-under-motion
+cost with pure render cost. The 109ms 8-ring number is dominated by
+the bounded-concurrency window (4 in-flight pages) not keeping up
+with the outer ring's page demand under continuous motion — that's
+a streaming-throughput problem, not a rasterization problem. The
+"is clipmap a viable primitive?" question stays answered yes;
+"can the current streaming layer feed it at 60fps?" is the open
+question Phase 4.5 partially answered (no, not at 8 rings).
+
 **Why 1.5 ms not 2.0 ms**: spec 21:97 reserves 2.0 ms for terrain at
 high tier; the 0.5 ms gap is buffer for the cache + residency layers
 + shader uniform updates per frame that the prototype didn't

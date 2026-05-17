@@ -29,8 +29,8 @@ multi-biome material blend, validates with one biome demo.
 | Phase 2 — Foundation build (Tier 0) | ✅ done | [phase_2_foundations.md](roadmap/phase_2_foundations.md) | 1 (commits `bcb1d62` → `cb46ffc`) |
 | Phase 2 audit + fix | ✅ done | SELF_AUDIT_PHASE_2_FINDINGS | 1 (commits `17fce3d` → `d6d6c94`) |
 | Phase 3 — Renderer research sprint | ✅ done | [phase_3_renderer_research.md](roadmap/phase_3_renderer_research.md) + spec 15a | 1 (came in under 3-5 estimate) |
-| **Phase 4 — Terrain MVP (one biome)** | 🚧 in progress | [phase_4_terrain_mvp.md](roadmap/phase_4_terrain_mvp.md) | 5-10 |
-| Phase 4.5 — **Calibration sprint** | pending | (write when starting) | 2-3 |
+| **Phase 4 — Terrain MVP (one biome)** | 🚧 in progress (4.1-4.4 done, 4.5 in flight, 4.6 next) | [phase_4_terrain_mvp.md](roadmap/phase_4_terrain_mvp.md) | 5-10 |
+| Phase 4.5 — **Calibration sprint** | 🚧 in progress (sub-phase of 4) | [phase_4_5_calibration.md](roadmap/phase_4_5_calibration.md) | 1-2 |
 | Phase 5 — Ground texture pipeline | pending | (write when starting) | 5-10 |
 | Phase 6 — Second biome | pending | (write when starting) | 3-5 |
 | Phase 7 — Decoration end-to-end | pending | (write when starting) | 5-10 |

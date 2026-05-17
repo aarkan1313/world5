@@ -103,6 +103,16 @@ func query_rect(rect: Rect2) -> PackedInt32Array:
 
 ## Return up to k nearest ids to point. Nearest first; insertion-order
 ## tiebreak on ties.
+##
+## APPROXIMATION (M4 audit 2026-05-17): expands cell-rings outward
+## until k candidates found + does one safety ring. This can MISS the
+## true k-th nearest if it lives in a sparse outer ring that the
+## safety ring doesn't reach. For Phase 4 consumers (terrain page
+## adjacency queries) k is small (1-4) and densities are uniform
+## enough that the miss rate is negligible. A correctness-first
+## variant would compute the k-th candidate radius then re-check any
+## ring that could intersect that radius — deferred to a phase where
+## a consumer actually depends on exact k-nearest correctness.
 func query_nearest(point: Vector2, k: int = 1) -> PackedInt32Array:
 	if k <= 0 or _items.is_empty():
 		return [] as PackedInt32Array

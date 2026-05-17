@@ -104,11 +104,13 @@ GPU compute; readback matches within 1e-4 m tolerance.
 
 | # | File | Purpose | Test |
 |---|---|---|---|
-| 1 | `pipeline/world5/kernels/__init__.py` | `Kernel` base class (sample(world_xz, seed) → array) | `tests/unit/test_kernel_base.py` |
-| 2 | `pipeline/world5/kernels/noise_stack.py` | fBm impl (Python reference) | `tests/unit/test_noise_stack_python.py` (golden hash on known seeds) |
-| 3 | `engine/scripts/terrain/kernels/NoiseStackKernel.gd` | GPU wrapper; emits compute dispatch params | `tests/unit/test_noise_stack_kernel.gd` |
-| 4 | `engine/shaders/noise_stack.glsl` | Compute: fBm sampling matching Python | exercised by parity test |
-| 5 | `tests/integration/test_noise_stack_parity.py` | Python ↔ GPU readback parity | `--full` |
+| 1 | `pipeline/world5/kernels/__init__.py` | (no separate ABC; kernel-system v1 ships NoiseStack only — see Phase 4.3 corrected framing) | n/a |
+| 2 | `pipeline/world5/kernels/noise_stack.py` | fBm impl (Python reference) | `tests/unit/test_noise_stack_kernel.py` (covers Python ref + GDScript wrapper) |
+| 3 | `engine/scripts/terrain/kernels/NoiseStackKernel.gd` | GD config wrapper | `engine/tests/unit/test_noise_stack_kernel.gd` |
+| 4 | fBm inlined into `engine/shaders/terrain_page_gen.glsl` | (no separate noise_stack.glsl — fBm is in the page-gen shader since kernel-system v1 ships one shader; would split if/when ErosionKernel lands) | exercised by parity test |
+| 5 | `tests/integration/test_terrain_backend_parity.py` | Python ↔ GPU readback parity (7 cases) | `--full` |
+
+**Plan ↔ code reconciliation (S3 audit fix 2026-05-17)**: original plan listed 5 separately-named files; what actually shipped consolidated to the rows above. The plan was too granular for kernel-system v1's NoiseStack-only scope. When ErosionKernel lands (in a future phase), split out `engine/shaders/noise_stack.glsl` + add a Kernel base class.
 
 **Deferred to Phase 4.5+** (per phase 4 checklist):
 - `ErosionKernel` (pre-bake, not runtime; lives in pipeline)

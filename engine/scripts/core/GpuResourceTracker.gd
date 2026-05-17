@@ -34,6 +34,7 @@ func register(rid: RID, owner_name: String, category: String, approx_bytes: int 
 			{"rid": key, "previous_owner": _allocations[key]["owner"],
 			 "new_owner": owner_name})
 	_allocations[key] = {
+		"rid": rid,  # stored so _exit_tree safety net can free it (C1 audit fix)
 		"owner": owner_name,
 		"category": category,
 		"ts_ms": Time.get_ticks_msec(),
@@ -89,13 +90,29 @@ func _exit_tree() -> void:
 	if _allocations.is_empty():
 		Log.info(SYSTEM_NAME, "shutdown — no leaked RIDs")
 		return
-	# Safety net: every owner should have freed already. Anything still
-	# registered is a leak per spec 08a rule 5.
+	# Safety net per spec 08a rule 5: free any RID still registered +
+	# warn. Owners SHOULD have freed already; this catches the cases
+	# where they forgot. Guarded against RenderingDevice teardown —
+	# if RD is gone we can't free, log-only fallback (still better
+	# than the audit gap of silent leaks).
 	Log.warn(SYSTEM_NAME, "shutdown — leaked RIDs detected",
 		{"count": _allocations.size(), "owners": get_owner_counts()})
-	# We do NOT call RenderingDevice.free_rid here because the
-	# RenderingDevice itself may already be torn down. Just log the
-	# leak so owners get fixed in implementation.
+	var rd: RenderingDevice = RenderingServer.get_rendering_device()
+	if rd != null:
+		var freed: int = 0
+		for rid_int in _allocations.keys():
+			# Reconstruct RID from int — Dictionary keys are the
+			# int-cast since RID isn't directly hashable across paths
+			var rec: Dictionary = _allocations[rid_int]
+			var rid: RID = rec.get("rid", RID())
+			if rid.is_valid():
+				rd.free_rid(rid)
+				freed += 1
+		if freed > 0:
+			Log.info(SYSTEM_NAME, "shutdown — freed leaked RIDs",
+				{"freed": freed})
+	else:
+		Log.warn(SYSTEM_NAME, "RD already gone; cannot free leaked RIDs", {})
 	_allocations.clear()
 
 
