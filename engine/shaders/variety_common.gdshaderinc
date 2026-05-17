@@ -130,3 +130,25 @@ vec4 w5_detail_blend(sampler2DArray array, vec2 tile_uv, vec2 world_xz,
     return vec4((d0.rgb * w0 + d1.rgb * w1) / wsum,
                 clamp((d0.a + d1.a) * 0.5, 0.0, 1.0));
 }
+
+// Per-fragment slot weight from elevation + slope bands (Phase 4.9.b,
+// spec 23 §Surface slot model). Smoothstep crossfade in from
+// (band.x - band.z) to band.x, hold full weight band.x..band.y, then
+// crossfade out from band.y to (band.y + band.w). Returns 0..1.
+//
+// Caller passes the slot's elev band as vec4(min_m, max_m,
+// band_in_m, band_out_m) and slope band as vec4(min_deg, max_deg,
+// band_in_deg, band_out_deg). Final weight is product (slot is
+// active only where BOTH bands match).
+float w5_slot_weight(vec4 elev_band, vec4 slope_band,
+                     float elev_m, float slope_deg) {
+    // Elevation band: ramp up min - band_in → min, ramp down max → max + band_out
+    float ew_in  = smoothstep(elev_band.x - max(elev_band.z, 0.001), elev_band.x, elev_m);
+    float ew_out = 1.0 - smoothstep(elev_band.y, elev_band.y + max(elev_band.w, 0.001), elev_m);
+    float ew = ew_in * ew_out;
+    // Slope band: same shape, in degrees
+    float sw_in  = smoothstep(slope_band.x - max(slope_band.z, 0.001), slope_band.x, slope_deg);
+    float sw_out = 1.0 - smoothstep(slope_band.y, slope_band.y + max(slope_band.w, 0.001), slope_deg);
+    float sw = sw_in * sw_out;
+    return ew * sw;
+}

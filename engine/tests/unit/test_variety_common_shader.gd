@@ -93,3 +93,47 @@ func test_terrain_shader_calls_detail_blend() -> void:
 		"terrain_clipmap.gdshader must call w5_detail_blend")
 	assert_true(src.contains("has_detail"),
 		"terrain_clipmap.gdshader must branch on has_detail flag")
+
+
+# --- Phase 4.9.b: per-fragment slot selection ---
+
+func test_slot_weight_primitive_exists() -> void:
+	# Per spec 23 §"Surface slot model" hardened in audit C2.
+	# w5_slot_weight(slot_idx, elev_m, slope_deg) returns the
+	# smoothstep-banded weight for one slot.
+	var src: String = _read()
+	assert_true(src.contains("w5_slot_weight"),
+		"w5_slot_weight primitive required for per-fragment slot selection")
+	assert_true(src.contains("float w5_slot_weight"),
+		"w5_slot_weight must be declared as float-returning function")
+
+
+func test_terrain_shader_loops_over_slots() -> void:
+	# Fragment shader must loop over slot_count, calling w5_slot_weight
+	# for each + w5_variety_sample_3tap for the matching window,
+	# accumulating a weighted average.
+	var f: FileAccess = FileAccess.open(
+		"res://addons/world5/shaders/terrain_clipmap.gdshader",
+		FileAccess.READ)
+	var src: String = f.get_as_text()
+	f.close()
+	assert_true(src.contains("slot_count"),
+		"shader must read slot_count uniform")
+	assert_true(src.contains("w5_slot_weight"),
+		"shader must call w5_slot_weight in fragment loop")
+	assert_true(src.contains("slot_windows"),
+		"shader must read slot_windows uniform")
+
+
+func test_vertex_derives_slope_from_heightmap() -> void:
+	# Per-fragment slot selection needs slope_deg per fragment. The
+	# vertex shader computes it from heightmap finite differences
+	# (sample +/-eps in U and V) and passes via varying.
+	var f: FileAccess = FileAccess.open(
+		"res://addons/world5/shaders/terrain_clipmap.gdshader",
+		FileAccess.READ)
+	var src: String = f.get_as_text()
+	f.close()
+	assert_true(src.contains("v_slope_deg") or src.contains("v_world_y"),
+		"vertex must publish slope (v_slope_deg) or world Y (v_world_y) " +
+		"for per-fragment slot selection")

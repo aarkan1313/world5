@@ -303,13 +303,30 @@ func _load_world_bundle(bundle_path: String) -> void:
 			Log.warn("terrain_world", "surface_slots.json failed to load",
 				{"path": slots_cfg})
 
-	# --- spec 24 Layer 1 (siblings + 3-tap stochastic UV) ---
+	# --- biome_catalog (spec 22) → per-slot selectors for Phase 4.9.b ---
 	#
-	# Phase 5.5 wire-up: read material_variants.json (sibling manifest),
-	# build the Texture2DArray for the first slot, bind on every ring.
-	# Single-slot binding matches the shader's current Phase 5.5 contract
-	# (one active slot); Phase 6 multi-biome work widens this to
-	# per-slot windows.
+	# When the bundle ships a biome_catalog.json, the per-slot elevation
+	# + slope bands drive per-fragment slot weight in the shader.
+	# Without a catalog, fall back to legacy single-slot binding.
+	var catalog: BiomeCatalog = null
+	var catalog_cfg: String = bundle_path + "biome_catalog.json"
+	if FileAccess.file_exists(catalog_cfg):
+		catalog = BiomeCatalog.from_file(catalog_cfg)
+		if catalog != null:
+			var cat_errors: Array = catalog.validate()
+			if cat_errors.size() > 0:
+				Log.warn("terrain_world", "biome_catalog validation errors",
+					{"errors": cat_errors})
+
+	# --- spec 24 Layer 1 (siblings + per-fragment slot selection) ---
+	#
+	# Phase 4.9.b: build the sibling Texture2DArray from material_variants,
+	# extract per-slot (start, count) windows + elev/slope bands from
+	# the biome catalog, bind ALL slots so the shader's per-fragment
+	# loop can weight + blend across them.
+	# Fallback (no catalog OR no slot selectors): legacy single-slot
+	# binding via bind_sibling_array — preserves Phase 5.5 behavior
+	# for any scene that hasn't migrated.
 	if has_material_variants:
 		var mv: MaterialVariants = MaterialVariants.from_file(mv_cfg)
 		if mv != null and mv.slots.size() > 0:
@@ -322,26 +339,7 @@ func _load_world_bundle(bundle_path: String) -> void:
 				"materials_root": materials_root,
 			})
 			if sta.layer_count() > 0:
-				# Bind the first slot's window. (Phase 6 will pick per
-				# fragment; Phase 5.5 demo is single-biome single-slot.)
-				var first_slot: Dictionary = mv.slots[0]
-				var window: Dictionary = sta.window_for(
-					String(first_slot.get("biome", "")),
-					String(first_slot.get("slot", "")))
-				Log.info("terrain_world", "binding siblings on rings", {
-					"biome": String(first_slot.get("biome", "")),
-					"slot": String(first_slot.get("slot", "")),
-					"start": int(window.get("start", 0)),
-					"count": int(window.get("count", 0)),
-					"rings": _rings.size(),
-				})
-				for ring in _rings:
-					var rmat: Material = ring.mesh_instance.material_override
-					if rmat is ShaderMaterial:
-						_material_pipeline.bind_sibling_array(
-							rmat as ShaderMaterial, sta.texture,
-							int(window.get("start", 0)),
-							int(window.get("count", 0)))
+				_bind_slots_with_catalog(sta, mv, catalog)
 	else:
 		Log.warn("terrain_world", "bundle missing material_variants.json",
 			{"path": mv_cfg})
@@ -495,6 +493,77 @@ func _bind_height_to_ring(ring: ClipmapRing,
 	var img: Image = Image.create_from_data(n, n, false, Image.FORMAT_RF, bytes)
 	var tex: ImageTexture = ImageTexture.create_from_image(img)
 	_material_pipeline.bind_height_map(mat as ShaderMaterial, tex, amp, 0.0)
+
+
+## Bind every slot's sibling window + selector bands on every ring
+## material. Phase 4.9.b. Falls back to legacy single-slot binding
+## when the catalog isn't available OR when a catalog slot has no
+## matching variants in the manifest (avoids breaking demos that
+## have textures but no catalog yet).
+func _bind_slots_with_catalog(sta: SiblingTextureArray,
+		mv: MaterialVariants, catalog: BiomeCatalog) -> void:
+	# Build per-slot windows + bands. We iterate over the manifest's
+	# slot order (the order SiblingTextureArray packed the layers).
+	# For each (biome, slot) in the manifest, look up the catalog
+	# entry to get the selector bands. Missing catalog entry → use
+	# very wide defaults (slot always active).
+	var windows: Array = []
+	var elev_bands: Array = []
+	var slope_bands: Array = []
+	for slot_entry in mv.slots:
+		if not (slot_entry is Dictionary):
+			continue
+		var se: Dictionary = slot_entry
+		var biome_name: String = String(se.get("biome", ""))
+		var slot_name: String = String(se.get("slot", ""))
+		var win: Dictionary = sta.window_for(biome_name, slot_name)
+		if int(win.get("count", 0)) <= 0:
+			continue  # SiblingTextureArray.build skipped this slot
+		windows.append({"start": int(win["start"]), "count": int(win["count"])})
+		var elev_b: Dictionary = {
+			"min": -10000.0, "max": 10000.0, "band_min": 1.0, "band_max": 1.0
+		}
+		var slope_b: Dictionary = {
+			"min": 0.0, "max": 90.0, "band_min": 1.0, "band_max": 1.0
+		}
+		if catalog != null:
+			var biome: Dictionary = catalog.biome_by_name(biome_name)
+			for cs in (biome.get("surface_slots", []) as Array):
+				if not (cs is Dictionary):
+					continue
+				var csd: Dictionary = cs
+				if String(csd.get("name", "")) != slot_name:
+					continue
+				var sel: Dictionary = csd.get("selector", {})
+				if sel.has("elevation_m") and (sel["elevation_m"] as Array).size() == 2:
+					elev_b["min"] = float((sel["elevation_m"] as Array)[0])
+					elev_b["max"] = float((sel["elevation_m"] as Array)[1])
+				if sel.has("slope_deg") and (sel["slope_deg"] as Array).size() == 2:
+					slope_b["min"] = float((sel["slope_deg"] as Array)[0])
+					slope_b["max"] = float((sel["slope_deg"] as Array)[1])
+				if sel.has("band_width_elevation_m"):
+					var bwe: float = float(sel["band_width_elevation_m"])
+					elev_b["band_min"] = bwe
+					elev_b["band_max"] = bwe
+				if sel.has("band_width_slope_deg"):
+					var bws: float = float(sel["band_width_slope_deg"])
+					slope_b["band_min"] = bws
+					slope_b["band_max"] = bws
+				break
+		elev_bands.append(elev_b)
+		slope_bands.append(slope_b)
+
+	Log.info("terrain_world", "binding slots on rings", {
+		"slot_count": windows.size(),
+		"has_catalog": catalog != null,
+		"rings": _rings.size(),
+	})
+
+	for ring in _rings:
+		var rmat: Material = ring.mesh_instance.material_override
+		if rmat is ShaderMaterial:
+			_material_pipeline.bind_all_slots(rmat as ShaderMaterial,
+				sta.texture, windows, elev_bands, slope_bands)
 
 
 func _all_rings_have_pages() -> bool:

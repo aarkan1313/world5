@@ -148,8 +148,15 @@ func test_world_with_textures_flips_has_siblings_on_all_rings() -> void:
 				"ring %s has ShaderMaterial override" % c.name)
 			assert_eq((mat.get_shader_parameter("has_siblings") as bool), true,
 				"ring %s has_siblings must be true after world load" % c.name)
-			assert_eq(int(mat.get_shader_parameter("sibling_count")), 3,
-				"ring %s sibling_count must reflect manifest (3 variants)" % c.name)
+			# Phase 4.9.b: per-fragment slot selection. The manifest has
+			# 1 slot (ground) with 3 variants, so slot_count=1 and the
+			# first slot_windows entry has count=3.
+			assert_eq(int(mat.get_shader_parameter("slot_count")), 1,
+				"ring %s slot_count must reflect manifest slots (1 slot)" % c.name)
+			var windows: Array = mat.get_shader_parameter("slot_windows")
+			assert_not_null(windows, "slot_windows uniform must be set")
+			assert_eq(int((windows[0] as Vector4i).y), 3,
+				"ring %s slot_windows[0].y (count) must = 3 variants" % c.name)
 	assert_gt(ring_count, 0, "test must find at least one ring")
 
 

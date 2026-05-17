@@ -178,3 +178,68 @@ func test_detail_unbound_flag_defaults_false() -> void:
 	var mat: ShaderMaterial = p.make_ring_material(0)
 	assert_eq((mat.get_shader_parameter("has_detail") as bool), false,
 		"has_detail must default false on a fresh ring material")
+
+
+# --- Phase 4.9.b: per-fragment slot selection ---
+
+func test_bind_all_slots_sets_slot_count_and_windows() -> void:
+	# Spec 23 hardened contract: every slot's sibling window MUST be
+	# bound, not just the first. Previously TerrainWorld bound only
+	# mv.slots[0] making mid + rock dead weight.
+	var p: MaterialPipeline = MaterialPipeline.new()
+	var mat: ShaderMaterial = p.make_ring_material(0)
+	var arr: Texture2DArray = _make_sibling_array(9)  # 3 slots * 3 variants
+	var windows: Array = [
+		{"start": 0, "count": 3},
+		{"start": 3, "count": 3},
+		{"start": 6, "count": 3},
+	]
+	var elev_bands: Array = [
+		{"min": -50.0, "max": 5.0, "band_min": 8.0, "band_max": 8.0},
+		{"min": -15.0, "max": 30.0, "band_min": 10.0, "band_max": 10.0},
+		{"min": 10.0, "max": 50.0, "band_min": 12.0, "band_max": 12.0},
+	]
+	var slope_bands: Array = [
+		{"min": 0.0, "max": 20.0, "band_min": 5.0, "band_max": 5.0},
+		{"min": 10.0, "max": 45.0, "band_min": 8.0, "band_max": 8.0},
+		{"min": 30.0, "max": 90.0, "band_min": 10.0, "band_max": 10.0},
+	]
+	p.bind_all_slots(mat, arr, windows, elev_bands, slope_bands)
+	assert_eq(mat.get_shader_parameter("sibling_array"), arr)
+	assert_eq(int(mat.get_shader_parameter("slot_count")), 3)
+	# slot_windows packed as ivec4[8]; first 3 entries non-zero
+	# (xy = start,count; zw unused)
+	var w: Array = mat.get_shader_parameter("slot_windows")
+	assert_not_null(w, "slot_windows uniform must be set")
+	assert_gte(w.size(), 3,
+		"slot_windows must have at least slot_count entries (got %d)" % w.size())
+	# has_siblings flips true since at least one window is non-empty
+	assert_eq((mat.get_shader_parameter("has_siblings") as bool), true)
+
+
+func test_bind_all_slots_caps_at_max_slots() -> void:
+	# Spec 23 hard cap is 8 slots per biome (shader limit). Caller
+	# passing more must be clamped at the binder so the shader's
+	# fixed-size arrays don't overflow.
+	var p: MaterialPipeline = MaterialPipeline.new()
+	var mat: ShaderMaterial = p.make_ring_material(0)
+	var arr: Texture2DArray = _make_sibling_array(20)
+	var windows: Array = []
+	var elev_bands: Array = []
+	var slope_bands: Array = []
+	for i in range(12):  # over the 8-slot cap
+		windows.append({"start": i * 2, "count": 2})
+		elev_bands.append({"min": 0.0, "max": 50.0, "band_min": 5.0, "band_max": 5.0})
+		slope_bands.append({"min": 0.0, "max": 45.0, "band_min": 5.0, "band_max": 5.0})
+	p.bind_all_slots(mat, arr, windows, elev_bands, slope_bands)
+	assert_lte(int(mat.get_shader_parameter("slot_count")), 8,
+		"slot_count must clamp to MAX_SLOTS=8 (spec 23 hard cap)")
+
+
+func test_bind_all_slots_empty_windows_leaves_has_siblings_false() -> void:
+	var p: MaterialPipeline = MaterialPipeline.new()
+	var mat: ShaderMaterial = p.make_ring_material(0)
+	p.bind_all_slots(mat, null, [], [], [])
+	assert_eq((mat.get_shader_parameter("has_siblings") as bool), false,
+		"empty/null inputs must leave has_siblings false (macro-only path)")
+	assert_eq(int(mat.get_shader_parameter("slot_count")), 0)

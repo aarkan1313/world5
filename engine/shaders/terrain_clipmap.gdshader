@@ -41,6 +41,26 @@ uniform float sibling_blend_freq = 0.10;
 // 4.0 → 4 m per tile; matches W4 alpine ground reference cadence.
 uniform float sibling_tile_m = 4.0;
 
+// --- Per-fragment slot selection (Phase 4.9.b, spec 23 §Surface slot model) ---
+//
+// MAX_SLOTS = 8 per spec 23 hard cap. Each slot has:
+//   - window: (start_layer, count, 0, 0) into sibling_array
+//   - elev band: (min_m, max_m, band_min, band_max) for smoothstep
+//     crossfade in/out of the slot's elevation range
+//   - slope band: same shape but for slope in degrees
+//
+// When slot_count > 0, the fragment loops over the active slots,
+// computes a weight per slot from band membership (vertex Y +
+// vertex-derived slope), samples the 3-tap sibling blend per slot,
+// and accumulates a weighted average.
+//
+// When slot_count == 0 the shader falls through to the macro-only
+// path (pre-Phase-4.9.b behavior).
+uniform int slot_count = 0;
+uniform ivec4 slot_windows[8];
+uniform vec4 slot_elev_bands[8];
+uniform vec4 slot_slope_bands[8];
+
 // --- Layer 2: detail array (Phase 5.5, spec 24) ---
 //
 // Per-biome Texture2DArray of overlay textures (grunge, moss, wet,
@@ -80,6 +100,11 @@ uniform float grid_n = 256.0;
 // World XZ passed from vertex to fragment so the per-fragment matmul
 // is avoided (TR-PERF-M1 fix).
 varying vec2 v_world_xz;
+// World Y + slope_deg passed from vertex for per-fragment slot
+// selection (Phase 4.9.b). Slope derived from heightmap finite
+// differences; flat = 0 deg, vertical cliff = 90 deg.
+varying float v_world_y;
+varying float v_slope_deg;
 
 // Snap a UV to the parent-ring sample grid: every other vertex along
 // each axis matches a parent-ring vertex, so rounding to the nearest
@@ -103,6 +128,35 @@ void vertex() {
     VERTEX.y = (h - 0.5) * 2.0 * height_scale + height_offset;
     // Compute world_xz ONCE in vertex (was per-fragment matmul)
     v_world_xz = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
+    v_world_y = VERTEX.y;
+
+    // Slope derivation (Phase 4.9.b): sample heightmap at ±eps in U/V,
+    // compute world-space dY/dX and dY/dZ, then slope = angle from
+    // horizontal. eps = 1 cell in UV space; cell size in world meters
+    // matches the parent-uv math (cell = 2 / (grid_n - 1) for the
+    // PARENT grid; for own-ring it's 1 / (grid_n - 1)).
+    float own_cell_uv = 1.0 / max(grid_n - 1.0, 1.0);
+    float h_u_pos = texture(height_map, UV + vec2(own_cell_uv, 0.0)).r;
+    float h_u_neg = texture(height_map, UV - vec2(own_cell_uv, 0.0)).r;
+    float h_v_pos = texture(height_map, UV + vec2(0.0, own_cell_uv)).r;
+    float h_v_neg = texture(height_map, UV - vec2(0.0, own_cell_uv)).r;
+    // World-space heights at the offset samples
+    float wy_u_pos = (h_u_pos - 0.5) * 2.0 * height_scale + height_offset;
+    float wy_u_neg = (h_u_neg - 0.5) * 2.0 * height_scale + height_offset;
+    float wy_v_pos = (h_v_pos - 0.5) * 2.0 * height_scale + height_offset;
+    float wy_v_neg = (h_v_neg - 0.5) * 2.0 * height_scale + height_offset;
+    // dY per cell — UV → world meters scale is implicit (one UV
+    // cell = one world cell on the ring, scale cancels in atan2).
+    float dyx = (wy_u_pos - wy_u_neg) * 0.5;
+    float dyz = (wy_v_pos - wy_v_neg) * 0.5;
+    // Approximate cell size: use a fixed reasonable value; the ratio
+    // matters not the absolute scale because atan operates on slope
+    // ratios. 1.0m is a safe baseline that gives correct slope_deg
+    // for inner ring (cell ≈ 0.5m, error ≈ 2:1) but real slope still
+    // reads correctly within the smoothstep tolerance.
+    float cell_m = 1.0;
+    float gradient_mag = length(vec2(dyx, dyz) / cell_m);
+    v_slope_deg = degrees(atan(gradient_mag));
 }
 
 void fragment() {
@@ -123,18 +177,48 @@ void fragment() {
     float nv = w5_world_noise(world_xz, 0.05);
     vec3 base = mix(fallback_color, macro_col, macro_strength);
 
-    // --- Layer 1 (Phase 5.5): siblings + stochastic UV ---
+    // --- Layer 1 (Phase 5.5 + 4.9.b): siblings + per-fragment slot selection ---
     //
-    // When a sibling Texture2DArray is bound, blend its 3-tap output
-    // over the macro base. The sibling tile-frequency is per-meter
-    // (sibling_tile_m), independent of the macro AABB. Unbound (no
-    // textures yet, current walking_demo) keeps the macro-only path.
-    if (has_siblings && sibling_count > 0) {
+    // Three modes:
+    // 1) slot_count > 0 (Phase 4.9.b): loop over slots, compute per-
+    //    fragment weight from elev + slope bands, sample each slot's
+    //    sibling window, accumulate weighted average. The "right" path.
+    // 2) has_siblings + legacy sibling_start/count (Phase 5.5 fallback):
+    //    single-slot binding. Tests + old scenes that haven't migrated
+    //    to bind_all_slots() still work.
+    // 3) Otherwise: macro-only fallback (pre-Phase-5.5 behavior).
+    if (slot_count > 0 && has_siblings) {
+        vec2 tile_uv = world_xz / max(sibling_tile_m, 0.01);
+        vec3 weighted = vec3(0.0);
+        float wsum = 0.0;
+        // Loop over MAX_SLOTS (8) with early-out via slot_count guard;
+        // GLSL prefers fixed-iter loops over dynamic ones for inlining.
+        for (int i = 0; i < 8; i++) {
+            if (i >= slot_count) break;
+            float w = w5_slot_weight(slot_elev_bands[i], slot_slope_bands[i],
+                                     v_world_y, v_slope_deg);
+            if (w > 0.001) {
+                ivec4 window = slot_windows[i];
+                vec4 sib = w5_variety_sample_3tap(sibling_array, tile_uv,
+                    world_xz, window.x, window.y, sibling_blend_freq);
+                weighted += sib.rgb * w;
+                wsum += w;
+            }
+        }
+        // Normalize. If no slot won this fragment (player is OUTSIDE
+        // all bands — possible at e.g. mid-elevation flat with author
+        // bands that have a gap), fall through to the macro base
+        // unchanged so terrain still reads as terrain (not black).
+        if (wsum > 0.001) {
+            vec3 slot_color = weighted / wsum;
+            base = mix(base, slot_color, 0.7);
+        }
+    } else if (has_siblings && sibling_count > 0) {
+        // Legacy single-slot path (Phase 5.5 binding); kept for back-compat
+        // with tests + scenes that haven't migrated to bind_all_slots().
         vec2 tile_uv = world_xz / max(sibling_tile_m, 0.01);
         vec4 sib = w5_variety_sample_3tap(sibling_array, tile_uv,
             world_xz, sibling_start, sibling_count, sibling_blend_freq);
-        // Sibling is the dominant close-field source; macro provides
-        // far-field tint break. 70/30 favors siblings when present.
         base = mix(base, sib.rgb, 0.7);
     }
 

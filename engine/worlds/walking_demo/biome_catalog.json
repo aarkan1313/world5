@@ -1,0 +1,72 @@
+{
+	"_schema_version": 1,
+	"_note": "Walking demo biome catalog (alpine single-biome). Spec 22. Per-slot selectors drive per-fragment slot weight in the shader (spec 23 §Surface slot model). Elevation bands tuned to the NoiseStackKernel amplitude=50 m so all three slots are exercised on the visible terrain.",
+	"world_name": "walking_demo",
+	"biome_scale_m": 1024.0,
+	"elevation_range_m": [-50.0, 50.0],
+	"biomes": [
+		{
+			"name": "alpine",
+			"kernel": {
+				"type": "noise_stack",
+				"params": {
+					"octaves": 6,
+					"frequency": 0.001953125,
+					"lacunarity": 2.0,
+					"gain": 0.5,
+					"amplitude": 50.0
+				}
+			},
+			"material_kit": "materials/biome_alpine/",
+			"decoration_palette": null,
+			"audio_tag": "ambient/alpine_high_altitude",
+			"climate_base": {
+				"reference_elevation_m": 0.0,
+				"moisture": 0.3,
+				"temperature_c": 5.0,
+				"wind_exposure": 0.8
+			},
+			"surface_slots": [
+				{
+					"name": "ground",
+					"weight": 1.0,
+					"selector": {
+						"_note": "Low / flat terrain — alpine firn snow basin.",
+						"elevation_m": [-50.0, 5.0],
+						"slope_deg": [0.0, 20.0],
+						"band_width_elevation_m": 8.0,
+						"band_width_slope_deg": 5.0
+					}
+				},
+				{
+					"name": "mid",
+					"weight": 1.0,
+					"selector": {
+						"_note": "Mid slopes — lichen + moss on transitional rock.",
+						"elevation_m": [-15.0, 30.0],
+						"slope_deg": [10.0, 45.0],
+						"band_width_elevation_m": 10.0,
+						"band_width_slope_deg": 8.0
+					}
+				},
+				{
+					"name": "rock",
+					"weight": 1.0,
+					"selector": {
+						"_note": "High / steep — granite + lichen on exposed bedrock.",
+						"elevation_m": [10.0, 50.0],
+						"slope_deg": [30.0, 90.0],
+						"band_width_elevation_m": 12.0,
+						"band_width_slope_deg": 10.0
+					}
+				}
+			],
+			"auto_biome_rules": {
+				"elevation_m": [-50.0, 50.0],
+				"slope_deg": [0.0, 90.0]
+			},
+			"nav_default": "walkable"
+		}
+	],
+	"splat_overrides": []
+}
