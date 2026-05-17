@@ -78,14 +78,11 @@ Pitfall numbers are per-tier-file local (pitfalls_core.md #1, #2, ...;
 pitfalls_world.md #1, #2, ...). Index here lists by short title +
 links into the per-tier file.
 
-## Live pitfall index (empty)
+## Live pitfall index
 
-No pitfalls recorded yet — Phase 0 hasn't shipped code, so no bug
-classes have surfaced. Update as pitfalls happen.
-
-| # | Title | Tier | Spec |
-|---|---|---|---|
-| — | (none yet) | — | — |
+| # | Title | Tier | Spec | Phase |
+|---|---|---|---|---|
+| meta-1 | [Static methods named `get`/`load`/etc. shadow Godot builtins](pitfalls_meta.md#1) | meta | 13 | 2.3 |
 
 ## Doc cap status
 

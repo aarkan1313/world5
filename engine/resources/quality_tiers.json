@@ -1,0 +1,221 @@
+{
+  "_schema_version": 1,
+  "_note": "Phase 2.3: placeholder values. Calibration sprint at Phase 4.5 re-measures every number on real RTX 3060 hardware. Per-system specs cite these via QualityTiers.get_current().",
+  "tiers": {
+    "low": {
+      "tier_name": "low",
+
+      "streaming_budget_active_tris": 1500000,
+      "streaming_budget_resident_texture_mb": 500,
+      "streaming_budget_draw_calls": 400,
+      "streaming_budget_active_jobs": 8,
+      "streaming_budget_cpu_pages": 32,
+      "streaming_budget_gpu_pages": 16,
+      "streaming_budget_asset_cache_mb": 300,
+
+      "frame_budget_target_ms": 16.6,
+      "frame_budget_p99_ms": 22.0,
+      "frame_budget_peak_ms": 33.0,
+      "frame_budget_engine_share_ms": 4.0,
+
+      "terrain_rings": 6,
+      "terrain_grid_n": 128,
+      "terrain_step0_m": 4.0,
+      "terrain_stepN_m": 128.0,
+      "terrain_collision_rings": 1,
+      "terrain_pbr_tile_size_m": 8.0,
+      "terrain_macro_tile_size_m": 256.0,
+
+      "visibility_ship_distance_m": 2000,
+      "visibility_haze_start_fraction": 0.5,
+      "visibility_haze_end_fraction": 1.0,
+
+      "decoration_lod_close_m": 20.0,
+      "decoration_lod_mid_m": 50.0,
+      "decoration_lod_far_m": 150.0,
+      "decoration_max_visible": 3000,
+
+      "spatial_index_decoration_cell_size_m": 8.0,
+      "spatial_index_terrain_cell_size_m": 64.0,
+      "spatial_index_foliage_cell_size_m": 16.0,
+      "spatial_index_default_cell_size_m": 32.0,
+
+      "lighting_recipe": "baseline_analytical",
+      "atmosphere_profile": "clear_noon_low",
+
+      "nav_grid_n": 32
+    },
+    "medium": {
+      "tier_name": "medium",
+
+      "streaming_budget_active_tris": 2500000,
+      "streaming_budget_resident_texture_mb": 900,
+      "streaming_budget_draw_calls": 600,
+      "streaming_budget_active_jobs": 12,
+      "streaming_budget_cpu_pages": 48,
+      "streaming_budget_gpu_pages": 24,
+      "streaming_budget_asset_cache_mb": 500,
+
+      "frame_budget_target_ms": 16.6,
+      "frame_budget_p99_ms": 20.0,
+      "frame_budget_peak_ms": 33.0,
+      "frame_budget_engine_share_ms": 6.0,
+
+      "terrain_rings": 7,
+      "terrain_grid_n": 192,
+      "terrain_step0_m": 3.0,
+      "terrain_stepN_m": 96.0,
+      "terrain_collision_rings": 2,
+      "terrain_pbr_tile_size_m": 8.0,
+      "terrain_macro_tile_size_m": 256.0,
+
+      "visibility_ship_distance_m": 4000,
+      "visibility_haze_start_fraction": 0.6,
+      "visibility_haze_end_fraction": 1.0,
+
+      "decoration_lod_close_m": 25.0,
+      "decoration_lod_mid_m": 65.0,
+      "decoration_lod_far_m": 200.0,
+      "decoration_max_visible": 5000,
+
+      "spatial_index_decoration_cell_size_m": 8.0,
+      "spatial_index_terrain_cell_size_m": 64.0,
+      "spatial_index_foliage_cell_size_m": 16.0,
+      "spatial_index_default_cell_size_m": 32.0,
+
+      "lighting_recipe": "shadow_near",
+      "atmosphere_profile": "clear_noon_medium",
+
+      "nav_grid_n": 48
+    },
+    "high": {
+      "tier_name": "high",
+
+      "streaming_budget_active_tris": 4000000,
+      "streaming_budget_resident_texture_mb": 1500,
+      "streaming_budget_draw_calls": 800,
+      "streaming_budget_active_jobs": 16,
+      "streaming_budget_cpu_pages": 64,
+      "streaming_budget_gpu_pages": 32,
+      "streaming_budget_asset_cache_mb": 800,
+
+      "frame_budget_target_ms": 16.6,
+      "frame_budget_p99_ms": 20.0,
+      "frame_budget_peak_ms": 33.0,
+      "frame_budget_engine_share_ms": 8.0,
+
+      "terrain_rings": 8,
+      "terrain_grid_n": 256,
+      "terrain_step0_m": 2.0,
+      "terrain_stepN_m": 64.0,
+      "terrain_collision_rings": 2,
+      "terrain_pbr_tile_size_m": 8.0,
+      "terrain_macro_tile_size_m": 256.0,
+
+      "visibility_ship_distance_m": 8000,
+      "visibility_haze_start_fraction": 0.65,
+      "visibility_haze_end_fraction": 1.0,
+
+      "decoration_lod_close_m": 30.0,
+      "decoration_lod_mid_m": 80.0,
+      "decoration_lod_far_m": 250.0,
+      "decoration_max_visible": 8000,
+
+      "spatial_index_decoration_cell_size_m": 8.0,
+      "spatial_index_terrain_cell_size_m": 64.0,
+      "spatial_index_foliage_cell_size_m": 16.0,
+      "spatial_index_default_cell_size_m": 32.0,
+
+      "lighting_recipe": "sdfgi_probe",
+      "atmosphere_profile": "clear_noon_high",
+
+      "nav_grid_n": 64
+    },
+    "ultra": {
+      "tier_name": "ultra",
+
+      "streaming_budget_active_tris": 6500000,
+      "streaming_budget_resident_texture_mb": 2500,
+      "streaming_budget_draw_calls": 1200,
+      "streaming_budget_active_jobs": 24,
+      "streaming_budget_cpu_pages": 96,
+      "streaming_budget_gpu_pages": 48,
+      "streaming_budget_asset_cache_mb": 1500,
+
+      "frame_budget_target_ms": 16.6,
+      "frame_budget_p99_ms": 20.0,
+      "frame_budget_peak_ms": 33.0,
+      "frame_budget_engine_share_ms": 10.0,
+
+      "terrain_rings": 10,
+      "terrain_grid_n": 256,
+      "terrain_step0_m": 1.5,
+      "terrain_stepN_m": 48.0,
+      "terrain_collision_rings": 3,
+      "terrain_pbr_tile_size_m": 8.0,
+      "terrain_macro_tile_size_m": 256.0,
+
+      "visibility_ship_distance_m": 12000,
+      "visibility_haze_start_fraction": 0.7,
+      "visibility_haze_end_fraction": 1.0,
+
+      "decoration_lod_close_m": 40.0,
+      "decoration_lod_mid_m": 100.0,
+      "decoration_lod_far_m": 300.0,
+      "decoration_max_visible": 12000,
+
+      "spatial_index_decoration_cell_size_m": 8.0,
+      "spatial_index_terrain_cell_size_m": 64.0,
+      "spatial_index_foliage_cell_size_m": 16.0,
+      "spatial_index_default_cell_size_m": 32.0,
+
+      "lighting_recipe": "sdfgi_probe_tight",
+      "atmosphere_profile": "clear_noon_ultra",
+
+      "nav_grid_n": 96
+    },
+    "cinematic": {
+      "tier_name": "cinematic",
+
+      "streaming_budget_active_tris": 10000000,
+      "streaming_budget_resident_texture_mb": 4500,
+      "streaming_budget_draw_calls": 2000,
+      "streaming_budget_active_jobs": 32,
+      "streaming_budget_cpu_pages": 128,
+      "streaming_budget_gpu_pages": 64,
+      "streaming_budget_asset_cache_mb": 2500,
+
+      "frame_budget_target_ms": 33.3,
+      "frame_budget_p99_ms": 40.0,
+      "frame_budget_peak_ms": 66.0,
+      "frame_budget_engine_share_ms": 20.0,
+
+      "terrain_rings": 12,
+      "terrain_grid_n": 256,
+      "terrain_step0_m": 1.0,
+      "terrain_stepN_m": 32.0,
+      "terrain_collision_rings": 4,
+      "terrain_pbr_tile_size_m": 8.0,
+      "terrain_macro_tile_size_m": 256.0,
+
+      "visibility_ship_distance_m": 20000,
+      "visibility_haze_start_fraction": 0.75,
+      "visibility_haze_end_fraction": 1.0,
+
+      "decoration_lod_close_m": 60.0,
+      "decoration_lod_mid_m": 150.0,
+      "decoration_lod_far_m": 500.0,
+      "decoration_max_visible": 20000,
+
+      "spatial_index_decoration_cell_size_m": 8.0,
+      "spatial_index_terrain_cell_size_m": 64.0,
+      "spatial_index_foliage_cell_size_m": 16.0,
+      "spatial_index_default_cell_size_m": 32.0,
+
+      "lighting_recipe": "sdfgi_probe_extended",
+      "atmosphere_profile": "clear_noon_cinematic",
+
+      "nav_grid_n": 128
+    }
+  }
+}

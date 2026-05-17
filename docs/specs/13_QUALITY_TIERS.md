@@ -147,6 +147,14 @@ class QualityTiers:
 
 ### GDScript: `engine/scripts/core/QualityTiers.gd`
 
+**Phase 2.3 lesson**: GDScript's `Object.load(path)` (Resource loader)
+and `Object.get(property)` (property getter) are builtins; static
+methods named `load` or `get` shadow them and the parser errors out
+("Cannot call non-static function ... from the static function ...").
+GDScript renamed `load → load_config` and `get → get_tier`. Python
+side keeps `.load` and `.get` since there's no conflict. Cross-impl
+tests call the language-appropriate name.
+
 ```gdscript
 class_name QualityTiers extends Node
 # Singleton autoload at /root/QualityTiers
