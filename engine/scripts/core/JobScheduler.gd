@@ -167,7 +167,9 @@ func _exit_tree() -> void:
 	# quickly. Godot's WTP destructor will clean up.
 	for jid in _running.keys():
 		var wtp_id: int = _running[jid]
-		WorkerThreadPool.wait_for_task_completion(wtp_id)
+		if wtp_id != -1:
+			WorkerThreadPool.wait_for_task_completion(wtp_id)
+		# GpuJob (wtp_id == -1) runs synchronously on render thread; no wait needed
 	_running.clear()
 
 
@@ -205,12 +207,19 @@ func _tick() -> void:
 			_dispatch(jid)
 			break  # one per tick
 
-	# Reap completed WTP tasks
+	# Reap completed tasks (WTP for plain Job; render-thread for GpuJob)
 	for jid in _running.keys():
 		var wtp_id: int = _running[jid]
-		if WorkerThreadPool.is_task_completed(wtp_id):
-			WorkerThreadPool.wait_for_task_completion(wtp_id)
-			_running.erase(jid)
+		var job: Job = _jobs[jid]
+		if wtp_id == -1:
+			# GpuJob: render thread runs synchronously per frame.
+			# Check job status directly.
+			if job.is_done():
+				_running.erase(jid)
+		else:
+			if WorkerThreadPool.is_task_completed(wtp_id):
+				WorkerThreadPool.wait_for_task_completion(wtp_id)
+				_running.erase(jid)
 
 	# Evict ancient terminal jobs
 	var now := Time.get_ticks_msec()
@@ -235,9 +244,16 @@ func _dispatch(job_id: int) -> void:
 		job.status = Job.Status.CANCELLED
 		job.completed_at_ms = Time.get_ticks_msec()
 		return
-	# Add to WorkerThreadPool
-	var wtp_id := WorkerThreadPool.add_task(Callable(job, "_run"), false, job.name)
-	_running[job_id] = wtp_id
+	# GpuJob routing per spec 08a: RenderingDevice calls must happen
+	# on the render thread, NOT on WorkerThreadPool workers. GpuJob is
+	# routed via RenderingServer.call_on_render_thread.
+	if job is GpuJob:
+		_running[job_id] = -1  # sentinel: GPU job, no WTP id
+		RenderingServer.call_on_render_thread(Callable(job, "_run_on_render_thread"))
+	else:
+		# Plain Job goes to WorkerThreadPool
+		var wtp_id := WorkerThreadPool.add_task(Callable(job, "_run"), false, job.name)
+		_running[job_id] = wtp_id
 
 
 func _publish_to_budget() -> void:
