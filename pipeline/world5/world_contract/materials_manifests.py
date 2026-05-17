@@ -214,16 +214,22 @@ def _check_detail_arrays(world: Path) -> list[Issue]:
 
 def _resolve_res_path(world: Path, res_path: str) -> Path | None:
     """Resolve a 'res://...' path against the world bundle. We don't
-    have project.godot here, so use a best-effort heuristic: strip
-    'res://' and try (a) world-bundle-relative, (b) engine-root-
-    relative if the path starts with 'worlds/'. Returns None if the
-    input isn't a res:// path."""
+    have project.godot here, so use a best-effort heuristic:
+    - 'res://addons/world5/<rest>' — demo project's mount of engine/.
+      Strip the prefix; treat <rest> as engine-root-relative.
+    - 'res://worlds/<rest>' — engine project's own root. Resolve
+      under engine-root.
+    - Otherwise — assume world-bundle-relative (legacy).
+    Returns None if not a res:// path."""
     if not res_path.startswith("res://"):
         return None
     stripped = res_path.removeprefix("res://")
+    # engine_root = world.parent.parent (engine/worlds/<name> → engine/)
+    engine_root = world.parent.parent
+    if stripped.startswith("addons/world5/"):
+        return engine_root / stripped.removeprefix("addons/world5/")
     if stripped.startswith("worlds/"):
-        # Engine root is world.parent.parent (engine/worlds/<name>)
-        return world.parent.parent / stripped
+        return engine_root / stripped
     return world / stripped
 
 

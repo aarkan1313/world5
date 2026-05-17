@@ -8,14 +8,14 @@
 
 ## One-sentence summary
 
-**Phase 6 paused; pivoting to Phase 5.7 (erosion + composer sprint).**
-Forest textures + catalog landed as test fixture for Phase 5.7.b
-KernelComposer to validate against; multi-biome render gated on
-Composer per spec 22 (biome weighting is a Composer concern, not a
-shader concern). `_pending_slots` keeps forest entries on disk but
-loader-ignored so walking_demo still renders alpine cleanly. Verify
-5/5 green in 59.0s. **Next**: Phase 5.7.a Python ErosionKernel
-reference (the kernel-system parity ground truth).
+**Phase 5.7.a closed — Python ErosionKernel reference shipped** (8
+TDD pytests green). Spec 19 hydraulic (Mei 2007) + thermal (Musgrave)
+post-process kernel; emits eroded height + drainage_map + flow_direction
++ flow_accumulation per spec 19 §"Auxiliary outputs". Parity-reference
+quality (single-threaded numpy, ~250 lines); GPU port deferred to
+5.7.d when perf demands it. Schema at `engine/resources/schemas/kernels/erosion.schema.json`.
+**Next**: Phase 5.7.b KernelComposer — the piece that unblocks
+Phase 6 multi-biome render via per-fragment biome_weights.
 
 ## Per-tier state
 
@@ -164,6 +164,23 @@ sweep runs against the most-evolved spec set).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
+- 2026-05-17 (Phase 5.7.a closed — Python ErosionKernel reference):
+  Spec 19 §"Kernel types shipped in v1" item 2. Mei 2007 hydraulic
+  step (rain → flux → velocity → sediment capacity → dissolve/deposit
+  → evaporate) + Musgrave thermal step (talus-angle slumping)
+  interleaved. ~250 lines numpy. Emits ErosionResult with eroded
+  height + drainage_map + flow_direction + flow_accumulation
+  (consumed downstream by spec 35 water rivers + spec 41 roads
+  valley biasing). Schema at engine/resources/schemas/kernels/
+  erosion.schema.json (12 params, all defaults + descriptions).
+  Test-first per superpowers TDD: 8 pytest cases (construct +
+  shape/dtype + flat-input invariance + determinism + bounded
+  range + radial drainage + flow direction on ramp + thermal
+  slumping). 8/8 green; pytest total now 151 (was 143). Build note
+  phase_5_7_a_erosion_kernel_2026_05_17.md. Also: extended
+  materials_manifests preflight _resolve_res_path to handle
+  `res://addons/world5/` prefix (demo project's mount of engine/).
+  Next: 5.7.b KernelComposer (unblocks Phase 6 multi-biome).
 - 2026-05-17 (Phase 6 paused; pivoting to Phase 5.7):
   Started Phase 6 (forest second biome). Promoted texture team's
   forest candidates (dirt_mossy ground + roots_moss mid + granite_mossy

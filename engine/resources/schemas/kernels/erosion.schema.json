@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "world5/kernels/erosion.schema.json",
+  "title": "ErosionKernel config",
+  "description": "Spec 19 ErosionKernel — hydraulic + thermal erosion over a pre-existing heightmap. Pre-bake global pass (not per-page) per spec 19 §'World-size bound'; output cached per spec 12 content addressing.\n\nReferences:\n- Hydraulic: Mei et al. 2007 'Fast Hydraulic Erosion Simulation and Visualization on GPU' (Pacific Graphics)\n- Thermal: Musgrave/Kolb classic — angle-of-repose-driven slope diffusion\n\nInputs: height field (numpy array) + params.\nOutputs: eroded height field + drainage_map + flow_direction + flow_accumulation per spec 19 §'Auxiliary outputs' (consumed by spec 35 water + spec 41 roads).",
+  "type": "object",
+  "required": ["iterations"],
+  "additionalProperties": false,
+  "properties": {
+    "_schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version. Bump when the contract changes incompatibly."
+    },
+    "_note": {
+      "type": "string",
+      "description": "Human-readable annotation; ignored by the loader."
+    },
+    "iterations": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "Number of simulation timesteps. Higher = more eroded. Typical: 50-200 for visible features; 500+ for heavy carving. Per spec 19 Quality bar, must complete a 1024² grid in ≤ 60s on dev hardware (Python reference; GPU is faster)."
+    },
+    "rain_rate": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "default": 0.012,
+      "description": "Water added per cell per iteration (m/iter). Sets the dominant flow magnitude. Higher = faster carving but also faster drying (paired with evaporation)."
+    },
+    "evaporation": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "default": 0.015,
+      "description": "Fraction of water that evaporates per iteration. 0 = water accumulates forever; 1 = water gone immediately. Mei 2007 default range: 0.005-0.05."
+    },
+    "sediment_capacity": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "default": 0.10,
+      "description": "Max sediment a unit of flowing water can carry. Higher = more aggressive carving. Mei 2007 'Kc' constant."
+    },
+    "dissolve_rate": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "default": 0.30,
+      "description": "Fraction of capacity-deficit dissolved into water per iteration (where capacity > current sediment). Higher = faster erosion in carving zones."
+    },
+    "deposit_rate": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "default": 0.30,
+      "description": "Fraction of capacity-excess deposited from water per iteration (where current sediment > capacity). Higher = faster deposition in deposition zones."
+    },
+    "min_slope": {
+      "type": "number",
+      "minimum": 0.0,
+      "default": 0.005,
+      "description": "Minimum effective slope (radians) used in capacity = Kc * sin(slope) * flow_velocity. Prevents capacity from collapsing to 0 on flat ground (which would freeze the simulation). Mei 2007 'minSlope' floor."
+    },
+    "gravity": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "default": 9.81,
+      "description": "Gravitational acceleration (m/s²). Affects flow velocity calculation in the hydraulic pass. Default Earth; can model Mars (3.71) or Moon (1.62) etc."
+    },
+    "thermal_iterations": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 50,
+      "description": "Number of thermal-erosion (talus) timesteps interleaved with hydraulic. 0 disables thermal pass entirely. Thermal slumps material on slopes steeper than talus_angle_deg."
+    },
+    "talus_angle_deg": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 90.0,
+      "default": 30.0,
+      "description": "Angle-of-repose threshold (degrees). Slopes steeper than this slump per thermal iteration. Typical alpine: 30-40°; loose sand: 25-30°; bedrock: 60°+."
+    },
+    "talus_rate": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "default": 0.25,
+      "description": "Fraction of excess slope material moved per thermal iteration. Higher = faster slumping."
+    },
+    "seed": {
+      "type": "integer",
+      "default": 42,
+      "description": "Random seed (currently unused; deterministic given height_in + params). Reserved for any future stochastic-rainfall variation."
+    }
+  }
+}

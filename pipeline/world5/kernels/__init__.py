@@ -5,10 +5,12 @@ terrain fields (height, slope, biome, etc.). Each kernel has a
 Python reference implementation (this package) and a GPU compute
 implementation (engine/shaders/) that must match within tolerance.
 
-Phase 4.2 ships NoiseStackKernel only. ErosionKernel + DemFeatureKernel
-land in Phase 5+ per the spec 19 / phase 4 roadmap.
+Phase 4.2 shipped NoiseStackKernel. Phase 5.7.a adds ErosionKernel
+(hydraulic + thermal post-process). DemFeatureKernel remains deferred
+to its own sprint per spec 19 amendment.
 """
 
 from world5.kernels.noise_stack import NoiseStackKernel  # noqa: F401
+from world5.kernels.erosion import ErosionKernel, ErosionResult  # noqa: F401
 
-__all__ = ["NoiseStackKernel"]
+__all__ = ["NoiseStackKernel", "ErosionKernel", "ErosionResult"]

@@ -3,5 +3,5 @@
   "_note": "Walking demo macro_albedo (spec 23 Layer 3). Authored 2026-05-17 via tx_macro_terrain --purpose-candidates --promote-purpose. Single-biome alpine: world macro == alpine ground/macro_albedo.png. AABB ±4 km covers outer ring extent (~±2 km at ring_count=6, ring_vertex_grid=256, inner_cell=0.5).",
   "world_min_xz": [-4096.0, -4096.0],
   "world_max_xz": [4096.0, 4096.0],
-  "texture": "res://worlds/walking_demo/materials/biome_alpine/ground/macro_albedo.png"
+  "texture": "res://addons/world5/worlds/walking_demo/materials/biome_alpine/ground/macro_albedo.png"
 }
