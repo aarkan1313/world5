@@ -1,6 +1,6 @@
 {
   "_schema_version": 1,
-  "_note": "Walking demo sibling manifest (alpine, single-biome). Empty until Phase 5 promote.py wires real textures from the diversity batch. MaterialPipeline reads this at world-load + binds the sibling Texture2DArrays.",
+  "_note": "Walking demo sibling manifest. Phase 5.4 promoted alpine. Phase 6 promoted forest BUT moved its slots to `_pending_slots` (loader-ignored) since multi-biome rendering is gated on Phase 5.7.b KernelComposer. Once 5.7.b ships + Composer provides per-fragment biome_weights, move `_pending_slots` entries back into `slots` and the renderer will pick them up. See docs/build-notes/phase_6_paused_2026_05_17.md.",
   "world_seed": 42,
   "region_size_m": 512.0,
   "edge_blend_m": 48.0,
@@ -83,6 +83,39 @@
           "source": "rock_variants/v2_granite_lichen_s45",
           "weight": 1.0
         }
+      ]
+    }
+  ],
+  "_pending_slots": [
+    {
+      "_note": "Forest biome slots — promoted 2026-05-17 but loader-ignored until Phase 5.7.b KernelComposer ships. Move back to `slots` array once per-fragment biome_weights are available from Composer output.",
+      "biome": "forest",
+      "slot": "ground",
+      "variants": [
+        {"id": "default", "source": "ground", "weight": 1.0},
+        {"id": "v0_dirt_mossy_s43", "source": "ground_variants/v0_dirt_mossy_s43", "weight": 1.0},
+        {"id": "v1_dirt_mossy_s44", "source": "ground_variants/v1_dirt_mossy_s44", "weight": 1.0},
+        {"id": "v2_dirt_mossy_s45", "source": "ground_variants/v2_dirt_mossy_s45", "weight": 1.0}
+      ]
+    },
+    {
+      "biome": "forest",
+      "slot": "mid",
+      "variants": [
+        {"id": "default", "source": "mid", "weight": 1.0},
+        {"id": "v0_roots_moss_s43", "source": "mid_variants/v0_roots_moss_s43", "weight": 1.0},
+        {"id": "v1_roots_moss_s44", "source": "mid_variants/v1_roots_moss_s44", "weight": 1.0},
+        {"id": "v2_roots_moss_s45", "source": "mid_variants/v2_roots_moss_s45", "weight": 1.0}
+      ]
+    },
+    {
+      "biome": "forest",
+      "slot": "rock",
+      "variants": [
+        {"id": "default", "source": "rock", "weight": 1.0},
+        {"id": "v0_granite_mossy_s43", "source": "rock_variants/v0_granite_mossy_s43", "weight": 1.0},
+        {"id": "v1_granite_mossy_s44", "source": "rock_variants/v1_granite_mossy_s44", "weight": 1.0},
+        {"id": "v2_granite_mossy_s45", "source": "rock_variants/v2_granite_mossy_s45", "weight": 1.0}
       ]
     }
   ]

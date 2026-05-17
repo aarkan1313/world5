@@ -59,17 +59,24 @@ func test_load_missing_file_returns_null() -> void:
 
 
 func test_load_real_walking_demo_catalog() -> void:
+	# Phase 6: catalog extended to 2 biomes (alpine + forest) as test
+	# fixture for Phase 5.7.b KernelComposer. Render still single-biome
+	# (alpine) until Composer ships; catalog shape is forward-ready.
 	var bc: BiomeCatalog = BiomeCatalog.from_file(
 		"res://addons/world5/worlds/walking_demo/biome_catalog.json")
 	assert_not_null(bc, "walking_demo biome_catalog loads")
 	var errors: Array = bc.validate()
 	assert_eq(errors.size(), 0,
 		"walking_demo biome_catalog valid (errors: %s)" % str(errors))
-	assert_eq(bc.biomes.size(), 1, "walking demo is single-biome (alpine)")
-	var alpine: Dictionary = bc.biomes[0]
+	assert_eq(bc.biomes.size(), 2, "walking demo has alpine + forest")
+	var alpine: Dictionary = bc.biome_by_name("alpine")
 	assert_eq(alpine["name"], "alpine")
 	assert_eq((alpine["surface_slots"] as Array).size(), 3,
 		"alpine declares 3 slots: ground/mid/rock")
+	var forest: Dictionary = bc.biome_by_name("forest")
+	assert_eq(forest["name"], "forest")
+	assert_eq((forest["surface_slots"] as Array).size(), 3,
+		"forest declares 3 slots: ground/mid/rock")
 
 
 # --- validation rules ---

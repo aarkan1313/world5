@@ -1,6 +1,6 @@
 {
 	"_schema_version": 1,
-	"_note": "Walking demo biome catalog (alpine single-biome). Spec 22. Per-slot selectors drive per-fragment slot weight in the shader (spec 23 §Surface slot model). Elevation bands tuned to the NoiseStackKernel amplitude=50 m so all three slots are exercised on the visible terrain.",
+	"_note": "Walking demo biome catalog. Phase 4 shipped alpine-only; Phase 6 added forest as a second biome. Per spec 22 §Catalog schema: each biome has its own surface_slots + auto_biome_rules. The renderer (a) computes a per-fragment biome weight from auto_biome_rules elev+slope bands; (b) multiplies by the per-slot weight within that biome. Auto-rules: forest owns low-elevation flatlands, alpine owns higher/steeper. Crossover band ~5-15m elevation produces a natural transition (no hard seam).",
 	"world_name": "walking_demo",
 	"biome_scale_m": 1024.0,
 	"elevation_range_m": [-50.0, 50.0],
@@ -62,8 +62,77 @@
 				}
 			],
 			"auto_biome_rules": {
-				"elevation_m": [-50.0, 50.0],
-				"slope_deg": [0.0, 90.0]
+				"_note": "Alpine owns mid-to-high elevation. Crossover with forest in [5, 15] m via 10m band. Outside this range alpine weight ramps down.",
+				"elevation_m": [10.0, 60.0],
+				"slope_deg": [0.0, 90.0],
+				"band_width_elevation_m": 10.0,
+				"band_width_slope_deg": 5.0
+			},
+			"nav_default": "walkable"
+		},
+		{
+			"name": "forest",
+			"kernel": {
+				"_note": "Forest uses the same NoiseStackKernel as alpine for the walking demo (single composed world). Phase 6 ships only material differentiation; per-biome kernel chains land in Phase 5.7 (KernelComposer).",
+				"type": "noise_stack",
+				"params": {
+					"octaves": 6,
+					"frequency": 0.001953125,
+					"lacunarity": 2.0,
+					"gain": 0.5,
+					"amplitude": 50.0
+				}
+			},
+			"material_kit": "materials/biome_forest/",
+			"decoration_palette": null,
+			"audio_tag": "ambient/forest_temperate",
+			"climate_base": {
+				"reference_elevation_m": 0.0,
+				"moisture": 0.7,
+				"temperature_c": 12.0,
+				"wind_exposure": 0.3
+			},
+			"surface_slots": [
+				{
+					"name": "ground",
+					"weight": 1.0,
+					"selector": {
+						"_note": "Forest floor — dirt + moss. Active across the forest's elevation range, flat-to-mild slopes.",
+						"elevation_m": [-50.0, 20.0],
+						"slope_deg": [0.0, 25.0],
+						"band_width_elevation_m": 5.0,
+						"band_width_slope_deg": 3.0
+					}
+				},
+				{
+					"name": "mid",
+					"weight": 1.0,
+					"selector": {
+						"_note": "Mid slopes — exposed roots + moss carpet on transitional ground.",
+						"elevation_m": [-10.0, 30.0],
+						"slope_deg": [25.0, 50.0],
+						"band_width_elevation_m": 5.0,
+						"band_width_slope_deg": 4.0
+					}
+				},
+				{
+					"name": "rock",
+					"weight": 1.0,
+					"selector": {
+						"_note": "Forest rock — mossy granite outcrops on steep terrain.",
+						"elevation_m": [0.0, 50.0],
+						"slope_deg": [45.0, 90.0],
+						"band_width_elevation_m": 5.0,
+						"band_width_slope_deg": 5.0
+					}
+				}
+			],
+			"auto_biome_rules": {
+				"_note": "Forest owns low-to-mid elevation. Crossover with alpine in [5, 15] m via 10m band.",
+				"elevation_m": [-50.0, 10.0],
+				"slope_deg": [0.0, 90.0],
+				"band_width_elevation_m": 10.0,
+				"band_width_slope_deg": 5.0
 			},
 			"nav_default": "walkable"
 		}

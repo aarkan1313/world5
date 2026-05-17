@@ -8,14 +8,14 @@
 
 ## One-sentence summary
 
-**Phase 4.11 closed — heightmap clamp + slot-band tuning** (post-4.10
-re-test). 4.11.a removed the encoded-height [0,1] clamp that produced
-flat plateaus + straight-edge level-set boundaries where fBm exceeded
-±amplitude. 4.11.b tightened walking_demo catalog slot bands so mid
-only activates at 21°+ slope instead of 2°+ (was producing white
-patches on near-flat snow). Verify 5/5 green in 59.9s. Tracked debt:
-pop-in / streaming polish (W4 PITFALLS #15) deferred per user.
-Next: 5.4.b.3 detail overlays OR Phase 6 forest OR Phase 5.7 erosion.
+**Phase 6 paused; pivoting to Phase 5.7 (erosion + composer sprint).**
+Forest textures + catalog landed as test fixture for Phase 5.7.b
+KernelComposer to validate against; multi-biome render gated on
+Composer per spec 22 (biome weighting is a Composer concern, not a
+shader concern). `_pending_slots` keeps forest entries on disk but
+loader-ignored so walking_demo still renders alpine cleanly. Verify
+5/5 green in 59.0s. **Next**: Phase 5.7.a Python ErosionKernel
+reference (the kernel-system parity ground truth).
 
 ## Per-tier state
 
@@ -164,6 +164,21 @@ sweep runs against the most-evolved spec set).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
+- 2026-05-17 (Phase 6 paused; pivoting to Phase 5.7):
+  Started Phase 6 (forest second biome). Promoted texture team's
+  forest candidates (dirt_mossy ground + roots_moss mid + granite_mossy
+  rock + 3 siblings each = 48 files). Extended biome_catalog with
+  forest biome including auto_biome_rules for biome-weight crossover
+  (alpine [10,60]+10m band, forest [-50,10]+10m band, crossover at
+  5-15m elev). While starting multi-biome shader wire-up, realized
+  per-fragment biome weighting belongs in KernelComposer (spec 22
+  §"softmax over biome_weights"), not inline in the shader's slot
+  loop. Per ethos + user direction "best long term way / following
+  roadmap", paused Phase 6. Forest slots moved to `_pending_slots`
+  in material_variants.json (loader-ignored) so walking_demo still
+  renders alpine cleanly. test_load_real_walking_demo_catalog
+  updated to assert 2 biomes. Build note phase_6_paused_2026_05_17.md.
+  Pivot: Phase 5.7.a Python ErosionKernel reference next.
 - 2026-05-17 (Phase 4.11 closed — heightmap clamp + slot bleed):
   Post-4.10 user re-test surfaced two more artifacts. 4.11.a:
   removed the [0,1] clamp in `_update_ring_height_array` height
