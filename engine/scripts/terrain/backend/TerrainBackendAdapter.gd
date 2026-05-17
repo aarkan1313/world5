@@ -98,7 +98,7 @@ func _get_scheduler() -> Node:
 	var loop: SceneTree = Engine.get_main_loop() as SceneTree
 	if loop == null:
 		return null
-	return loop.root.get_node_or_null("/root/JobScheduler")
+	return W5Lookup.find("JobScheduler")
 
 
 # --- Inner job class: runs the backend on the render thread ---
@@ -118,7 +118,7 @@ class _TerrainPageJob extends GpuJob:
 		# not the running node)
 		var loop: SceneTree = Engine.get_main_loop() as SceneTree
 		if loop != null:
-			var sched: Node = loop.root.get_node_or_null("/root/JobScheduler")
+			var sched: Node = W5Lookup.find("JobScheduler")
 			if sched != null and sched.is_shutting_down():
 				return null
 		if backend == null or request == null:

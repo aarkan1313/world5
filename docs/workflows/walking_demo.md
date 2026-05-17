@@ -3,30 +3,34 @@
 > Phase 4.6 deliverable. Launches the W5 terrain renderer end-to-end
 > with a real world bundle. Walk around with WASD.
 
-## ⚠️ Known issue — autoload bootstrap
+## ⚠️ Known issue — terrain renders as flat plane standalone
 
-The Tier 0 autoloads (StreamingBudget / JobScheduler / etc.) are
-registered by `engine/plugin.gd` via `EditorPlugin.add_autoload_singleton`.
-Per Godot 4 semantics this only persists to `project.godot` after
-an interactive editor session (open + save). **Standalone runs
-(F5 from a fresh checkout, or `godot --path demo res://scenes/...`)
-fail with `JobScheduler autoload missing` until the editor has
-been opened + the project saved once.**
+Phase 4.7 fixed the autoload bootstrap (autoloads now register
+correctly via project.godot's `[autoload]` section + W5_ prefix).
+But standalone runs hit a second bug:
 
-The "obvious" fix (add an `[autoload]` section to `project.godot`
-manually with the same names) hits a Godot 4 parse error: autoload
-globals can't share a name with the underlying scripts' `class_name`
-declarations ("X is an invalid name. Must not collide with an
-existing global script class name."). The proper fix is renaming
-all autoloads to a `W5_` prefix while keeping `class_name` for tests
-— scoped as Phase 4.7 (see `docs/roadmap/phase_4_7_autoload_rename.md`).
+```
+ERROR: Only local devices can submit and sync.
+   at: GpuTerrainBackend._generate_heights
+```
 
-**Workaround until Phase 4.7 ships**:
-1. Open `demo/project.godot` in Godot once
-2. In the Project Settings → Plugins, ensure World5 is enabled
-3. Settings → Autoload should show 5 entries (added by the plugin)
-4. Save the project (Ctrl + S)
-5. From now on, standalone runs work
+`GpuTerrainBackend` uses the MAIN RenderingDevice for compute work
+(`rd.submit() / rd.sync()`). Godot 4.6 only allows local devices
+to be explicitly submitted/synced — the main RD is owned by
+Godot's renderer. Result: page generation fails → heightmaps stay
+unbound → terrain shader samples a zero-default texture →
+`VERTEX.y = -50m` everywhere → terrain is a flat plane below the
+camera's view → you see only the procedural sky's ground band.
+
+The gut_real_gpu test layer works because gut's test viewport uses
+a local RD; standalone scenes don't. Fix: use
+`RenderingServer.create_local_rendering_device()` in the backend
+(Phase 4.8 — see `docs/roadmap/phase_4_8_local_rd_refactor.md`).
+
+**Until Phase 4.8 ships**: open the scene in Godot editor + press
+F5. The in-editor render path uses a separate RD context where
+the compute work succeeds. Standalone command-line runs still
+show only sky + a flat plane.
 
 ## Launch
 

@@ -181,7 +181,7 @@ func _invoke_job(sub: _Sub, change: Change) -> void:
 	# Wrap in a Job + submit to scheduler. Lazy lookup of /root/JobScheduler;
 	# if absent (test context), fall back to call_deferred so behavior is
 	# still observable.
-	var scheduler := get_node_or_null("/root/JobScheduler")
+	var scheduler := W5Lookup.find("JobScheduler")
 	if scheduler == null:
 		# Tests without autoload — degrade to async
 		if sub.callback.is_valid():

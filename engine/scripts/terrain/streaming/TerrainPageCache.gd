@@ -89,7 +89,7 @@ func _free_gpu_rids(res: TerrainPageResult) -> void:
 	var loop: SceneTree = Engine.get_main_loop() as SceneTree
 	var tracker: Node = null
 	if loop != null:
-		tracker = loop.root.get_node_or_null("/root/GpuResourceTracker")
+		tracker = W5Lookup.find("GpuResourceTracker")
 	for rid in [res.height_gpu, res.biome_mask_gpu, res.drainage_map]:
 		if rid.is_valid():
 			rd.free_rid(rid)

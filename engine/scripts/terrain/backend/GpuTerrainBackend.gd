@@ -125,7 +125,7 @@ func _generate_heights(rd: RenderingDevice,
 	if not out_buf.is_valid():
 		return PackedFloat32Array()
 	# Track via GpuResourceTracker if autoload available
-	var tracker: Node = Engine.get_main_loop().root.get_node_or_null("/root/GpuResourceTracker")
+	var tracker: Node = W5Lookup.find("GpuResourceTracker")
 	if tracker != null:
 		tracker.register(out_buf, "terrain_backend", "buffer", bytes_needed)
 
@@ -225,7 +225,7 @@ func _compile_shader(rd: RenderingDevice) -> bool:
 			"shader_create_from_spirv returned invalid RID", {})
 		return false
 	# Track the shader RID
-	var tracker: Node = Engine.get_main_loop().root.get_node_or_null("/root/GpuResourceTracker")
+	var tracker: Node = W5Lookup.find("GpuResourceTracker")
 	if tracker != null:
 		tracker.register(_shader_rid, "terrain_backend", "shader", 0)
 	_rd = rd
@@ -241,7 +241,7 @@ func _compile_shader(rd: RenderingDevice) -> bool:
 func shutdown() -> void:
 	if _shader_rid.is_valid() and _rd != null:
 		_rd.free_rid(_shader_rid)
-		var tracker: Node = Engine.get_main_loop().root.get_node_or_null("/root/GpuResourceTracker")
+		var tracker: Node = W5Lookup.find("GpuResourceTracker")
 		if tracker != null:
 			tracker.unregister(_shader_rid)
 		_shader_rid = RID()

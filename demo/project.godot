@@ -13,6 +13,20 @@ config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
 run/main_scene="res://scenes/walking_demo.tscn"
 
+[autoload]
+
+; Tier 0 autoloads. W5_ prefix avoids collision with the scripts'
+; class_name globals (Godot 4 dialog: "X is an invalid name. Must
+; not collide with an existing global script class name.").
+; SUT code looks these up via W5Lookup.find(short_name) which checks
+; W5_-prefixed first + falls back to bare name for test-injection.
+
+W5_StreamingBudget="*res://addons/world5/scripts/core/StreamingBudget.gd"
+W5_JobScheduler="*res://addons/world5/scripts/core/JobScheduler.gd"
+W5_GpuResourceTracker="*res://addons/world5/scripts/core/GpuResourceTracker.gd"
+W5_AssetStream="*res://addons/world5/scripts/core/AssetStream.gd"
+W5_ChangeBroadcast="*res://addons/world5/scripts/core/ChangeBroadcast.gd"
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/world5/plugin.cfg")

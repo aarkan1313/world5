@@ -16,12 +16,18 @@ extends EditorPlugin
 # higher-level consumers detach BEFORE their dependencies do.
 
 const _AUTOLOADS: Array = [
-	# (name, path) — registered in order; teardown is reversed
-	["StreamingBudget", "res://addons/world5/scripts/core/StreamingBudget.gd"],
-	["JobScheduler", "res://addons/world5/scripts/core/JobScheduler.gd"],
-	["GpuResourceTracker", "res://addons/world5/scripts/core/GpuResourceTracker.gd"],
-	["AssetStream", "res://addons/world5/scripts/core/AssetStream.gd"],
-	["ChangeBroadcast", "res://addons/world5/scripts/core/ChangeBroadcast.gd"],
+	# (name, path) — registered in order; teardown is reversed.
+	# W5_ prefix per Phase 4.7: bare names collide with the scripts'
+	# class_name globals (Godot 4: "X is an invalid name. Must not
+	# collide with an existing global script class name."). SUT
+	# lookups go through W5Lookup.find(short_name) which tries the
+	# W5_-prefixed path first + falls back to the bare name for
+	# test-injection compatibility.
+	["W5_StreamingBudget", "res://addons/world5/scripts/core/StreamingBudget.gd"],
+	["W5_JobScheduler", "res://addons/world5/scripts/core/JobScheduler.gd"],
+	["W5_GpuResourceTracker", "res://addons/world5/scripts/core/GpuResourceTracker.gd"],
+	["W5_AssetStream", "res://addons/world5/scripts/core/AssetStream.gd"],
+	["W5_ChangeBroadcast", "res://addons/world5/scripts/core/ChangeBroadcast.gd"],
 ]
 
 

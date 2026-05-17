@@ -69,14 +69,26 @@ void vertex() {
 void fragment() {
     vec2 world_xz = v_world_xz;
 
-    // Sample macro albedo (the anti-repeat layer)
+    // Sample macro albedo (the anti-repeat layer). When no macro
+    // texture is bound, texture() returns vec3(0); detect that and
+    // fall back to fallback_color at full strength instead of the
+    // 15% blend (which made unbound-macro terrain near-black against
+    // the procedural-sky ground band, invisible — Phase 4.6 visual
+    // review caught this).
+    // Sample macro albedo (the anti-repeat layer). When no macro
+    // texture is bound, texture() returns vec3(0); detect that and
+    // fall back to fallback_color at full strength instead of the
+    // 15% blend (which made unbound-macro terrain near-black against
+    // the procedural-sky ground band, invisible — Phase 4.6 visual
+    // review caught this).
     vec2 mu = w5_macro_uv(world_xz, macro_aabb);
     vec3 macro_col = texture(macro_albedo, mu).rgb;
+    float macro_strength = dot(macro_col, vec3(1.0)) > 0.001 ? 0.85 : 0.0;
 
     // Variation: small modulation by world-noise so adjacent fragments
     // differ slightly even when sampling the same macro pixel
     float nv = w5_world_noise(world_xz, 0.05);
-    vec3 base = mix(macro_col, fallback_color, 0.15);
+    vec3 base = mix(fallback_color, macro_col, macro_strength);
     ALBEDO = base * (0.85 + 0.30 * nv);
     ROUGHNESS = 0.85;
     METALLIC = 0.0;

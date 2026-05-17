@@ -32,7 +32,8 @@ multi-biome material blend, validates with one biome demo.
 | Phase 4 — Terrain MVP (one biome) | ✅ done | [phase_4_terrain_mvp.md](roadmap/phase_4_terrain_mvp.md) | 6 sessions (4.1-4.6) |
 | Phase 4.5 — Calibration sprint | ✅ done (sub-phase of 4) | [phase_4_5_calibration.md](roadmap/phase_4_5_calibration.md) | 1 session |
 | Phase 4.6 — Walking demo | ✅ done (sub-phase of 4) | [phase_4_6_walking_demo.md](roadmap/phase_4_6_walking_demo.md) | 1 session |
-| Phase 4.7 — Autoload rename refactor | 📋 planned | [phase_4_7_autoload_rename.md](roadmap/phase_4_7_autoload_rename.md) | 1 session |
+| Phase 4.7 — Autoload rename refactor | ✅ done | [phase_4_7_autoload_rename.md](roadmap/phase_4_7_autoload_rename.md) | 1 session |
+| Phase 4.8 — Local RD refactor | 📋 planned | [phase_4_8_local_rd_refactor.md](roadmap/phase_4_8_local_rd_refactor.md) | 1-2 sessions |
 | **Phase 5 — Ground texture pipeline** | 🚧 next | (write when starting) | 5-10 |
 | Phase 6 — Second biome | pending | (write when starting) | 3-5 |
 | Phase 7 — Decoration end-to-end | pending | (write when starting) | 5-10 |

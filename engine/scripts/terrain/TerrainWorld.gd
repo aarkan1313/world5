@@ -336,7 +336,7 @@ func _exit_tree() -> void:
 	if _cache != null:
 		_cache.clear()
 	# Tell StreamingBudget terrain is gone
-	var budget: Node = get_node_or_null("/root/StreamingBudget")
+	var budget: Node = W5Lookup.find("StreamingBudget")
 	if budget != null:
 		budget.clear("terrain_cache")
 	if _loaded:

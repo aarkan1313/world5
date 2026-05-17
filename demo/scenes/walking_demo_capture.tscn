@@ -1,0 +1,9 @@
+[gd_scene load_steps=3 format=3 uid="uid://bw5walkingdemo002"]
+
+[ext_resource type="PackedScene" path="res://scenes/walking_demo.tscn" id="1_demo"]
+[ext_resource type="Script" path="res://scripts/capture_walking_demo.gd" id="2_capture"]
+
+[node name="WalkingDemoCapture" instance=ExtResource("1_demo")]
+
+[node name="CaptureHelper" type="Node" parent="."]
+script = ExtResource("2_capture")

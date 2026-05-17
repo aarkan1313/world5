@@ -281,7 +281,7 @@ func _publish_to_budget() -> void:
 	# silently no-op. Integration tests that instantiate both nodes
 	# as siblings can set _streaming_budget_node directly via inject.
 	if _streaming_budget_node == null:
-		_streaming_budget_node = get_node_or_null("/root/StreamingBudget")
+		_streaming_budget_node = W5Lookup.find("StreamingBudget")
 	if _streaming_budget_node != null:
 		_streaming_budget_node.call("publish", SYSTEM_NAME,
 			{"active_jobs": get_running_count() + _get_queued_count()})

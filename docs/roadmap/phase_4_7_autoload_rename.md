@@ -1,92 +1,70 @@
-# Phase 4.7 — Autoload Rename Refactor
+# Phase 4.7 — Autoload Rename Refactor (DONE 2026-05-17)
 
-> Phase: 4.7 (post-4.6 audit-driven refactor)
-> Status: 📋 planned
-> Estimated sessions: 1 (focused)
+> Phase: 4.7 (sub-phase of Phase 4)
+> Status: ✅ done
 > Triggered by: 2026-05-17 visual-review session caught that the
 > walking demo doesn't run standalone — `JobScheduler autoload missing`
 > errors fire because plugin-only `add_autoload_singleton` doesn't
 > persist to `project.godot` outside interactive editor sessions.
 
-## Problem statement
+## Problem
 
-The 5 Tier 0 autoloads (`StreamingBudget`, `JobScheduler`,
-`GpuResourceTracker`, `AssetStream`, `ChangeBroadcast`) currently:
+The 5 Tier 0 autoloads were only registered via the editor plugin's
+`add_autoload_singleton`. Standalone runs bypassed the editor →
+no autoloads → SUT `/root/X` lookups failed → terrain backend
+couldn't submit page jobs → terrain stayed flat.
 
-1. Are registered by `engine/plugin.gd` via
-   `EditorPlugin.add_autoload_singleton(name, path)` in `_enter_tree`.
-2. Are referenced at `/root/<Name>` by SUT code (24 lookup sites).
-3. Are manually instantiated in 8 test files via
-   `var x = JobScheduler.new(); x.name = "JobScheduler";
-   root.add_child(x)` because tests don't run the editor plugin.
-
-This pattern has three failure modes:
-
-**Failure A**: standalone runs (`godot --path demo`) miss the
-autoloads → SUT code's `/root/JobScheduler` lookups fail. Editor
-must be opened + saved once before standalone runs work.
-
-**Failure B**: adding the obvious explicit `[autoload]` section to
-`project.godot` collides with `class_name JobScheduler` etc. —
-Godot 4 rejects with "X is an invalid name. Must not collide with
+The obvious fix (add `[autoload]` to `project.godot`) hit Godot 4's
+class_name collision: "X is an invalid name. Must not collide with
 an existing global script class name."
 
-**Failure C**: tests' manual instantiation creates instances at
-`/root/<Name>` that would coexist with the autoload-registered
-instance at the same path → `get_node_or_null` returns one of two,
-racy.
+## What shipped
 
-## Decision
+### W5_ prefix for autoload-registered names
+- `engine/plugin.gd` `_AUTOLOADS` entries renamed `StreamingBudget`
+  → `W5_StreamingBudget`, etc.
+- `demo/project.godot` gains `[autoload]` section with the same
+  prefixed names (works in standalone)
+- `class_name` declarations on the 5 autoload scripts UNCHANGED —
+  tests still use `JobScheduler.new()` for unit-level construction
 
-Rename the autoload-registered globals to `W5_<Name>` prefix, keep
-`class_name <Name>` on the scripts. Test files stop instantiating
-autoload-backed systems manually — they use the autoload directly
-via `get_node("/root/W5_<Name>")` + `._reset()` between tests.
+### W5Lookup helper
+- `engine/scripts/core/W5Lookup.gd`: static `find(short_name)`
+  helper. Checks `/root/<name>` first (test-override path), then
+  `/root/W5_<name>` (production autoload). Lets tests inject without
+  renaming + still works in production where only the W5_ entry
+  exists.
 
-## Deliverables
+### All SUT lookup sites converted
+12 `get_node_or_null("/root/X")` sites in SUT code now go through
+`W5Lookup.find("X")`. Plus 5 spec docs updated. Test files
+untouched — they still instantiate at `/root/<name>` without prefix
+because that's the test-override path W5Lookup checks first.
 
-- [ ] `engine/plugin.gd` `_AUTOLOADS` entries renamed to W5_*
-- [ ] `demo/project.godot` gains `[autoload]` section with W5_*
-      names (works in standalone runs)
-- [ ] All 24 `/root/<Name>` lookups in engine + spec docs renamed
-      to `/root/W5_<Name>`
-- [ ] Test refactor: 8 integration / perf / visual test files
-      stop manually instantiating autoload-backed systems. New
-      pattern: `before_each: _x = get_node("/root/W5_X"); _x._reset()`.
-- [ ] Add `_reset()` to JobScheduler + verify state-isolation works
-- [ ] Verify all 5 layers pass green stable post-refactor
-- [ ] Update `docs/workflows/walking_demo.md` to remove the
-      known-issue + workaround section
-- [ ] Pitfall note documenting the class_name vs autoload-name
-      collision
+### `_reset()` added to JobScheduler
+For test-suite isolation when sharing the autoload instance (not
+strictly needed today since tests use the manual-instantiation
+override path, but useful for future test refactors).
 
-## Out of scope
+## Verify
 
-- Renaming the underlying `class_name` declarations (keep them; they
-  exist for test type hints + `.new()` construction in unit tests
-  that don't touch /root)
-- Adding `_reset()` to GpuResourceTracker (per-test state doesn't
-  accumulate problematically)
-- Changing test isolation strategy for non-autoload-backed systems
-  (TerrainPageCache, ResidencyManager, etc.)
+5/5 layers green stable (115 pytest + gut + gut_real_gpu + preflight
++ capture).
 
-## Why not done in Phase 4.6
+## What this did NOT fix
 
-Tried it during the visual-review session. The naive sed-rename
-broke 50+ files. The test-refactor side (replacing 8 files'
-`before_each` blocks) is mechanical but needs care: tests that
-share an autoload must reset state between runs OR design around
-state accumulation.
+**Walking demo terrain still doesn't render standalone.** Phase 4.6
+visual review uncovered a SECOND bug:
+`GpuTerrainBackend._generate_heights` uses
+`RenderingServer.get_rendering_device()` (the MAIN RD) and calls
+`rd.submit() / rd.sync()` — Godot 4.6 errors with
+`"Only local devices can submit and sync"` in standalone runs. The
+gut_real_gpu test layer doesn't hit this because gut's test setup
+creates a local device for the test viewport.
 
-A focused session can do this cleanly. Splitting it out keeps
-Phase 4.6 close.
-
-## Close criteria
-
-- Walking demo runs standalone from a fresh `git clone` without
-  needing to open the editor first
-- All tests pass on first run (no editor bootstrap needed)
-- Walk-through doc no longer carries the workaround section
+Scoped as Phase 4.8 (`docs/roadmap/phase_4_8_local_rd_refactor.md`).
+Walking demo still requires Godot editor to actually render terrain
+until that ships.
 
 ## Doc cap status
 

@@ -101,7 +101,7 @@ func on_evict_requested(ring: int, page_xz: Vector2) -> void:
 # Replaces the backend's monotonic high-water mark per TR-INTEG-C2 +
 # matches spec 10 contract (publish current usage on residency change).
 func _publish_budget() -> void:
-	var budget: Node = get_node_or_null("/root/StreamingBudget")
+	var budget: Node = W5Lookup.find("StreamingBudget")
 	if budget == null or _cache == null:
 		return
 	budget.publish("terrain_cache", {
@@ -114,7 +114,7 @@ func _publish_budget() -> void:
 
 func _await_and_cache(k: String, ring: int, page_xz: Vector2,
 		job_id: int) -> void:
-	var scheduler: Node = get_node_or_null("/root/JobScheduler")
+	var scheduler: Node = W5Lookup.find("JobScheduler")
 	if scheduler == null:
 		_inflight.erase(k)
 		return
