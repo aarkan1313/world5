@@ -264,3 +264,100 @@ func test_bind_sibling_blend_freq_clamps_negative() -> void:
 	assert_gt(float(mat.get_shader_parameter("sibling_blend_freq")), 0.0,
 		"negative freq must be clamped to a small positive")
 	assert_eq(int(mat.get_shader_parameter("slot_count")), 0)
+
+
+# --- Phase 6 biome_weights (5.7.b GDScript runtime mirror) ---
+
+
+func test_bind_biome_auto_rules_sets_uniforms() -> void:
+	# Per spec 22 §Catalog schema, each biome has auto_biome_rules
+	# (elevation_m + slope_deg bands). At runtime the fragment shader
+	# computes biome_weight per fragment from these bands; this binder
+	# packs them into the shader's fixed-size uniform arrays.
+	var p: MaterialPipeline = MaterialPipeline.new()
+	var mat: ShaderMaterial = p.make_ring_material(0)
+	var elev_bands: Array = [
+		{"min": -50.0, "max": 10.0, "band_min": 10.0, "band_max": 10.0},
+		{"min":  10.0, "max": 60.0, "band_min": 10.0, "band_max": 10.0},
+	]
+	var slope_bands: Array = [
+		{"min": 0.0, "max": 90.0, "band_min": 5.0, "band_max": 5.0},
+		{"min": 0.0, "max": 90.0, "band_min": 5.0, "band_max": 5.0},
+	]
+	p.bind_biome_auto_rules(mat, 2, elev_bands, slope_bands)
+	assert_eq(int(mat.get_shader_parameter("biome_count")), 2,
+		"biome_count uniform must reflect the bound count")
+	var packed_elev: Array = mat.get_shader_parameter("biome_auto_elev_bands") as Array
+	assert_eq(packed_elev.size(), 8,
+		"biome_auto_elev_bands must be padded to MAX_BIOMES (8)")
+	var first: Vector4 = packed_elev[0] as Vector4
+	assert_almost_eq(first.x, -50.0, 0.001, "elev band 0 min packed")
+	assert_almost_eq(first.y,  10.0, 0.001, "elev band 0 max packed")
+
+
+func test_bind_biome_auto_rules_caps_at_max_biomes() -> void:
+	var p: MaterialPipeline = MaterialPipeline.new()
+	var mat: ShaderMaterial = p.make_ring_material(0)
+	var elev_bands: Array = []
+	var slope_bands: Array = []
+	for i in range(12):  # over the 8-biome cap
+		elev_bands.append({"min": 0.0, "max": 50.0,
+			"band_min": 5.0, "band_max": 5.0})
+		slope_bands.append({"min": 0.0, "max": 45.0,
+			"band_min": 5.0, "band_max": 5.0})
+	p.bind_biome_auto_rules(mat, 12, elev_bands, slope_bands)
+	assert_lte(int(mat.get_shader_parameter("biome_count")), 8,
+		"biome_count must clamp to MAX_BIOMES=8 hard cap")
+
+
+func test_bind_biome_auto_rules_zero_count_disables() -> void:
+	# Single-biome scenes don't need biome weighting; pass count=0
+	# and the shader skips the per-biome multiply.
+	var p: MaterialPipeline = MaterialPipeline.new()
+	var mat: ShaderMaterial = p.make_ring_material(0)
+	p.bind_biome_auto_rules(mat, 0, [], [])
+	assert_eq(int(mat.get_shader_parameter("biome_count")), 0,
+		"biome_count=0 routes shader through legacy single-biome path")
+
+
+func test_bind_all_slots_accepts_biome_indices() -> void:
+	# Phase 6 unblock: bind_all_slots now accepts an optional biome_indices
+	# array. Each slot's biome_index tells the shader which biome_weight
+	# to multiply by. Missing array → all slots index biome 0 (back-compat
+	# with single-biome scenes).
+	var p: MaterialPipeline = MaterialPipeline.new()
+	var mat: ShaderMaterial = p.make_ring_material(0)
+	var arr: Texture2DArray = _make_sibling_array(6)
+	var windows: Array = [
+		{"start": 0, "count": 3}, {"start": 3, "count": 3},
+	]
+	var elev_bands: Array = [
+		{"min": -50.0, "max": 15.0, "band_min": 5.0, "band_max": 5.0},
+		{"min":  -5.0, "max": 35.0, "band_min": 5.0, "band_max": 5.0},
+	]
+	var slope_bands: Array = [
+		{"min": 0.0, "max": 25.0, "band_min": 3.0, "band_max": 3.0},
+		{"min": 0.0, "max": 25.0, "band_min": 3.0, "band_max": 3.0},
+	]
+	var biome_indices: Array = [0, 1]  # slot 0 -> biome 0, slot 1 -> biome 1
+	p.bind_all_slots(mat, arr, windows, elev_bands, slope_bands,
+		biome_indices)
+	var packed: Array = mat.get_shader_parameter("slot_biome_index") as Array
+	assert_eq(int(packed[0]), 0, "slot 0 indexed to biome 0")
+	assert_eq(int(packed[1]), 1, "slot 1 indexed to biome 1")
+
+
+func test_bind_all_slots_back_compat_no_biome_indices() -> void:
+	# When biome_indices is omitted, all slots default to biome 0.
+	var p: MaterialPipeline = MaterialPipeline.new()
+	var mat: ShaderMaterial = p.make_ring_material(0)
+	var arr: Texture2DArray = _make_sibling_array(3)
+	var windows: Array = [{"start": 0, "count": 3}]
+	var elev_bands: Array = [
+		{"min": -50.0, "max": 15.0, "band_min": 5.0, "band_max": 5.0}]
+	var slope_bands: Array = [
+		{"min": 0.0, "max": 25.0, "band_min": 3.0, "band_max": 3.0}]
+	p.bind_all_slots(mat, arr, windows, elev_bands, slope_bands)
+	var packed: Array = mat.get_shader_parameter("slot_biome_index") as Array
+	assert_eq(int(packed[0]), 0,
+		"omitted biome_indices defaults all slots to biome 0")

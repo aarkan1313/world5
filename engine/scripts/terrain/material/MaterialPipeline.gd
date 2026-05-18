@@ -18,6 +18,10 @@ const SIBLING_COUNT_CAP: int = 8
 # Spec 23 hard cap: max slots per biome = 8 (shader's per-fragment
 # slot loop budget). Phase 4.9.b adds per-fragment slot selection.
 const MAX_SLOTS: int = 8
+# Spec 22 hard cap: max biomes per world = 8 (shader's per-fragment
+# biome_weight loop budget; matches MAX_SLOTS for symmetric uniform
+# arrays). Phase 6 / 5.7.b GDScript Composer mirror.
+const MAX_BIOMES: int = 8
 
 
 # Lazily-loaded Shader resource shared across all ring materials
@@ -82,6 +86,19 @@ func make_ring_material(_ring_index: int,
 	mat.set_shader_parameter("slot_windows", zero_iv4)
 	mat.set_shader_parameter("slot_elev_bands", zero_v4)
 	mat.set_shader_parameter("slot_slope_bands", zero_v4)
+	# Phase 6 biome_weights (5.7.b GDScript mirror): per-slot biome
+	# index + per-biome auto_rule bands. Defaults to single-biome
+	# (biome_count=0 → shader skips per-biome multiply).
+	var zero_int: Array = []
+	var zero_biome_v4: Array = []
+	for i in range(MAX_SLOTS):
+		zero_int.append(0)
+	for i in range(MAX_BIOMES):
+		zero_biome_v4.append(Vector4(0.0, 0.0, 0.0, 0.0))
+	mat.set_shader_parameter("slot_biome_index", zero_int)
+	mat.set_shader_parameter("biome_count", 0)
+	mat.set_shader_parameter("biome_auto_elev_bands", zero_biome_v4)
+	mat.set_shader_parameter("biome_auto_slope_bands", zero_biome_v4)
 	return mat
 
 
@@ -242,8 +259,15 @@ func bind_detail_array(mat: ShaderMaterial, array: Texture2DArray,
 ##
 ## Caller passes them in matched order; binder takes min(N, MAX_SLOTS).
 ## Empty inputs → has_siblings stays false (macro-only render path).
+##
+## Phase 6 (5.7.b GDScript Composer mirror): optional biome_indices
+## tells the shader which biome each slot belongs to (so the per-
+## fragment biome_weight from bind_biome_auto_rules multiplies the
+## right slot's weight). Omit / empty array = all slots index biome 0
+## (back-compat with single-biome scenes).
 func bind_all_slots(mat: ShaderMaterial, sibling_array: Texture2DArray,
-		windows: Array, elev_bands: Array, slope_bands: Array) -> void:
+		windows: Array, elev_bands: Array, slope_bands: Array,
+		biome_indices: Array = []) -> void:
 	var n: int = min(min(windows.size(), elev_bands.size()),
 		min(slope_bands.size(), MAX_SLOTS))
 	if sibling_array == null or n == 0:
@@ -257,6 +281,7 @@ func bind_all_slots(mat: ShaderMaterial, sibling_array: Texture2DArray,
 	var packed_windows: Array = []
 	var packed_elev: Array = []
 	var packed_slope: Array = []
+	var packed_biome_idx: Array = []
 	for i in range(MAX_SLOTS):
 		if i < n:
 			var w: Dictionary = windows[i]
@@ -276,10 +301,58 @@ func bind_all_slots(mat: ShaderMaterial, sibling_array: Texture2DArray,
 				float(s.get("max", 90.0)),
 				float(s.get("band_min", 1.0)),
 				float(s.get("band_max", 1.0))))
+			# Default to biome 0 when biome_indices is omitted/short.
+			var bi: int = 0
+			if i < biome_indices.size():
+				bi = int(biome_indices[i])
+			packed_biome_idx.append(clamp(bi, 0, MAX_BIOMES - 1))
 		else:
 			packed_windows.append(Vector4i(0, 0, 0, 0))
 			packed_elev.append(Vector4(0.0, 0.0, 0.0, 0.0))
 			packed_slope.append(Vector4(0.0, 0.0, 0.0, 0.0))
+			packed_biome_idx.append(0)
 	mat.set_shader_parameter("slot_windows", packed_windows)
 	mat.set_shader_parameter("slot_elev_bands", packed_elev)
 	mat.set_shader_parameter("slot_slope_bands", packed_slope)
+	mat.set_shader_parameter("slot_biome_index", packed_biome_idx)
+
+
+## Phase 6 (5.7.b GDScript Composer mirror). Bind per-biome
+## auto_biome_rules so the fragment shader can compute
+## biome_weight[i] = w5_band_weight(elev, slope, biome_auto_bands[i])
+## per fragment + multiply each slot's weight by its biome_weight.
+##
+## - count: number of biomes (clamped to MAX_BIOMES=8)
+## - elev_bands: Array of {min, max, band_min, band_max} per biome
+##   (meters). Format matches bind_all_slots's per-slot elev_bands.
+## - slope_bands: same shape (degrees)
+##
+## Pass count=0 to disable per-biome weighting (single-biome path;
+## shader skips the multiply, all slots render at their slot_weight).
+func bind_biome_auto_rules(mat: ShaderMaterial, count: int,
+		elev_bands: Array, slope_bands: Array) -> void:
+	var n: int = clamp(count, 0, MAX_BIOMES)
+	mat.set_shader_parameter("biome_count", n)
+	if n == 0:
+		return
+	var packed_elev: Array = []
+	var packed_slope: Array = []
+	for i in range(MAX_BIOMES):
+		if i < n and i < elev_bands.size() and i < slope_bands.size():
+			var e: Dictionary = elev_bands[i]
+			var s: Dictionary = slope_bands[i]
+			packed_elev.append(Vector4(
+				float(e.get("min", -10000.0)),
+				float(e.get("max",  10000.0)),
+				float(e.get("band_min", 1.0)),
+				float(e.get("band_max", 1.0))))
+			packed_slope.append(Vector4(
+				float(s.get("min", 0.0)),
+				float(s.get("max", 90.0)),
+				float(s.get("band_min", 1.0)),
+				float(s.get("band_max", 1.0))))
+		else:
+			packed_elev.append(Vector4(0.0, 0.0, 0.0, 0.0))
+			packed_slope.append(Vector4(0.0, 0.0, 0.0, 0.0))
+	mat.set_shader_parameter("biome_auto_elev_bands", packed_elev)
+	mat.set_shader_parameter("biome_auto_slope_bands", packed_slope)

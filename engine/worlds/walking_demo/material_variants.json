@@ -1,6 +1,6 @@
 {
   "_schema_version": 1,
-  "_note": "Walking demo sibling manifest. Phase 5.4 promoted alpine. Phase 6 promoted forest BUT moved its slots to `_pending_slots` (loader-ignored) since multi-biome rendering is gated on Phase 5.7.b KernelComposer. Once 5.7.b ships + Composer provides per-fragment biome_weights, move `_pending_slots` entries back into `slots` and the renderer will pick them up. See docs/build-notes/phase_6_paused_2026_05_17.md.",
+  "_note": "Walking demo sibling manifest. Phase 5.4 promoted alpine (3 slots × 4 variants). Phase 6 unblock (2026-05-17): forest slots moved back from _pending_slots → slots now that the GDScript Composer mirror is wired (TerrainWorld._bind_slots_with_catalog passes per-slot biome_index + per-biome auto_rules to the shader). 6 slots x 4 variants = 24 layers (under 256 cap). Per-fragment biome_weights multiply slot weights so alpine vs forest slots only activate where each biome's auto_rule says it should.",
   "world_seed": 42,
   "region_size_m": 512.0,
   "edge_blend_m": 48.0,
@@ -84,11 +84,8 @@
           "weight": 1.0
         }
       ]
-    }
-  ],
-  "_pending_slots": [
+    },
     {
-      "_note": "Forest biome slots — promoted 2026-05-17 but loader-ignored until Phase 5.7.b KernelComposer ships. Move back to `slots` array once per-fragment biome_weights are available from Composer output.",
       "biome": "forest",
       "slot": "ground",
       "variants": [

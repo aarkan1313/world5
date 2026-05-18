@@ -684,9 +684,18 @@ func _bind_slots_with_catalog(sta: SiblingTextureArray,
 	# For each (biome, slot) in the manifest, look up the catalog
 	# entry to get the selector bands. Missing catalog entry → use
 	# very wide defaults (slot always active).
+	#
+	# Phase 6 (5.7.b GDScript Composer mirror): also collect per-biome
+	# auto_rules + per-slot biome_index so the fragment shader can
+	# multiply each slot's weight by its biome's auto_rule weight.
+	# Result: multi-biome scenes render the correct biome's slots per
+	# fragment.
 	var windows: Array = []
 	var elev_bands: Array = []
 	var slope_bands: Array = []
+	var slot_biome_indices: Array = []
+	# Track biome name → composer-style index. First-seen order.
+	var biome_name_to_idx: Dictionary = {}
 	for slot_entry in mv.slots:
 		if not (slot_entry is Dictionary):
 			continue
@@ -729,9 +738,55 @@ func _bind_slots_with_catalog(sta: SiblingTextureArray,
 				break
 		elev_bands.append(elev_b)
 		slope_bands.append(slope_b)
+		# Assign biome index in first-seen order (matches the composer's
+		# `biome_names` ordering when loaded from the same catalog).
+		if not biome_name_to_idx.has(biome_name):
+			biome_name_to_idx[biome_name] = biome_name_to_idx.size()
+		slot_biome_indices.append(int(biome_name_to_idx[biome_name]))
+
+	# Collect per-biome auto_biome_rules in the same first-seen order.
+	# Missing auto_rules → always-on default (biome wins everywhere).
+	var biome_count: int = biome_name_to_idx.size()
+	var biome_elev_bands: Array = []
+	var biome_slope_bands: Array = []
+	# Single-biome scenes don't need per-biome multiply; pass count=0
+	# so the shader skips the biome step entirely (back-compat).
+	var enable_biome_weights: bool = biome_count > 1 and catalog != null
+	if enable_biome_weights:
+		var ordered_names: Array = biome_name_to_idx.keys()
+		# Dictionary.keys() preserves insertion order in Godot 4.
+		for biome_name_2 in ordered_names:
+			var biome2: Dictionary = catalog.biome_by_name(String(biome_name_2))
+			var auto: Dictionary = biome2.get("auto_biome_rules", {})
+			var e_band: Dictionary = {
+				"min": -10000.0, "max": 10000.0,
+				"band_min": 1.0, "band_max": 1.0,
+			}
+			var s_band: Dictionary = {
+				"min": 0.0, "max": 90.0,
+				"band_min": 1.0, "band_max": 1.0,
+			}
+			if auto.has("elevation_m") and (auto["elevation_m"] as Array).size() == 2:
+				e_band["min"] = float((auto["elevation_m"] as Array)[0])
+				e_band["max"] = float((auto["elevation_m"] as Array)[1])
+			if auto.has("slope_deg") and (auto["slope_deg"] as Array).size() == 2:
+				s_band["min"] = float((auto["slope_deg"] as Array)[0])
+				s_band["max"] = float((auto["slope_deg"] as Array)[1])
+			if auto.has("band_width_elevation_m"):
+				var bwe2: float = float(auto["band_width_elevation_m"])
+				e_band["band_min"] = bwe2
+				e_band["band_max"] = bwe2
+			if auto.has("band_width_slope_deg"):
+				var bws2: float = float(auto["band_width_slope_deg"])
+				s_band["band_min"] = bws2
+				s_band["band_max"] = bws2
+			biome_elev_bands.append(e_band)
+			biome_slope_bands.append(s_band)
 
 	Log.info("terrain_world", "binding slots on rings", {
 		"slot_count": windows.size(),
+		"biome_count": biome_count,
+		"biome_weights_active": enable_biome_weights,
 		"has_catalog": catalog != null,
 		"rings": _rings.size(),
 	})
@@ -746,9 +801,17 @@ func _bind_slots_with_catalog(sta: SiblingTextureArray,
 		var rmat: Material = ring.mesh_instance.material_override
 		if rmat is ShaderMaterial:
 			_material_pipeline.bind_all_slots(rmat as ShaderMaterial,
-				sta.texture, windows, elev_bands, slope_bands)
+				sta.texture, windows, elev_bands, slope_bands,
+				slot_biome_indices)
 			_material_pipeline.bind_sibling_blend_freq(
 				rmat as ShaderMaterial, blend_freq)
+			if enable_biome_weights:
+				_material_pipeline.bind_biome_auto_rules(
+					rmat as ShaderMaterial, biome_count,
+					biome_elev_bands, biome_slope_bands)
+			else:
+				_material_pipeline.bind_biome_auto_rules(
+					rmat as ShaderMaterial, 0, [], [])
 
 
 func _all_rings_have_pages() -> bool:

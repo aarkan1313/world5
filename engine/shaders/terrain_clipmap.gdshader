@@ -82,6 +82,14 @@ uniform int slot_count = 0;
 uniform ivec4 slot_windows[8];
 uniform vec4 slot_elev_bands[8];
 uniform vec4 slot_slope_bands[8];
+// Phase 6 / 5.7.b GDScript Composer mirror: per-slot biome index +
+// per-biome auto_rule bands. biome_count=0 disables the per-biome
+// multiply (single-biome scenes still render via slot_weight only).
+// Index packed as int[] (NOT ivec4 — single int per slot).
+uniform int slot_biome_index[8];
+uniform int biome_count = 0;
+uniform vec4 biome_auto_elev_bands[8];
+uniform vec4 biome_auto_slope_bands[8];
 
 // --- Layer 2: detail array (Phase 5.5, spec 24) ---
 //
@@ -297,12 +305,48 @@ void fragment() {
         vec2 tile_uv = world_xz / max(sibling_tile_m, 0.01);
         vec3 weighted = vec3(0.0);
         float wsum = 0.0;
+        // Phase 6 (5.7.b GDScript Composer mirror): when biome_count > 0,
+        // compute per-biome weight from auto_rules + normalize (softmax-
+        // shape), then multiply each slot's weight by its biome's weight.
+        // biome_count == 0 leaves all biome weights effectively 1.0
+        // (single-biome path).
+        float biome_w[8];
+        float biome_w_sum = 0.0;
+        for (int b = 0; b < 8; b++) {
+            biome_w[b] = 0.0;
+            if (b >= biome_count) continue;
+            biome_w[b] = w5_slot_weight(
+                biome_auto_elev_bands[b],
+                biome_auto_slope_bands[b],
+                v_world_y, v_slope_deg);
+            biome_w_sum += biome_w[b];
+        }
+        // Normalize biome weights so they sum to 1 (probability dist).
+        // Fall back to uniform if no biome owns this (elev, slope) so
+        // the renderer doesn't black out.
+        if (biome_count > 0) {
+            if (biome_w_sum > 0.001) {
+                for (int b = 0; b < 8; b++) {
+                    biome_w[b] /= biome_w_sum;
+                }
+            } else {
+                float uniform_w = 1.0 / float(biome_count);
+                for (int b = 0; b < 8; b++) {
+                    biome_w[b] = (b < biome_count) ? uniform_w : 0.0;
+                }
+            }
+        }
         // Loop over MAX_SLOTS (8) with early-out via slot_count guard;
         // GLSL prefers fixed-iter loops over dynamic ones for inlining.
         for (int i = 0; i < 8; i++) {
             if (i >= slot_count) break;
             float w = w5_slot_weight(slot_elev_bands[i], slot_slope_bands[i],
                                      v_world_y, v_slope_deg);
+            // Multiply by this slot's biome weight (1.0 if single-biome).
+            if (biome_count > 0) {
+                int bi = slot_biome_index[i];
+                w *= biome_w[bi];
+            }
             if (w > 0.001) {
                 ivec4 window = slot_windows[i];
                 vec4 sib = w5_variety_sample_3tap(sibling_array, tile_uv,
