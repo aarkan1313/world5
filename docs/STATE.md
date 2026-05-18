@@ -166,6 +166,24 @@ sweep runs against the most-evolved spec set).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
+- 2026-05-18 late (DEM/runtime-kernels epic sprints 1+2+3 closed):
+  Sprint 3 added GDScript DemFeatureKernel (config class mirroring
+  NoiseStack/Erosion pattern; 16 unit tests) + KernelComposer dem_feature
+  stage dispatch + 7 composer tests + DemSource bundle loader (sidecar
+  + 16-bit height PNG + pre-baked feature PNGs via bilinear sampling;
+  12 unit tests). tx_dem_prepare extended to emit 16-bit height PNG
+  + 4 baked feature PNGs (ridge/drainage/slope/aspect) + --auto-bounds
+  flag (auto-center on source DEM, world-XZ recentered to (0,0)).
+  GpuTerrainBackend: DEM source registry + _apply_dem_feature_blend
+  CPU post-process. TerrainWorld scans <bundle>/dem/*.json + registers
+  sources. Walking demo wired with Cascades DEM (Mount Hood foothills,
+  Copernicus GLO-30, 1024² at ~4 m/cell). Alpine chain is now 3
+  stages: noise_stack → dem_feature(cascades, ridge_emphasis,
+  strength=1.0) → erosion. Forest stays pure noise (proves catalog
+  mixing). Runtime capture confirms 3-stage chain runs cleanly
+  (chain_hash=e18e1212258b, 76 pages, no leaked RIDs). Build note:
+  build-notes/sprint_3_dem_runtime_2026_05_18.md.
+
 - 2026-05-18 evening (DEM/runtime-kernels epic sprints 1+2 closed):
   Walking demo's catalog-declared `noise_stack + erosion` chain now
   runs at runtime via GPU compute — alpine biome shows visibly eroded

@@ -1,8 +1,9 @@
-# W5 session handoff — 2026-05-18 (evening; Sprint 1+2 closed)
+# W5 session handoff — 2026-05-18 (late; Sprint 1+2+3 closed)
 
 > For: the next session (you, fresh context). Read this first.
-> Phase 6 + Sprint 1 + Sprint 2 of the DEM/runtime-kernels epic all
-> shipped + pushed today. Sprint 3 is the next active work.
+> Phase 6 + Sprints 1+2+3 of the DEM/runtime-kernels epic all shipped
+> + pushed today. Sprint 4 (DEM tile streaming for infinite worlds)
+> is the next active work.
 
 ## Where we are in 60 seconds
 
@@ -14,22 +15,26 @@ After Phase 6 close the user flagged: "world gen is bumpy noise, DEM
 is super important." Spawned a spec-to-impl audit (results in commit
 `3aef731`), wrote a 4-sprint plan
 ([docs/plans/19_DEM_AND_RUNTIME_KERNELS_PLAN.md](plans/19_DEM_AND_RUNTIME_KERNELS_PLAN.md)),
-shipped sprints 1+2:
+shipped sprints 1+2+3:
 
 - **Sprint 1** (commit `3fb70fa`): runtime kernel chain execution.
-  Walking demo's alpine `noise_stack + erosion` chain now runs at
-  runtime via GPU compute instead of being ignored. Visible eroded
-  terrain in capture render.
-- **Sprint 2** (commit `b34cda8`): Python `DemFeatureKernel`
-  reference (ridge/drainage/slope/aspect from real DEMs) + bundle DEM
-  schema + `tx_dem_prepare` tool. Smoke-tested against W3's Cascades
-  DEM.
+  Walking demo's alpine `noise_stack + erosion` chain runs at
+  runtime via GPU compute instead of being ignored.
+- **Sprint 2** (commit `b34cda8`): Python `DemFeatureKernel` ref +
+  bundle DEM schema + `tx_dem_prepare` tool.
+- **Sprint 3** (commit `9c61395`): GDScript `DemFeatureKernel` +
+  `DemSource` bundle loader + bake-route DEM feature blending +
+  walking_demo wired with Cascades DEM (Mount Hood foothills,
+  Copernicus GLO-30). Alpine chain is now 3 stages:
+  `noise_stack → dem_feature(cascades, ridge_emphasis) → erosion`.
 
 Stats: 193 pytest (was 174 pre-Sprint-2), gut + preflight green.
 
 ## Commit graph since last handoff
 
 ```
+9c61395 Sprint 3 close: DEM-anchored alpine biome end-to-end
+f0ff2ac docs: post Sprint 1+2 handoff + STATE update
 b34cda8 Sprint 2: Python DemFeatureKernel + bundle DEM schema + tx_dem_prepare
 3fb70fa Sprint 1 close: runtime kernel chain execution + visible erosion
 d2c8371 Sprint 1.2a: KernelComposer.gd + TerrainPageRequest chain support
@@ -41,83 +46,47 @@ fbafc34 Phase 6 close: multi-biome rendering end-to-end
 
 Branch: `main`, pushed to `github.com/aarkan1313/world5.git`.
 
-## Sprint 3 — next active work
+## Sprint 4 — next active work
 
-**Goal**: walking demo's alpine biome uses a real Cascades DEM via
-the chain (noise → DEM ridge_emphasis → erosion); forest stays pure
-procedural to prove catalog mixing.
+**Goal**: DEM virtual-texture streaming so the world is genuinely
+"procedural infinite" — player can walk arbitrary distance, DEM tiles
+stream in/out as needed, cache budget honored.
 
-### 3.1 GDScript DemFeatureKernel.gd config class (1 session)
+See `docs/plans/19_DEM_AND_RUNTIME_KERNELS_PLAN.md` §"Sprint 4" for
+the full plan. Summary:
 
-Mirror NoiseStackKernel.gd / ErosionKernel.gd pattern. Fields:
-`dem_source: String, modes: PackedStringArray,
-ridge_smooth_sigma_cells: float, seed: int`. Standard from_dict,
-to_dict, validate, config_hash. Add as a 3rd kernel type in
-`KernelComposer.gd` (`STAGE_DEM_FEATURE = "dem_feature"` +
-`VALID_STAGE_TYPES` + `_build_config`). Unit tests for the config
-class + composer dispatch.
+### 4.1 DEM tile pyramid format (1 session)
 
-### 3.2 Bundle DEM source loader (1 session)
+DEM source becomes a tile pyramid (mip levels of sub-tiles), not a
+single 1024² PNG. `tx_dem_prepare` updated to emit
+`dem/<id>/<mip>/<x>_<z>.tif` + `dem/<id>/index.json`. LOD selection:
+far pages sample coarse mips; near pages sample full-res.
 
-Add `engine/scripts/terrain/kernels/DemSource.gd` — RefCounted that
-reads `<bundle>/dem/<id>.json` sidecar + loads the GeoTIFF (or NPY)
-into a `PackedFloat32Array` + 2D dims. TerrainWorld instantiates
-these at bundle-load time and passes them to PageStreamingJob.
-**Decision needed**: load entire DEM into RAM (~16 MB for
-walking_demo's 2048² Cascades patch) vs. lazy/tile-based. RECOMMEND:
-RAM-load for sprint 3 (small DEMs), tile-based streaming is sprint 4.
+### 4.2 DEM tile streaming via AssetStream (2-3 sessions)
 
-### 3.3 GLSL DEM feature compute shader (2-3 sessions)
+New `DemTileResidency` tracking which tiles overlap the active page
+set. Tile load through AssetStream (spec 9); budget tracked via spec
+10 StreamingBudget (new `dem_tiles` bucket). Eviction when no
+resident page needs the tile. DemFeatureKernel reads from resident
+tile cache; missing-tile fallback = coarse-mip placeholder.
 
-`engine/shaders/terrain_dem_feature.glsl`. Inputs: source DEM
-storage buffer + sample window. Outputs: feature buffer per mode.
-For ridge_emphasis: gaussian blur pass + Laplacian pass. For
-drainage_accumulation: D8 + iterative scatter (this one's tricky on
-GPU — may need multi-pass or accept CPU bake for v1).
-**Pragmatic alternative**: for sprint 3, CALL the Python ref via
-subprocess at bundle-load time + bake the feature stacks to disk;
-runtime samples from baked PNGs. Faster path to visible result.
+### 4.3 Perf measurement + GPU pivot if needed (1-2 sessions)
 
-### 3.4 GpuTerrainBackend chain dispatch for DEM (1 session)
+Measure DEM feature blend time at typical pages-per-second. Today's
+CPU bake-route is fine for small worlds; large-world streaming may
+need GPU compute path. Target: > 80% cache hit rate after first orbit
+of a region.
 
-Add `dem_feature` stage handling to `_generate_chain`. When a stage
-is `dem_feature`, sample the DEM source's feature stack at the page's
-world bounds + blend the result into the height field via the stage's
-`strength` param. Cache key includes DEM source path hash.
+### Sprint 4 close
 
-### 3.5 Walking demo wire (1 session)
+- Visible: player walks 10+ km in any direction with no stalls,
+  no missing pages, no tile-edge seams.
+- Build note: `docs/build-notes/sprint_4_dem_streaming_<date>.md`.
 
-1. Run `tx_dem_prepare` on a Cascades excerpt:
-   ```
-   python -m world5.textures.tx_dem_prepare \
-     --bundle engine/worlds/walking_demo \
-     --source d:/assets/world3/opentopo/raw/cog/tcf_pnw_cascades_usa/COP30_*.tif \
-     --id cascades \
-     --bounds-world-xz <bounds in target CRS that actually overlap the source> \
-     --crs EPSG:32610
-   ```
-   **Note**: smoke-test showed the tool works but bounds-world-xz must
-   be in target CRS that overlaps source. Easier path: auto-derive
-   bounds from the source if not specified. Add `--auto-bounds` flag.
-2. Update `walking_demo/biome_catalog.json` alpine biome:
-   ```json
-   "kernel": {"type": "chain", "stages": [
-     {"type": "noise_stack", "params": {...}},
-     {"type": "dem_feature", "params": {"source": "cascades", "mode": "ridge_emphasis", "strength": 0.7}},
-     {"type": "erosion", "params": {...}}
-   ]}
-   ```
-3. Launch + capture. Alpine should show Mount Hood-style ridges.
+## Sprint 5 — spec gap closures (deferred)
 
-### Sprint 3 close
-
-- Visible: alpine = Cascades-anchored (real ridges visible from
-  walking eye height); forest = pure procedural (smooth fBm).
-- Build note: `docs/build-notes/sprint_3_dem_runtime_<date>.md`.
-
-## Sprint 4 (after 3) — DEM virtual-texture streaming (4-6 sessions)
-
-This is what makes "procedural infinite" real. See plan doc §"Sprint 4".
+`08a` GPU/CPU contract enforcement, `14` world contract validators
+(biome/surface/kernel/tier/decoration), `18` hot-reload harness.
 
 ## Sprint 5 — spec gap closures (deferred)
 
@@ -130,7 +99,7 @@ This is what makes "procedural infinite" real. See plan doc §"Sprint 4".
 |---|---|
 | 0–4.11, 5.1, 5.4, 5.4.b (a+b), 5.5, 5.7.a/b/c | ✅ done |
 | **6 (forest)** | **✅ closed 2026-05-18** |
-| **DEM/runtime-kernels epic (5 sprints, 13-20 sessions)** | **🚧 sprints 1+2 done; 3 next** |
+| **DEM/runtime-kernels epic (5 sprints, 13-20 sessions)** | **🚧 sprints 1+2+3 done; 4 next** |
 | 7+ (decoration, foliage, atmosphere, water, ...) | pending |
 
 ## Verify commands
