@@ -12,6 +12,16 @@
 ## If stationary cost ≈ motion cost, the renderer itself is over
 ## budget and ring_count needs to come down or visual ceiling drops.
 ##
+## 2026-05-17 page_extent fix: pre-5.6, this harness used
+## page_extent=32m. The Phase 5.6 cache auto-raise scales budget
+## with visible page count; at page_extent=32m outer rings need
+## thousands of pages → per-frame ring iteration dominates even at
+## rest. Now uses production page_extent_m=256 so the working set
+## reflects real workload. Per-tier ceilings match the calibration
+## harness's spec 13 §Calibration HW + extrapolation pattern —
+## 5090-measured ceilings; per-tier-target-HW perf-budget regression
+## tests live separately.
+##
 ## Real-GPU only; skipped headless.
 
 extends GutTest
@@ -19,11 +29,15 @@ extends GutTest
 
 const OUT_DIR := "user://_calibration"
 
+# Per-tier 5090-measured catastrophic-only ceilings. Stationary cost
+# at rest should be MUCH lower than motion cost — pure render
+# only, no streaming churn. These ceilings catch infinite-loop /
+# per-frame-allocation / unbounded-iteration bugs.
 const _CONFIGS := [
-	{"name": "low_4r_stationary",      "rings": 4, "grid": 64},
-	{"name": "medium_5r_stationary",   "rings": 5, "grid": 64},
-	{"name": "high_6r_stationary",     "rings": 6, "grid": 64},
-	{"name": "ultra_7r_stationary",    "rings": 7, "grid": 64},
+	{"name": "low_4r_stationary",    "rings": 4, "grid": 64, "tier": "low",    "ceiling_ms_5090": 25.0},
+	{"name": "medium_5r_stationary", "rings": 5, "grid": 64, "tier": "medium", "ceiling_ms_5090": 25.0},
+	{"name": "high_6r_stationary",   "rings": 6, "grid": 64, "tier": "high",   "ceiling_ms_5090": 40.0},
+	{"name": "ultra_7r_stationary",  "rings": 7, "grid": 64, "tier": "ultra",  "ceiling_ms_5090": 60.0},
 ]
 
 
@@ -100,7 +114,11 @@ func _measure_stationary(cfg: Dictionary,
 	_tw.ring_count = cfg["rings"]
 	_tw.ring_vertex_grid = cfg["grid"]
 	_tw.inner_cell_size_m = 0.5
-	_tw.page_extent_m = 32.0
+	# Use production page_extent (256m). Pre-2026-05-17 was 32m
+	# which combined with Phase 5.6 cache auto-raise made outer
+	# rings need thousands of pages and dominated per-frame cost
+	# even at rest. See calibration test for the same fix.
+	_tw.page_extent_m = 256.0
 	_tw.terrain_pages_max = 128
 	_tw.camera_path = NodePath("../Camera")
 	get_tree().root.add_child(_tw)
@@ -148,30 +166,38 @@ func _measure_stationary(cfg: Dictionary,
 
 # --- per-tier stationary measurements ---
 
+
+func _assert_catastrophic_ceiling(cfg: Dictionary, rec: Dictionary) -> void:
+	var ceiling: float = float(cfg.get("ceiling_ms_5090", 50.0))
+	var measured: float = float(rec["cpu_avg_ms"])
+	assert_lt(measured, ceiling,
+		"stationary %s cpu_avg %.2fms blew catastrophic ceiling %.2fms (5090-measured)" % [
+			cfg["tier"], measured, ceiling])
+
+
 func test_stationary_low() -> void:
 	if _skip_if_no_rd():
 		return
 	var rec: Dictionary = await _measure_stationary(_CONFIGS[0])
-	assert_lt(rec["cpu_avg_ms"], 50.0,
-		"stationary low blew catastrophic ceiling")
+	_assert_catastrophic_ceiling(_CONFIGS[0], rec)
 
 
 func test_stationary_medium() -> void:
 	if _skip_if_no_rd():
 		return
 	var rec: Dictionary = await _measure_stationary(_CONFIGS[1])
-	assert_lt(rec["cpu_avg_ms"], 50.0)
+	_assert_catastrophic_ceiling(_CONFIGS[1], rec)
 
 
 func test_stationary_high() -> void:
 	if _skip_if_no_rd():
 		return
 	var rec: Dictionary = await _measure_stationary(_CONFIGS[2])
-	assert_lt(rec["cpu_avg_ms"], 50.0)
+	_assert_catastrophic_ceiling(_CONFIGS[2], rec)
 
 
 func test_stationary_ultra() -> void:
 	if _skip_if_no_rd():
 		return
 	var rec: Dictionary = await _measure_stationary(_CONFIGS[3])
-	assert_lt(rec["cpu_avg_ms"], 50.0)
+	_assert_catastrophic_ceiling(_CONFIGS[3], rec)
