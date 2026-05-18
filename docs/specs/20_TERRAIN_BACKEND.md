@@ -1,6 +1,6 @@
 # Spec: Terrain Backend
 
-> Status: draft
+> Status: shipped (2026-05-18; promoted per spec-to-impl audit — GpuTerrainBackend.gd + TerrainPageRequest/Result + page generation pipeline shipped)
 > Tier: 1 (core)
 > Depends on: 19_KERNEL_SYSTEM, 07_JOB_SYSTEM, 10_STREAMING_BUDGET, 13_QUALITY_TIERS
 > Consumed by: terrain renderer, collision, nav export, decoration generator, AI knowledge

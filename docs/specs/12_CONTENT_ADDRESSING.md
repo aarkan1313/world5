@@ -1,6 +1,6 @@
 # Spec: Asset Content Addressing
 
-> Status: draft
+> Status: shipped (2026-05-18; promoted per spec-to-impl audit — ContentAddress.gd + Python ContentAddressStore shipped + parity tested)
 > Tier: cross-cutting (Tier 0)
 > Depends on: 01_MODULE_LAYOUT
 > Consumed by: texture pipeline, decoration bake, terrain page cache, LOD bake, audio hooks (consumer-side), any pipeline that produces baked artifacts

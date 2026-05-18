@@ -1,6 +1,6 @@
 # Spec: Job System
 
-> Status: draft
+> Status: shipped (2026-05-18; promoted per spec-to-impl audit — Job + JobScheduler + GpuJob shipped as autoloads + tested)
 > Tier: cross-cutting (Tier 0)
 > Depends on: 01_MODULE_LAYOUT, 03_PILLARS
 > Consumed by: terrain backend, async asset streaming, decoration runtime, nav, audio hooks, every async system

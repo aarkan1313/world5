@@ -1,6 +1,6 @@
 # Spec: Godot Project Root Allowlist
 
-> Status: draft
+> Status: shipped (2026-05-18; promoted per spec-to-impl audit — preflight checker shipped at pipeline/world5/world_contract/godot_root_check.py + test coverage)
 > Tier: meta
 > Depends on: 01_MODULE_LAYOUT
 > Consumed by: every contributor + a preflight check

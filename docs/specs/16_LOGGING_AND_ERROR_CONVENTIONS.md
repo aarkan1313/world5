@@ -1,6 +1,6 @@
 # Spec: Logging + Error Conventions
 
-> Status: draft
+> Status: shipped (2026-05-18; promoted per spec-to-impl audit — Log.gd structured logging shipped repo-wide)
 > Tier: meta
 > Depends on: 01_MODULE_LAYOUT, 03_PILLARS
 > Consumed by: every system that produces runtime output

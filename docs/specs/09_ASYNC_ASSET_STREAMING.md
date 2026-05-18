@@ -1,6 +1,6 @@
 # Spec: Async Asset Streaming
 
-> Status: draft
+> Status: shipped (2026-05-18; promoted per spec-to-impl audit — AssetStream.gd shipped + integrated with Job system)
 > Tier: cross-cutting (Tier 0)
 > Depends on: 01_MODULE_LAYOUT, 07_JOB_SYSTEM
 > Consumed by: decoration runtime (mesh load), terrain backend (texture array load), audio hooks consumer-side, future foliage card load, future nav region load

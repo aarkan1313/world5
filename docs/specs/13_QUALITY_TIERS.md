@@ -1,6 +1,6 @@
 # Spec: Quality Tiers
 
-> Status: draft
+> Status: shipped (2026-05-18; promoted per spec-to-impl audit — quality_tiers.json + 5 tiers + per-tier perf extrapolation ratios)
 > Tier: cross-cutting (Tier 0)
 > Depends on: 01_MODULE_LAYOUT
 > Consumed by: terrain backend, atmosphere, lighting, decoration runtime, streaming budget, every system that scales with hardware

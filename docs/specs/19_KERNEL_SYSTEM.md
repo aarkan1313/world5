@@ -1,6 +1,6 @@
 # Spec: Kernel System
 
-> Status: draft
+> Status: shipped (2026-05-18; promoted per spec-to-impl audit — NoiseStackKernel + ErosionKernel + KernelComposer + bake_page Python end-to-end)
 > Tier: 1 (core)
 > Depends on: 01_MODULE_LAYOUT, 13_QUALITY_TIERS
 > Consumed by: terrain backend, materials, nav, climate

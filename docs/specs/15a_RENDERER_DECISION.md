@@ -1,6 +1,6 @@
 # Renderer Decision (15a)
 
-> Status: draft (committed; pending user signoff)
+> Status: shipped (2026-05-18; promoted per spec-to-impl audit — clipmap shipped Phase 4; multi-biome end-to-end Phase 6)
 > Output of: spec 15 RENDERER_RESEARCH_BRIEF
 > Decided: 2026-05-16 (Phase 3 sprint)
 >

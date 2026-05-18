@@ -1,6 +1,6 @@
 # Spec: Test Infrastructure
 
-> Status: draft
+> Status: shipped (2026-05-18; promoted per spec-to-impl audit — world5.verify with pytest+gut+preflight layers wired)
 > Tier: meta
 > Depends on: 01_MODULE_LAYOUT
 > Consumed by: every system

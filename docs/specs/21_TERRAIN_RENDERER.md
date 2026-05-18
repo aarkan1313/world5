@@ -1,6 +1,6 @@
 # Spec: Terrain Renderer
 
-> Status: draft (Phase 4 in progress)
+> Status: shipped (2026-05-18; promoted per spec-to-impl audit — clipmap renderer live + multi-page heightmap + per-fragment slot selection shipped Phase 4-6)
 > Tier: 1 (core)
 > Depends on: 15a_RENDERER_DECISION (committed: clipmap), 20_TERRAIN_BACKEND, 22_BIOME_CATALOG, 23_MATERIALS_PBR, 24_GROUND_VARIETY, 30_ATMOSPHERE, 31_LIGHTING_GI
 > Consumed by: every visible W5 scene

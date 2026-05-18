@@ -1,6 +1,6 @@
 # Spec: Module Layout
 
-> Status: draft
+> Status: shipped (2026-05-18; promoted per spec-to-impl audit — engine/+pipeline/+demo/+docs/ structure shipped, validated by godot_root_check)
 > Tier: meta
 > Depends on: none (this is foundational)
 > Consumed by: every other system

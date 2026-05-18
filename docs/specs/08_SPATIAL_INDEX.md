@@ -1,6 +1,6 @@
 # Spec: Spatial Index
 
-> Status: draft
+> Status: shipped (2026-05-18; promoted per spec-to-impl audit — SpatialIndex.gd shipped + tested)
 > Tier: cross-cutting (Tier 0)
 > Depends on: 01_MODULE_LAYOUT
 > Consumed by: terrain page cache, decoration runtime LOD pass, nav region queries, future audio occlusion, future AI knowledge, future deformation-impact queries

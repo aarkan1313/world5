@@ -1,6 +1,6 @@
 # Spec: Change Broadcast (Dirty-Rect Pattern)
 
-> Status: draft
+> Status: shipped (2026-05-18; promoted per spec-to-impl audit — ChangeBroadcast.gd shipped with multicast events)
 > Tier: cross-cutting (Tier 0)
 > Depends on: 01_MODULE_LAYOUT, 08_SPATIAL_INDEX
 > Consumed by: decoration runtime (re-bake on zone change), nav export (regenerate on water/obstruction change), terrain page cache (invalidate on kernel-version change), persistence (write-back on runtime edit), audio hooks (re-evaluate tag manifest), future AI knowledge

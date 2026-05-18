@@ -1,6 +1,8 @@
 # Spec: Renderer Research Brief (Decision Sprint)
 
-> Status: draft
+> Status: obsolete (2026-05-18; superseded by 15a_RENDERER_DECISION which
+> committed W5 to clipmap and has since shipped through Phase 6). Kept
+> in tree as history of the decision process; do not modify or extend.
 > Type: research brief, NOT a system spec
 > Depends on: 03_PILLARS, 01_MODULE_LAYOUT
 > Output: a decision doc (`docs/specs/15a_RENDERER_DECISION.md`) that

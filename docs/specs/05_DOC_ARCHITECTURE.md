@@ -1,6 +1,6 @@
 # Spec: Doc Architecture
 
-> Status: draft
+> Status: shipped (2026-05-18; meta-spec — policy in force; doc cap + structure enforced via preflight doc_health check)
 > Tier: meta
 > Depends on: 01_MODULE_LAYOUT, 02_CONTRIBUTING_LIFECYCLE
 > Consumed by: every contributor (human or LLM)

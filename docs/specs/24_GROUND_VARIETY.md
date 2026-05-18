@@ -1,6 +1,9 @@
 # Spec: Ground Variety System
 
-> Status: draft (Phase 4 in progress)
+> Status: shipped — Layers 1+3 (2026-05-18); Layer 2 (detail array)
+> deferred indefinitely with no detail tiles authored. See revision
+> history below for the Phase 6-era sampler swap to W3 M11-derived
+> triplanar + hex + region selection.
 > Tier: 1 (core)
 > Depends on: 15a_RENDERER_DECISION (clipmap), 21_TERRAIN_RENDERER,
 > 23_MATERIALS_PBR, 25_TEXTURE_PIPELINE
@@ -245,3 +248,20 @@ is the *runtime artifact* MaterialPipeline reads. Spec 25's
 - 2026-05-17 (Phase 5 plan): absorbed `material_variants.json` schema
   as the canonical Layer 1 contract (carried from W4, validated
   2026-05-17 staging). Authoring vs runtime artifact split documented.
+- 2026-05-18 (Phase 6 close): Layer 1 sampler shipped via W3 M11-derived
+  triplanar + hex (Heitz-Neyret 2018) + region-based variant selection
+  (replaces the stochastic 3-tap from the original spec, which was
+  shown to mush at any blend_freq). New helpers in
+  `variety_common.gdshaderinc`: `w5_hex_sample_albedo` (variance-
+  preserving hex blend), `w5_variety_sample_plane` (region pick + 4-
+  corner crossfade), `w5_variety_sample_triplanar` (XY/XZ/YZ blend
+  by world normal — kills stretched-slope wallpaper). Per-channel
+  inverse-CDF LUT (`albedo_tinv.png`) generator added at
+  `pipeline/world5/textures/tx_hn_lut.py`. **Layer 2 (detail array)
+  remains DEFERRED indefinitely** — no detail tiles authored; Layer 1
+  variety carries the ground texture story for v1. Re-prioritize when
+  close-range ground reads weak in a real demo (currently shipping at
+  walking eye height in walking_demo and reads acceptably).
+- 2026-05-18 (status promotion): Layer 1 + Layer 3 fully shipped end-
+  to-end through Phase 6; spec moved `draft → shipped` for the
+  shipped layers. Layer 2 explicit deferral noted above.

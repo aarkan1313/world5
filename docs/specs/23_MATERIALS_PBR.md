@@ -1,6 +1,6 @@
 # Spec: Materials + PBR Pipeline
 
-> Status: draft
+> Status: shipped (2026-05-18; promoted per spec-to-impl audit — MaterialPipeline + per-fragment slot selection + biome_weights + PBR maps + triplanar hex sampler Phase 6)
 > Tier: 1 (core)
 > Depends on: 22_BIOME_CATALOG, 21_TERRAIN_RENDERER, 13_QUALITY_TIERS
 > Consumed by: terrain renderer (material binding); ground variety system (spec 24); world contract
@@ -173,6 +173,15 @@ that survives mipmapping.
 Optional but **strongly recommended for any world > 1km extent**.
 W4 proved this is the single biggest readability lift for far-field
 terrain.
+
+**2026-05-18 production default**: the shader's `macro_strength_global`
+uniform defaults to `0.0` after Phase 6 visual A/B revealed the prior
+0.35 default was contaminating slot detail with macro color (washed
+out high-contrast snow_over_rock textures). Macro stays bound and
+ready; raise the uniform to >0 when per-biome macros are properly
+authored (see "Hidden cross-cutting work" → per-biome macro refactor
+in HANDOFF_2026_05_18.md). Macro also fills coverage gaps when no
+slot wins a fragment, regardless of `macro_strength_global`.
 
 ## Public API (skeleton)
 

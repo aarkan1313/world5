@@ -1,6 +1,6 @@
 # Spec: Project Pillars
 
-> Status: draft
+> Status: shipped (2026-05-18; meta-spec — policy in force; pillar ordering used as durable decision-making frame; cited in CLAUDE.md + every plan)
 > Tier: meta
 > Depends on: none
 > Consumed by: every decision in W5

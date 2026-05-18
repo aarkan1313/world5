@@ -1,6 +1,10 @@
 # Spec: Texture Pipeline
 
-> Status: draft
+> Status: shipped (2026-05-18; 17 tx_*.py modules + drivers integrated
+> at pipeline/world5/textures/ — promote.py + tx_hn_lut + tx_macro_terrain
+> + tx_pipeline + 13 supporting tools. Walking demo's 48-layer sibling
+> pool was produced through this pipeline. tx_hn_lut added 2026-05-18
+> for Heitz-Neyret inverse-CDF LUTs.)
 > Tier: 1 (core)
 > Depends on: 01_MODULE_LAYOUT, 12_CONTENT_ADDRESSING, 14_WORLD_CONTRACT
 > Consumed by: materials (spec 23), ground variety (spec 24),

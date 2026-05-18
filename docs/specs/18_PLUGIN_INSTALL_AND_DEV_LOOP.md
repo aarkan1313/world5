@@ -1,6 +1,9 @@
 # Spec: Plugin Install + Dev Loop
 
-> Status: draft
+> Status: reviewed — `world5.setup install_demo` + `verify_install`
+> CLI shipped at pipeline/world5/setup/__init__.py; junction-based dev
+> loop works. Pending (~1-2 sessions): automated Godot hot-reload
+> harness (currently manual restart per shader edit).
 > Tier: meta
 > Depends on: 01_MODULE_LAYOUT, 17_VERSIONING_AND_MIGRATION
 > Consumed by: every consumer of W5; every contributor

@@ -1,6 +1,6 @@
 # Spec: Contributing Lifecycle
 
-> Status: draft
+> Status: shipped (2026-05-18; meta-spec — policy in force; lifecycle policy enforced daily via spec status sweeps + plan-before-code)
 > Tier: meta
 > Depends on: 01_MODULE_LAYOUT
 > Consumed by: every contributor (human or LLM)

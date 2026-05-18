@@ -1,6 +1,6 @@
 # Spec: Streaming Budget Contract
 
-> Status: draft
+> Status: shipped (2026-05-18; promoted per spec-to-impl audit — StreamingBudget.gd shipped + per-system usage tracking)
 > Tier: cross-cutting (Tier 0)
 > Depends on: 01_MODULE_LAYOUT, 13_QUALITY_TIERS
 > Consumed by: terrain backend, async asset streaming, decoration runtime, future water/weather/etc — every async system

@@ -1,6 +1,13 @@
 # Spec: World Contract / Preflight
 
-> Status: draft
+> Status: reviewed — validator host + 4 checks shipped, 5 per-system
+> validators pending (2026-05-18; verified by spec-to-impl audit).
+> Shipped: world_contract/__init__.py host + CLI + godot_root_check +
+> doc_health + logging_lint + materials_manifests. Pending (3-4
+> sessions): biome_catalog schema validator (uniqueness + slot xrefs),
+> surface_slots.json validator, kernel param validator (bounded outputs
+> within elev range), per-tier PBR-memory budget validator, decoration
+> palette cross-reference validator.
 > Tier: cross-cutting (Tier 0)
 > Depends on: 01_MODULE_LAYOUT, 13_QUALITY_TIERS
 > Consumed by: every world bundle (`worlds/<name>/`); CI; pre-launch checks

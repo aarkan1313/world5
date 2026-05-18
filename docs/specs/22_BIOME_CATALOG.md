@@ -1,6 +1,6 @@
 # Spec: Biome Catalog
 
-> Status: draft
+> Status: shipped (2026-05-18; promoted per spec-to-impl audit — catalog + auto_biome_rules + per-biome surface_slots + softmax wired Phase 6)
 > Tier: 1 (core)
 > Depends on: 19_KERNEL_SYSTEM, 20_TERRAIN_BACKEND, 14_WORLD_CONTRACT
 > Consumed by: terrain backend, materials, decoration, audio hooks, nav, weather/climate, world contract validator

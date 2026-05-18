@@ -1,6 +1,12 @@
 # Spec: GPU / CPU Contract
 
-> Status: draft
+> Status: reviewed — runtime routing shipped, enforcement layer pending
+> (2026-05-18; verified by spec-to-impl audit). Shipped: GpuJob.gd
+> bridge + JobScheduler render-thread routing + GpuResourceTracker
+> register/unregister/teardown safety net. Pending (1-2 sessions):
+> static-analysis lint preventing RenderingDevice calls in Job._execute,
+> StreamingBudget bucket validation, readback-only-via-GpuJob diagnostic,
+> repeated-spawn GPU-memory-stability capture test.
 > Tier: cross-cutting (Tier 0)
 > Depends on: 01_MODULE_LAYOUT, 07_JOB_SYSTEM, 10_STREAMING_BUDGET
 > Consumed by: terrain backend, async asset streaming, decoration runtime,
