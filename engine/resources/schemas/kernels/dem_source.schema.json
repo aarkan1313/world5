@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "world5/kernels/dem_source.schema.json",
+  "title": "DEM source declaration (bundle-level)",
+  "description": "Spec 19 §'DEM source handling defined upfront'. A bundle that uses a DemFeatureKernel stage in any biome's kernel chain MUST declare each referenced DEM source under `worlds/<bundle>/dem/sources.json` (an array of these). The pipeline tool `tx_dem_prepare` reprojects + crops + indexes the raw DEM and writes the prepared GeoTIFF + sidecar matching this schema.\n\nReferences:\n- Spec 19 §'KernelComposer' (DEM stages in a chain)\n- Spec 22 §'Catalog schema' (per-biome kernel chains)\n- Spec 12 (cache participation via DEM source path hash)",
+  "type": "object",
+  "required": ["id", "path", "bounds_world_xz", "elevation_range_m"],
+  "additionalProperties": false,
+  "properties": {
+    "_schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "_note": {
+      "type": "string",
+      "description": "Human-readable annotation; loader ignores."
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9_]+$",
+      "description": "Unique source ID within the bundle. Referenced by DemFeatureKernel stages as `params.source = '<id>'`. Lowercase + underscores only (filesystem-friendly)."
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Path to the prepared GeoTIFF (or .npz/.npy) relative to the bundle root. Convention: `dem/<id>.tif`. Pipeline tool tx_dem_prepare emits this."
+    },
+    "crs": {
+      "type": "string",
+      "description": "Coordinate Reference System of the prepared DEM (e.g. 'EPSG:32610' for UTM zone 10N). The pipeline tool reprojects from the source CRS to whatever CRS the bundle author specifies (typically a local UTM zone for accuracy)."
+    },
+    "bounds_world_xz": {
+      "type": "array",
+      "items": {"type": "number"},
+      "minItems": 4,
+      "maxItems": 4,
+      "description": "World-XZ bounds [min_x, min_z, max_x, max_z] in METERS. The DEM array's (0, 0) maps to (min_x, min_z); (rows-1, cols-1) maps to (max_x, max_z). Walking_demo authors a small 4 km × 4 km patch from a Cascades excerpt; larger worlds split into tiles per Sprint 4's pyramid scheme."
+    },
+    "elevation_range_m": {
+      "type": "array",
+      "items": {"type": "number"},
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "DEM elevation [min_m, max_m] in meters above sea level. Used by the world contract to validate that biome elev bands are compatible. The pipeline tool computes this from the prepared raster's statistics."
+    },
+    "source_resolution_m": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "description": "DEM cell size in meters (e.g. 10.0 for USGS 10m NED, 30.0 for COP30). Informational — actual sampling resolution at runtime is driven by grid_n in the request, not this. Useful for asset-bar tuning."
+    },
+    "attribution": {
+      "type": "string",
+      "description": "License + attribution string for downstream display (e.g. 'USGS 10m National Elevation Dataset, public domain'). The world contract REQUIRES this for non-public-domain sources."
+    }
+  }
+}
