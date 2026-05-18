@@ -61,6 +61,14 @@ func make_ring_material(_ring_index: int,
 	mat.set_shader_parameter("height_pages_per_side", 1)
 	mat.set_shader_parameter("height_array_min_xz", Vector2(0.0, 0.0))
 	mat.set_shader_parameter("height_array_page_extent_m", 256.0)
+	# Terrain-edge haze defaults: disabled until TerrainWorld binds the
+	# tier-derived range after ring construction.
+	mat.set_shader_parameter("terrain_haze_enabled", false)
+	mat.set_shader_parameter("terrain_haze_start_m", 1000000.0)
+	mat.set_shader_parameter("terrain_haze_end_m", 1000001.0)
+	mat.set_shader_parameter("terrain_haze_strength", 0.0)
+	mat.set_shader_parameter("terrain_haze_color",
+		Color(0.646, 0.656, 0.674, 1.0))
 	# Per-fragment slot selection (Phase 4.9.b): defaults to 0 slots
 	# active. bind_all_slots() sets slot_count + the band arrays.
 	mat.set_shader_parameter("slot_count", 0)
@@ -118,6 +126,19 @@ func bind_height_array(mat: ShaderMaterial, array: Texture2DArray,
 	mat.set_shader_parameter("height_array_page_extent_m", page_extent_m)
 	mat.set_shader_parameter("height_scale", scale_m)
 	mat.set_shader_parameter("height_offset", offset_m)
+
+
+## Bind terrain-only distance haze. This is intentionally separate from
+## the future Atmosphere controller; it gives the current clipmap a
+## tier-driven fade band so the finite edge does not pop hard.
+func bind_terrain_haze(mat: ShaderMaterial, enabled: bool,
+		start_m: float, end_m: float, strength: float, color: Color) -> void:
+	mat.set_shader_parameter("terrain_haze_enabled", enabled)
+	mat.set_shader_parameter("terrain_haze_start_m", max(0.0, start_m))
+	mat.set_shader_parameter("terrain_haze_end_m", max(end_m, start_m + 0.01))
+	mat.set_shader_parameter("terrain_haze_strength",
+		clamp(strength, 0.0, 1.0))
+	mat.set_shader_parameter("terrain_haze_color", color)
 
 
 ## Bind the macro albedo texture + world-AABB so the fragment shader

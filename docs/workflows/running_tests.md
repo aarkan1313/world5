@@ -5,6 +5,8 @@
 >
 > See [spec 06 TEST_INFRASTRUCTURE](../specs/06_TEST_INFRASTRUCTURE.md)
 > for the contract; this doc is the user-facing recipe.
+> See [godot_verify_gut_command_reference.md](godot_verify_gut_command_reference.md)
+> for the pinned Godot/GUT command reference and current session quirks.
 
 ## TL;DR
 

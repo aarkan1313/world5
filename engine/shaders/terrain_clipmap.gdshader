@@ -103,6 +103,17 @@ uniform float detail_blend_freq = 0.05;
 // be tier-driven later.
 uniform float detail_strength : hint_range(0.0, 1.0) = 0.5;
 
+// --- Terrain edge haze ---
+//
+// Minimal terrain-only haze for the current finite clipmap. The full
+// Atmosphere system owns sky/fog later; this pass hides the hard outer
+// clipmap edge and late page visibility during walking-demo review.
+uniform bool terrain_haze_enabled = false;
+uniform float terrain_haze_start_m = 1000000.0;
+uniform float terrain_haze_end_m = 1000001.0;
+uniform float terrain_haze_strength : hint_range(0.0, 1.0) = 0.0;
+uniform vec3 terrain_haze_color : source_color = vec3(0.646, 0.656, 0.674);
+
 // --- LOD morph (per-ring driven by ClipmapDispatch) ---
 //
 // morph_factor is the per-ring "how close to the outer boundary is the
@@ -327,6 +338,14 @@ void fragment() {
         vec4 det = w5_detail_blend(detail_array, detail_uv, world_xz,
             detail_count, detail_blend_freq);
         base = mix(base, det.rgb, detail_strength * det.a);
+    }
+
+    if (terrain_haze_enabled) {
+        float haze_dist = distance(world_xz, ring_center_xz);
+        float haze_t = smoothstep(terrain_haze_start_m,
+            max(terrain_haze_end_m, terrain_haze_start_m + 0.01), haze_dist);
+        base = mix(base, terrain_haze_color,
+            haze_t * clamp(terrain_haze_strength, 0.0, 1.0));
     }
 
     ALBEDO = base;

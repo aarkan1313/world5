@@ -107,7 +107,9 @@ Things to record if the demo misbehaves:
 
 Run all 5 quality tiers via the demo by editing the TerrainWorld's
 `quality_tier_override` property in the scene file (`high` is the
-default). Per-tier `terrain_rings` values come from
+default). The demo leaves terrain geometry exports at defaults, so
+TerrainWorld consumes `terrain_rings`, `terrain_grid_n`,
+`terrain_step0_m`, and `streaming_budget_cpu_pages` from
 `engine/resources/quality_tiers.json`:
 
 - low: 3 rings

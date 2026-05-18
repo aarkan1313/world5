@@ -35,6 +35,16 @@ class_name TerrainWorld extends Node3D
 @export var terrain_pages_max: int = 64
 
 
+# Runtime defaults. If scene exports are left at these values,
+# QualityTiers may replace them before modules are built.
+const DEFAULT_RING_COUNT: int = 6
+const DEFAULT_RING_VERTEX_GRID: int = 256
+const DEFAULT_INNER_CELL_SIZE_M: float = 0.5
+const DEFAULT_TERRAIN_PAGES_MAX: int = 64
+const DEFAULT_TERRAIN_HAZE_COLOR: Color = Color(0.646, 0.656, 0.674, 1.0)
+const DEFAULT_TERRAIN_HAZE_STRENGTH: float = 0.70
+
+
 # --- signals ---
 signal world_loaded()
 signal world_unloaded()
@@ -67,10 +77,10 @@ var _ring_height_arrays: Array = []  # Array[RingHeightArray]
 var _camera: Node3D = null
 var _loaded: bool = false
 var _full_detail: bool = false
-# Last camera-XZ a residency update saw (rounded to page boundary),
-# used to skip the per-frame diff when the camera hasn't crossed a
-# page edge (TR-SPEC-S6 + TR-PERF-S1 fix).
-var _last_residency_camera_xz: Vector2 = Vector2(NAN, NAN)
+# Last required page-set signature sent to ResidencyManager. The visible
+# ring footprint can enter a new page before the camera's own page changes,
+# so dirty-check the actual requirements, not just camera page coord.
+var _last_residency_signature: String = ""
 # Page bookkeeping for full-detail readiness check + spec'd
 # get_resident_pages() shape (TR-SPEC-C3 + TR-SPEC-S1).
 # Key = "ring:x:z" → {ring, xz, age_ms}
@@ -80,6 +90,7 @@ var _page_load_times: Dictionary = {}
 # --- lifecycle ---
 
 func _ready() -> void:
+	_apply_quality_tier_defaults()
 	_build_modules()
 	if world_bundle_path != "":
 		_load_world_bundle(world_bundle_path)
@@ -128,22 +139,40 @@ func _process(_delta: float) -> void:
 				_material_pipeline.set_ring_morph(mat as ShaderMaterial,
 					ring.snapped_center, half_extent, morph_band_fraction)
 
-	# 3. Residency update — dirty-check: only re-diff when camera crossed
-	# a page boundary (TR-SPEC-S6 + TR-PERF-S1 fix). At rest with no
-	# motion, this skips ~all the per-frame dict work.
-	var cam_page_xz: Vector2 = Vector2(
-		floor(cam_xz.x / page_extent_m),
-		floor(cam_xz.y / page_extent_m),
-	)
-	if cam_page_xz != _last_residency_camera_xz:
-		_last_residency_camera_xz = cam_page_xz
-		var required: Array = []
-		for i in range(_rings.size()):
-			var ring: ClipmapRing = _rings[i]
-			var ring_extent: float = float(ring_vertex_grid - 1) * ring.cell_size_m
-			required.append_array(_residency.required_pages_for_ring(
-				cam_xz, i, ring_extent))
+	# 3. Residency update. Dirty-check the actual required page set.
+	# A ring can expose a new edge page while the camera is still inside
+	# the same page; checking only camera page coord leaves flat placeholder
+	# layers visible until the player crosses the page boundary.
+	var required: Array = _required_pages_for_camera(cam_xz)
+	var residency_signature: String = _required_pages_signature(required)
+	if residency_signature != _last_residency_signature:
+		_last_residency_signature = residency_signature
 		_residency.update(required)
+
+
+func _required_pages_for_camera(cam_xz: Vector2) -> Array:
+	var required: Array = []
+	for i in range(_rings.size()):
+		var ring: ClipmapRing = _rings[i]
+		var ring_extent: float = float(ring_vertex_grid - 1) * ring.cell_size_m
+		required.append_array(_residency.required_pages_for_ring(
+			cam_xz, i, ring_extent))
+	return required
+
+
+func _required_pages_signature(required: Array) -> String:
+	var out: String = ""
+	for i in range(required.size()):
+		var entry: Dictionary = required[i]
+		var xz: Vector2 = entry["xz"]
+		if i > 0:
+			out += "|"
+		out += "%d:%d:%d" % [
+			int(entry["ring"]),
+			int(xz.x),
+			int(xz.y),
+		]
+	return out
 
 
 # --- public API ---
@@ -223,13 +252,40 @@ func get_debug_state() -> Dictionary:
 	}
 
 
+func _active_quality_tier() -> Dictionary:
+	return QualityTiers.get_tier(quality_tier_override) \
+		if quality_tier_override != "" else QualityTiers.get_current()
+
+
+func _active_quality_tier_name() -> String:
+	var tier: Dictionary = _active_quality_tier()
+	return String(tier.get("tier_name", "high"))
+
+
+func _apply_quality_tier_defaults() -> void:
+	var tier: Dictionary = _active_quality_tier()
+	if tier.is_empty():
+		return
+
+	# Preserve deliberate scene/test overrides. The tier fills only the
+	# exported defaults that would otherwise drift from quality_tiers.json.
+	if ring_count == DEFAULT_RING_COUNT:
+		ring_count = int(tier.get("terrain_rings", ring_count))
+	if ring_vertex_grid == DEFAULT_RING_VERTEX_GRID:
+		ring_vertex_grid = int(tier.get("terrain_grid_n", ring_vertex_grid))
+	if is_equal_approx(inner_cell_size_m, DEFAULT_INNER_CELL_SIZE_M):
+		inner_cell_size_m = float(tier.get("terrain_step0_m", inner_cell_size_m))
+	if terrain_pages_max == DEFAULT_TERRAIN_PAGES_MAX:
+		terrain_pages_max = int(tier.get(
+			"streaming_budget_cpu_pages", terrain_pages_max))
+
+
 # --- module construction ---
 
 func _build_modules() -> void:
 	_geometry = ClipmapGeometry.new()
 	_dispatch = ClipmapDispatch.new()
 	_cache = TerrainPageCache.new()
-	_cache.set_budget(terrain_pages_max)
 	_material_pipeline = MaterialPipeline.new()
 	_macro = MacroAlbedo.new()
 	_slots = SurfaceSlotMask.new()
@@ -253,7 +309,7 @@ func _build_modules() -> void:
 	# (height_gpu wires here when MaterialPipeline.bind_height_map_rd
 	# lands per spec 08a; today we bind CPU→ImageTexture per-load).
 	_streaming.configure(_adapter, _cache, page_extent_m, ring_vertex_grid,
-		0, "high", _kernel, ["height_cpu"])
+		0, _active_quality_tier_name(), _kernel, ["height_cpu"])
 	add_child(_streaming)
 
 	# Now configure residency with the streaming back-ref.
@@ -287,12 +343,65 @@ func _build_modules() -> void:
 		rha.configure(ring_extent_m, page_extent_m)
 		_ring_height_arrays.append(rha)
 
+	var min_visible_pages: int = _minimum_visible_height_pages()
+	if terrain_pages_max > 0 and terrain_pages_max < min_visible_pages:
+		Log.info("terrain_world",
+			"raising terrain page cache budget to visible height working set",
+			{"configured": terrain_pages_max, "required": min_visible_pages})
+		_cache.set_budget(min_visible_pages)
+	else:
+		_cache.set_budget(terrain_pages_max)
+
+	_bind_terrain_haze_from_tier()
+
 	# Diagnostics overlay (off by default per @export var)
 	_diag = RingDebugOverlay.new()
 	_diag.name = "RingDebugOverlay"
 	add_child(_diag)
 	_diag.bind_rings(_rings)
 	_diag.set_enabled(debug_overlay)
+
+
+func _minimum_visible_height_pages() -> int:
+	var total: int = 0
+	for rha in _ring_height_arrays:
+		var pages: int = int(rha.pages_per_side)
+		total += pages * pages
+	return total
+
+
+func _outer_terrain_radius_m() -> float:
+	if ring_count <= 0:
+		return 0.0
+	return float(ring_vertex_grid - 1) * inner_cell_size_m \
+		* pow(2.0, ring_count - 1) * 0.5
+
+
+func _bind_terrain_haze_from_tier() -> void:
+	var tier: Dictionary = _active_quality_tier()
+	if tier.is_empty():
+		return
+	var outer_radius: float = _outer_terrain_radius_m()
+	if outer_radius <= 0.0:
+		return
+	var visibility_m: float = float(tier.get(
+		"visibility_ship_distance_m", outer_radius))
+	var haze_basis: float = min(max(visibility_m, 0.0), outer_radius)
+	if haze_basis <= 0.0:
+		return
+
+	var start_frac: float = clamp(float(tier.get(
+		"visibility_haze_start_fraction", 0.65)), 0.0, 1.0)
+	var end_frac: float = clamp(float(tier.get(
+		"visibility_haze_end_fraction", 1.0)), 0.0, 1.0)
+	var haze_start_m: float = haze_basis * min(start_frac, end_frac)
+	var haze_end_m: float = max(haze_start_m + 0.01, haze_basis * end_frac)
+	for ring in _rings:
+		var mat: Material = ring.mesh_instance.material_override
+		if mat is ShaderMaterial:
+			_material_pipeline.bind_terrain_haze(mat as ShaderMaterial,
+				true, haze_start_m, haze_end_m,
+				DEFAULT_TERRAIN_HAZE_STRENGTH, DEFAULT_TERRAIN_HAZE_COLOR)
 
 
 # --- world bundle loading ---
@@ -630,8 +739,7 @@ func _bind_slots_with_catalog(sta: SiblingTextureArray,
 	# Phase 5.4.b audit C3 fix: bind per-tier sibling_blend_freq from
 	# quality_tiers.json. Higher tiers afford finer-frequency noise =
 	# less visible tile repeat at standing eye height.
-	var tier: Dictionary = QualityTiers.get_tier(quality_tier_override) \
-		if quality_tier_override != "" else QualityTiers.get_current()
+	var tier: Dictionary = _active_quality_tier()
 	var blend_freq: float = float(tier.get("terrain_sibling_blend_freq", 0.30))
 
 	for ring in _rings:

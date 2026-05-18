@@ -174,9 +174,8 @@ func layer_for_page_coord(page_xz: Vector2) -> int:
 ##
 ## Output is a Texture2DArray with `pages_per_side * pages_per_side`
 ## layers, indexed as `layer = page_y * pages_per_side + page_x`.
-## Missing pages (not yet streamed) get a placeholder zero image so
-## the array indexing is always valid; the shader treats missing
-## pages as flat ground (height = 0.5 → world y = 0).
+## Missing pages (not yet streamed) borrow the nearest resident image so
+## the array indexing is always valid; this avoids flat boundary slabs.
 func build_texture_array() -> Texture2DArray:
 	if _images_by_local_coord.is_empty():
 		return null
@@ -195,7 +194,8 @@ func build_texture_array() -> Texture2DArray:
 			if _images_by_local_coord.has(key):
 				imgs[layer] = _images_by_local_coord[key]
 			else:
-				imgs[layer] = _placeholder_image(page_n)
+				imgs[layer] = _fallback_image_for_local_coord(
+					Vector2i(px, py), page_n)
 	var arr: Texture2DArray = Texture2DArray.new()
 	arr.create_from_images(imgs)
 	return arr
@@ -212,6 +212,26 @@ func _local_coord(page_xz: Vector2) -> Vector2i:
 	var lx: int = int(round((page_xz.x - min_xz.x) / page_extent_m))
 	var ly: int = int(round((page_xz.y - min_xz.y) / page_extent_m))
 	return Vector2i(lx, ly)
+
+
+func _fallback_image_for_local_coord(coord: Vector2i, n: int) -> Image:
+	var best_img: Image = null
+	var best_dist: int = 2147483647
+	for key in _images_by_local_coord.keys():
+		var parts: PackedStringArray = String(key).split(":")
+		if parts.size() != 2:
+			continue
+		var lx: int = int(parts[0])
+		var ly: int = int(parts[1])
+		var dx: int = lx - coord.x
+		var dy: int = ly - coord.y
+		var dist: int = dx * dx + dy * dy
+		if best_img == null or dist < best_dist:
+			best_dist = dist
+			best_img = _images_by_local_coord[key]
+	if best_img != null:
+		return best_img
+	return _placeholder_image(n)
 
 
 func _placeholder_image(n: int) -> Image:

@@ -55,6 +55,24 @@ func test_nav_grid_n_matches_spec_33() -> void:
 			"%s nav_grid_n" % name)
 
 
+func test_terrain_step_n_matches_outer_ring_cell_size() -> void:
+	for name in QualityTiers.TIER_NAMES:
+		var tier: Dictionary = QualityTiers.get_tier(name)
+		var rings: int = int(tier["terrain_rings"])
+		var step0: float = float(tier["terrain_step0_m"])
+		var expected_step_n: float = step0 * pow(2.0, rings - 1)
+		assert_almost_eq(float(tier["terrain_stepN_m"]), expected_step_n, 0.001,
+			"%s terrain_stepN_m matches step0 * 2^(rings - 1)" % name)
+
+
+func test_terrain_cpu_page_budget_covers_visible_working_set() -> void:
+	for name in QualityTiers.TIER_NAMES:
+		var tier: Dictionary = QualityTiers.get_tier(name)
+		var required: int = _visible_page_working_set(tier)
+		assert_gte(int(tier["streaming_budget_cpu_pages"]), required,
+			"%s cpu_pages budget covers current clipmap height arrays" % name)
+
+
 func test_get_current_default_high() -> void:
 	# No ProjectSettings override; default should be 'high'
 	if ProjectSettings.has_setting("world5/quality_tier"):
@@ -72,3 +90,17 @@ func test_load_idempotent() -> void:
 	var second := QualityTiers.load_config()
 	# Dictionary equality is structural in GDScript
 	assert_eq(first, second, "load() is idempotent")
+
+
+func _visible_page_working_set(tier: Dictionary) -> int:
+	var total: int = 0
+	var grid_n: int = int(tier["terrain_grid_n"])
+	var step0: float = float(tier["terrain_step0_m"])
+	var rings: int = int(tier["terrain_rings"])
+	var page_extent_m: float = 256.0
+	for ring in range(rings):
+		var extent_m: float = float(grid_n - 1) * step0 * pow(2.0, ring)
+		var raw: float = extent_m / page_extent_m
+		var pages_per_side: int = 2 if raw <= 1.0 else int(ceil(raw)) + 1
+		total += pages_per_side * pages_per_side
+	return total

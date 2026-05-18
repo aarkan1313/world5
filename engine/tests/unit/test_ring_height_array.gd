@@ -144,6 +144,19 @@ func test_build_texture_array_empty_returns_null() -> void:
 # --- rebase (Phase 4.10.b — PITFALLS #14 fix) ---
 
 
+func test_missing_page_fallback_uses_nearest_resident_image() -> void:
+	var rha: RingHeightArray = RingHeightArray.new()
+	rha.configure(510.0, 256.0)  # pages_per_side = 3
+	rha.set_min_corner(Vector2(0.0, 0.0))
+	var img: Image = _solid_height_image(8, 0.25)
+	rha.add_page(Vector2(0.0, 0.0), img)
+
+	var fallback: Image = rha._fallback_image_for_local_coord(Vector2i(2, 2), 8)
+	assert_not_null(fallback)
+	assert_almost_eq(fallback.get_pixel(0, 0).r, 0.25, 0.001,
+		"missing layers borrow resident height instead of flat 0.5")
+
+
 func test_rebase_keeps_in_window_pages() -> void:
 	# When the ring snaps to a new min_xz, pages still inside the new
 	# window must keep their image content; their local coords get
