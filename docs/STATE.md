@@ -166,6 +166,27 @@ sweep runs against the most-evolved spec set).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
+- 2026-05-18 evening (DEM/runtime-kernels epic sprints 1+2 closed):
+  Walking demo's catalog-declared `noise_stack + erosion` chain now
+  runs at runtime via GPU compute — alpine biome shows visibly eroded
+  terrain instead of pure fBm noise (resolves user's "world gen is
+  bumpy noise" concern). Sprint 1 added ErosionKernel.gd config +
+  KernelComposer.gd chain orchestrator + GLSL hydraulic/thermal
+  compute shaders + GpuTerrainBackend chain dispatch (allocates
+  persistent height/water/sediment/velocity/drainage buffers,
+  ping-pongs thermal, interleaves per Python ref cadence) +
+  TerrainPageRequest composer field + PageStreamingJob composer
+  pass-through + TerrainWorld loader switch (catalog wins over
+  legacy noise_stack.json). 32 new GDScript unit tests. Sprint 2
+  added Python DemFeatureKernel reference (ridge_emphasis /
+  drainage_accumulation / slope_deg / aspect_deg via
+  scipy.ndimage + rasterio) + 19 pytest cases + bundle DEM schema
+  + tx_dem_prepare tool (smoke-tested against W3's Cascades DEM).
+  Total: 193 pytest (was 174), gut + preflight green. See
+  build-notes/sprint_1_runtime_kernels_2026_05_18.md +
+  plans/19_DEM_AND_RUNTIME_KERNELS_PLAN.md. 7 commits ahead of
+  pre-epic baseline; all pushed to origin.
+
 - 2026-05-18 (Phase 6 closed — multi-biome rendering end-to-end):
   Walking demo now renders alpine + forest with proper per-fragment
   biome_weights × slot weights. Fixed cascading rendering bugs that
