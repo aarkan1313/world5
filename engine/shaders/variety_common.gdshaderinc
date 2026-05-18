@@ -212,139 +212,90 @@ float w5_region_neighbor_mix(float d, float blend_m) {
     return clamp(1.0 - d / blend_m, 0.0, 1.0) * 0.5;
 }
 
-// Heitz-Neyret 2018 sampling on a single sibling layer of a Texture2DArray.
+// W3 M11-derived hex-cell stochastic UV sampling (the proven anti-repeat
+// + variance-preserving blend from world3/shaders/terrain_splat_unified.gdshader).
 //
-// Picks a triangle in a regular UV-space lattice, computes barycentric
-// weights, samples the layer at three offset+rotated UVs (one per vertex),
-// then variance-corrects the blend so the histogram is preserved.
-// T_inv_array (same shape as `array`, layer matched 1:1) carries the
-// per-channel inverse-CDF LUT (Gaussianized histogram); the final color
-// is T_inv(weighted sum of T(samples)) — i.e. the inverse-histogram-
-// transform that kills the contrast loss of plain averaging.
+// Per Heitz & Neyret 2018 §3 + W3's working impl:
+//   1. Skew UV into a triangle lattice via mat2([K,0],[-K/2,K]) where
+//      K = 1.15470054 (= 2/sqrt(3)).
+//   2. Pick the triangle the fragment is in; compute barycentric (w0,w1,w2).
+//   3. For each vertex, hash-jitter the UV + hash-rotate, sample.
+//   4. Variance-corrected blend: mean + (w0*d0+w1*d1+w2*d2)/sqrt(w0²+w1²+w2²)
+//      where di = si - mean. This preserves CONTRAST (the histogram
+//      variance), unlike plain weighted average which collapses it.
 //
-// References:
-// - Heitz & Neyret 2018, "High-Performance By-Example Noise using a
-//   Histogram-Preserving Blending Operator" §5
-// - Procedural Stochastic Textures by Tiling and Blending (GPU Zen 2)
-//
-// The T_inv LUT is 256×1 stored in a layer-matched Texture2DArray. If
-// has_t_inv is false the function falls back to plain blend (still
-// useful since rotation+offset alone kill repeat; only contrast suffers).
-vec4 w5_hn_sample(sampler2DArray array, vec2 uv, int layer,
-        sampler2DArray t_inv_array, bool has_t_inv) {
-    // Skew UV into triangle lattice. The 2.0 scale gives ~1-tile triangles
-    // (Heitz uses sqrt(3.0); 2.0 is the simpler integer variant used by
-    // GPU Zen 2's sample code).
-    vec2 skewed = uv + vec2(uv.y * 0.5, 0.0);
-    vec2 vbase = floor(skewed);
-    vec2 vfrac = fract(skewed);
-    // Pick upper or lower triangle of the skewed square.
-    vec2 v0 = vbase;
-    vec2 v1, v2;
-    float w0, w1, w2;
-    if (vfrac.x + vfrac.y < 1.0) {
-        v1 = vbase + vec2(1.0, 0.0);
-        v2 = vbase + vec2(0.0, 1.0);
-        w0 = 1.0 - vfrac.x - vfrac.y;
-        w1 = vfrac.x;
-        w2 = vfrac.y;
-    } else {
-        v0 = vbase + vec2(1.0, 1.0);
-        v1 = vbase + vec2(1.0, 0.0);
-        v2 = vbase + vec2(0.0, 1.0);
-        w0 = vfrac.x + vfrac.y - 1.0;
-        w1 = 1.0 - vfrac.y;
-        w2 = 1.0 - vfrac.x;
-    }
-    // Per-vertex pseudo-random offset (and small rotation) breaks linear repeats.
-    // hash12 already in this file.
-    vec2 off0 = vec2(w5_variety_hash(v0), w5_variety_hash(v0 + vec2(11.1, 17.7))) * 64.0;
-    vec2 off1 = vec2(w5_variety_hash(v1), w5_variety_hash(v1 + vec2(11.1, 17.7))) * 64.0;
-    vec2 off2 = vec2(w5_variety_hash(v2), w5_variety_hash(v2 + vec2(11.1, 17.7))) * 64.0;
-    vec2 uv0 = fract(uv + off0);
-    vec2 uv1 = fract(uv + off1);
-    vec2 uv2 = fract(uv + off2);
-    vec4 s0 = texture(array, vec3(uv0, float(layer)));
-    vec4 s1 = texture(array, vec3(uv1, float(layer)));
-    vec4 s2 = texture(array, vec3(uv2, float(layer)));
-    if (!has_t_inv) {
-        // Plain weighted blend (offsets+rotations alone still help vs
-        // raw repeat; just loses contrast).
-        return s0 * w0 + s1 * w1 + s2 * w2;
-    }
-    // Variance-preserving Gaussian blend per Heitz §3. Map each sample
-    // through T (the forward histogram transform) via the inverse LUT's
-    // forward pair stored in the same array's green/blue/alpha if needed.
-    // Simplified single-channel-luma variant: use the LUT as a 1D remap
-    // applied per RGB channel. Forward transform G(x) = sqrt(2)*erfinv(2x-1)
-    // is approximated by sampling t_inv as the inverse — we apply T (forward)
-    // here as a no-op + variance correction, then T_inv to remap.
-    //
-    // Pragmatic shortcut: sample t_inv at the weighted sum's luminance to
-    // remap. This isn't full HN correctness but recovers most of the
-    // contrast loss for our use case (single-luma siblings, snow + dirt).
-    vec4 blended = s0 * w0 + s1 * w1 + s2 * w2;
-    // Variance correction: scale residual from mean by 1/sqrt(w0²+w1²+w2²)
-    // (Heitz eq. 6 simplified — variance of weighted sum of unit-variance
-    // independents). Mean ≈ blended for our sources.
-    float vsum = sqrt(w0 * w0 + w1 * w1 + w2 * w2);
-    vec3 mean = blended.rgb;
-    vec3 residual = (s0.rgb * w0 + s1.rgb * w1 + s2.rgb * w2 - mean) / max(vsum, 0.001);
-    vec3 v_corrected = mean + residual * vsum;
-    // Per-channel T_inv lookup. LUT is 256×1; sample at the corrected value.
-    float r = texture(t_inv_array, vec3(v_corrected.r, 0.5, float(layer))).r;
-    float g = texture(t_inv_array, vec3(v_corrected.g, 0.5, float(layer))).g;
-    float b = texture(t_inv_array, vec3(v_corrected.b, 0.5, float(layer))).b;
-    return vec4(r, g, b, blended.a);
+// W3 shipped this and it looked right. My earlier HN attempt had a no-op
+// variance correction + broken T_inv LUT remap. This replaces both.
+vec2 w5_hash22(vec2 p) {
+    p = vec2(dot(p, vec2(127.1, 311.7)),
+             dot(p, vec2(269.5, 183.3)));
+    return fract(sin(p) * 43758.5453) * 2.0 - 1.0;
 }
 
-// Combined sampler. The intended Phase 6+ Layer 1 entry point.
-//
-// 1. Compute the integer region (region_x, region_z) for this fragment.
-// 2. Pick the region's variant (start + region_pick(count)).
-// 3. HN-sample that variant.
-// 4. If within edge_blend_m of any region border, also sample the
-//    neighbor region's variant and crossfade (up to 4-way at corners).
-//
-// Arguments:
-//   array, t_inv_array: layer-matched Texture2DArrays
-//   has_t_inv:          false to skip HN's variance correction (falls back
-//                       to plain weighted average within HN3)
-//   tile_uv:            world_xz / tile_m (passed to HN)
-//   world_xz:           raw world coords (drives region lookup)
-//   start, count:       sibling window within array
-//   region_size_m:      world meters per region (e.g. 64 → variants change ~every 64m)
-//   edge_blend_m:       world meters of crossfade at borders (0 = hard borders)
-//   seed, salt:         scene seed + slot salt for region hash
-vec4 w5_variety_sample_combined(
-        sampler2DArray array, sampler2DArray t_inv_array, bool has_t_inv,
-        vec2 tile_uv, vec2 world_xz,
+float w5_hash21(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+vec4 w5_hex_sample_jittered(sampler2DArray array, vec2 uv, int layer, vec2 cell) {
+    vec2 jitter = w5_hash22(cell) * 0.5;
+    float rot = w5_hash21(cell + 17.31) * 6.2831853;
+    float c = cos(rot);
+    float s = sin(rot);
+    mat2 R = mat2(vec2(c, -s), vec2(s, c));
+    return texture(array, vec3(fract(R * uv + jitter), float(layer)));
+}
+
+void w5_hex_weights(vec2 uv, out vec2 c0, out vec2 c1, out vec2 c2,
+                    out float w0, out float w1, out float w2) {
+    const float K = 1.15470054;
+    mat2 GRID_TO_SKEW = mat2(vec2(K, 0.0), vec2(-K * 0.5, K));
+    vec2 skewed = GRID_TO_SKEW * uv;
+    vec2 ip = floor(skewed);
+    vec2 fp = skewed - ip;
+    if (fp.x + fp.y < 1.0) {
+        c0 = ip; c1 = ip + vec2(1.0, 0.0); c2 = ip + vec2(0.0, 1.0);
+        w0 = 1.0 - fp.x - fp.y; w1 = fp.x; w2 = fp.y;
+    } else {
+        c0 = ip + vec2(1.0, 0.0); c1 = ip + vec2(0.0, 1.0); c2 = ip + vec2(1.0, 1.0);
+        w0 = 1.0 - fp.y; w1 = 1.0 - fp.x; w2 = fp.x + fp.y - 1.0;
+    }
+}
+
+// Albedo path: variance-preserving blend (preserves histogram contrast).
+vec4 w5_hex_sample_albedo(sampler2DArray array, vec2 uv, int layer) {
+    vec2 c0, c1, c2; float w0, w1, w2;
+    w5_hex_weights(uv, c0, c1, c2, w0, w1, w2);
+    vec4 s0 = w5_hex_sample_jittered(array, uv, layer, c0);
+    vec4 s1 = w5_hex_sample_jittered(array, uv, layer, c1);
+    vec4 s2 = w5_hex_sample_jittered(array, uv, layer, c2);
+    vec3 mean = (s0.rgb + s1.rgb + s2.rgb) / 3.0;
+    vec3 d0 = s0.rgb - mean;
+    vec3 d1 = s1.rgb - mean;
+    vec3 d2 = s2.rgb - mean;
+    float ws = sqrt(w0 * w0 + w1 * w1 + w2 * w2);
+    return vec4(mean + (w0 * d0 + w1 * d1 + w2 * d2) / max(ws, 1e-4),
+                s0.a * w0 + s1.a * w1 + s2.a * w2);
+}
+
+// One-plane variety sample: pick a variant by region hash, hex-sample it.
+// `uv` is in plane-units (already scaled by 1/tile_m). Caller picks the
+// plane (X-projected vs Y-projected vs Z-projected for triplanar).
+vec4 w5_variety_sample_plane(
+        sampler2DArray array, vec2 uv, vec2 region_xz,
         int start, int count,
         float region_size_m, float edge_blend_m,
-        int seed, int salt, bool hn_enabled) {
+        int seed, int salt) {
     if (count <= 0) return vec4(0.0);
-    if (region_size_m <= 0.001) {
-        // No region system → sample first variant.
-        if (hn_enabled) {
-            return w5_hn_sample(array, fract(tile_uv), start,
-                t_inv_array, has_t_inv);
-        }
-        return texture(array, vec3(fract(tile_uv), float(start)));
+    if (count == 1 || region_size_m <= 0.001) {
+        return w5_hex_sample_albedo(array, uv, start);
     }
-    vec2 region_f = floor(world_xz / region_size_m);
+    vec2 region_f = floor(region_xz / region_size_m);
     ivec2 region = ivec2(int(region_f.x), int(region_f.y));
     int v_center = w5_region_pick_variant(seed, salt, region, count);
-    vec4 c_center = hn_enabled
-        ? w5_hn_sample(array, fract(tile_uv),
-            start + v_center, t_inv_array, has_t_inv)
-        : texture(array, vec3(fract(tile_uv), float(start + v_center)));
-    if (edge_blend_m <= 0.001 || count <= 1) {
-        return c_center;
-    }
-    vec2 local_m = world_xz - region_f * region_size_m;
-    // Determine neighbor offsets we need to sample.
-    int x_off = 0;
-    int z_off = 0;
+    vec4 c_center = w5_hex_sample_albedo(array, uv, start + v_center);
+    if (edge_blend_m <= 0.001) return c_center;
+    vec2 local_m = region_xz - region_f * region_size_m;
+    int x_off = 0; int z_off = 0;
     float x_dist = region_size_m;
     float z_dist = region_size_m;
     if (local_m.x < edge_blend_m) {
@@ -357,12 +308,9 @@ vec4 w5_variety_sample_combined(
     } else if (region_size_m - local_m.y < edge_blend_m) {
         z_off = 1; z_dist = region_size_m - local_m.y;
     }
-    if (x_off == 0 && z_off == 0) {
-        return c_center;
-    }
+    if (x_off == 0 && z_off == 0) return c_center;
     float x_mix = (x_off != 0) ? w5_region_neighbor_mix(x_dist, edge_blend_m) : 0.0;
     float z_mix = (z_off != 0) ? w5_region_neighbor_mix(z_dist, edge_blend_m) : 0.0;
-    // 4-corner weights (some will be zero if not in a corner).
     float w_cc = (1.0 - x_mix) * (1.0 - z_mix);
     float w_xc = x_mix * (1.0 - z_mix);
     float w_cz = (1.0 - x_mix) * z_mix;
@@ -371,41 +319,60 @@ vec4 w5_variety_sample_combined(
     if (x_off != 0) {
         int v = w5_region_pick_variant(seed, salt,
             ivec2(region.x + x_off, region.y), count);
-        if (v != v_center) {
-            vec4 sx = hn_enabled
-                ? w5_hn_sample(array, fract(tile_uv),
-                    start + v, t_inv_array, has_t_inv)
-                : texture(array, vec3(fract(tile_uv), float(start + v)));
-            acc += sx * w_xc;
-        } else {
-            acc += c_center * w_xc;
-        }
+        acc += (v != v_center
+            ? w5_hex_sample_albedo(array, uv, start + v)
+            : c_center) * w_xc;
     }
     if (z_off != 0) {
         int v = w5_region_pick_variant(seed, salt,
             ivec2(region.x, region.y + z_off), count);
-        if (v != v_center) {
-            vec4 sz = hn_enabled
-                ? w5_hn_sample(array, fract(tile_uv),
-                    start + v, t_inv_array, has_t_inv)
-                : texture(array, vec3(fract(tile_uv), float(start + v)));
-            acc += sz * w_cz;
-        } else {
-            acc += c_center * w_cz;
-        }
+        acc += (v != v_center
+            ? w5_hex_sample_albedo(array, uv, start + v)
+            : c_center) * w_cz;
     }
     if (x_off != 0 && z_off != 0) {
         int v = w5_region_pick_variant(seed, salt,
             ivec2(region.x + x_off, region.y + z_off), count);
-        if (v != v_center) {
-            vec4 sxz = hn_enabled
-                ? w5_hn_sample(array, fract(tile_uv),
-                    start + v, t_inv_array, has_t_inv)
-                : texture(array, vec3(fract(tile_uv), float(start + v)));
-            acc += sxz * w_xz;
-        } else {
-            acc += c_center * w_xz;
-        }
+        acc += (v != v_center
+            ? w5_hex_sample_albedo(array, uv, start + v)
+            : c_center) * w_xz;
     }
     return acc;
+}
+
+// Triplanar variety sample. Samples the sibling array from XY, XZ, YZ
+// planes and blends by the absolute world normal. Steep slopes get the
+// X- or Z-projected sample instead of the stretched-vertically XZ one.
+// Region selection always uses world XZ (region is a world-XZ grid;
+// triplanar swaps just the sampling plane).
+//
+// Arguments:
+//   array:          sibling Texture2DArray
+//   world_pos:      world XYZ
+//   world_normal:   normalized world-space surface normal
+//   tile_m:         world meters per tile (e.g. 8-16)
+//   blend_sharp:    triplanar blend exponent (4-8 typical)
+//   start, count:   sibling window
+//   region_size_m, edge_blend_m, seed, salt: region selection params
+vec4 w5_variety_sample_triplanar(
+        sampler2DArray array,
+        vec3 world_pos, vec3 world_normal,
+        float tile_m, float blend_sharp,
+        int start, int count,
+        float region_size_m, float edge_blend_m,
+        int seed, int salt) {
+    float scale = 1.0 / max(tile_m, 0.001);
+    vec2 uv_x = world_pos.zy * scale;  // projected from X axis
+    vec2 uv_y = world_pos.xz * scale;  // projected from Y axis (the "normal" planar UV)
+    vec2 uv_z = world_pos.xy * scale;  // projected from Z axis
+    vec3 w = pow(abs(world_normal), vec3(blend_sharp));
+    w /= max(w.x + w.y + w.z, 1e-5);
+    // Region selection is world-XZ based regardless of which plane we sample.
+    vec4 s_x = w5_variety_sample_plane(array, uv_x, world_pos.xz,
+        start, count, region_size_m, edge_blend_m, seed, salt);
+    vec4 s_y = w5_variety_sample_plane(array, uv_y, world_pos.xz,
+        start, count, region_size_m, edge_blend_m, seed, salt);
+    vec4 s_z = w5_variety_sample_plane(array, uv_z, world_pos.xz,
+        start, count, region_size_m, edge_blend_m, seed, salt);
+    return s_x * w.x + s_y * w.y + s_z * w.z;
 }

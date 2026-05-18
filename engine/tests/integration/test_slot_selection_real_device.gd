@@ -49,10 +49,8 @@ func test_low_elevation_picks_ground_slot() -> void:
 	var img: Image = await _render_slot_test_quad(-20.0)
 	assert_not_null(img, "viewport rendered an image")
 	var col: Color = _avg_color(img)
-	# Red dominant: r > b by clear margin. Threshold low because:
-	# - base mix only applies sibling at 0.7 weight (vs 0.3 fallback)
-	# - brightness modulator (0.85 + 0.30 * noise) attenuates further
-	# - tonemap reinhard squashes saturated channels
+	# Red dominant: r > b by clear margin. Threshold is still modest
+	# because tonemap reinhard squashes saturated channels.
 	# Pre-fix (no slot selection): both elevations render identical
 	# fallback-tinted color, so r-b ≈ 0. Any positive delta proves
 	# the per-fragment slot loop actually fired.

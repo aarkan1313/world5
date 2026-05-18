@@ -56,6 +56,13 @@ func make_ring_material(_ring_index: int,
 	mat.set_shader_parameter("sibling_start", 0)
 	mat.set_shader_parameter("sibling_count", 0)
 	mat.set_shader_parameter("has_siblings", false)
+	mat.set_shader_parameter("sibling_tile_m", 8.0)
+	mat.set_shader_parameter("sibling_normal_array", Texture2DArray.new())
+	mat.set_shader_parameter("sibling_roughness_array", Texture2DArray.new())
+	mat.set_shader_parameter("sibling_ao_array", Texture2DArray.new())
+	mat.set_shader_parameter("has_sibling_normals", false)
+	mat.set_shader_parameter("has_sibling_roughness", false)
+	mat.set_shader_parameter("has_sibling_ao", false)
 	# Layer 2 defaults: detail overlay disabled until bind_detail_array()
 	mat.set_shader_parameter("detail_count", 0)
 	mat.set_shader_parameter("has_detail", false)
@@ -230,6 +237,37 @@ func bind_sibling_array(mat: ShaderMaterial, array: Texture2DArray,
 func bind_sibling_blend_freq(mat: ShaderMaterial, freq: float) -> void:
 	var clamped: float = max(0.01, freq)
 	mat.set_shader_parameter("sibling_blend_freq", clamped)
+
+
+## Bind the world-space PBR tile size for sibling/slot textures.
+##
+## Per-tier in quality_tiers.json (terrain_pbr_tile_size_m). This feeds
+## the shader's sibling_tile_m so authored quality tiers, not shader
+## fallback defaults, control close-ground texture scale.
+func bind_sibling_tile_size_m(mat: ShaderMaterial, tile_size_m: float) -> void:
+	var clamped: float = max(0.01, tile_size_m)
+	mat.set_shader_parameter("sibling_tile_m", clamped)
+
+
+## Bind optional PBR maps that are layer-matched 1:1 with sibling_array.
+## TerrainWorld validates layer/window alignment before calling this so
+## shader layer indices can be reused safely for all maps.
+func bind_sibling_pbr_arrays(mat: ShaderMaterial,
+		normal_array: Texture2DArray,
+		roughness_array: Texture2DArray,
+		ao_array: Texture2DArray) -> void:
+	var has_normals: bool = normal_array != null
+	var has_roughness: bool = roughness_array != null
+	var has_ao: bool = ao_array != null
+	mat.set_shader_parameter("sibling_normal_array",
+		normal_array if has_normals else Texture2DArray.new())
+	mat.set_shader_parameter("sibling_roughness_array",
+		roughness_array if has_roughness else Texture2DArray.new())
+	mat.set_shader_parameter("sibling_ao_array",
+		ao_array if has_ao else Texture2DArray.new())
+	mat.set_shader_parameter("has_sibling_normals", has_normals)
+	mat.set_shader_parameter("has_sibling_roughness", has_roughness)
+	mat.set_shader_parameter("has_sibling_ao", has_ao)
 
 
 ## Bind a per-biome detail Texture2DArray with N overlay layers.

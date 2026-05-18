@@ -166,6 +166,23 @@ sweep runs against the most-evolved spec set).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
+- 2026-05-18 (Phase 6 closed — multi-biome rendering end-to-end):
+  Walking demo now renders alpine + forest with proper per-fragment
+  biome_weights × slot weights. Fixed cascading rendering bugs that
+  surfaced on first multi-biome launch: silent size-mismatch skipping
+  forest layers, broken mix()-chain slot accumulator, missing PBR
+  bindings (normal/roughness/AO), missing mesh tangents, no mipmaps
+  on sibling array, macro overlay contaminating slots at 35%, broken
+  HN sampler. Replaced with W3 M11-derived triplanar + hex sampling
+  + region-based variant selection + proper weighted-sum accumulator
+  math + per-biome ground-avg fallback color. 48 sibling layers per
+  array (6 slots × 8 variants), 48 T_inv LUTs, 5 layer-matched
+  PBR arrays. New tool: `pipeline/world5/textures/tx_hn_lut.py` for
+  per-channel inverse-CDF LUT generation. Diagnostic toggles
+  stripped. pytest 174 passed, gut + preflight green. See
+  build-notes/phase_6_close_2026_05_18.md. Roadmap Phase 6 row
+  flipped ⏸→✅.
+
 - 2026-05-17 (Roadmap-alignment pass — spec 13 + spec 42 amendments):
   Per user direction "we will just have to guess on the 3060,
   probably figure out a thing like 5090 is x amount of performance

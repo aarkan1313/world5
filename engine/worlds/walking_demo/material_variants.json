@@ -25,6 +25,31 @@
           "id": "v1_snow_over_rock_s45",
           "source": "ground_variants/v1_snow_over_rock_s45",
           "weight": 1.0
+        },
+        {
+          "id": "v2_firn_dense_base",
+          "source": "ground_variants/v2_firn_dense_base",
+          "weight": 1.0
+        },
+        {
+          "id": "v3_windpack_base",
+          "source": "ground_variants/v3_windpack_base",
+          "weight": 1.0
+        },
+        {
+          "id": "v4_local_fresh_powder",
+          "source": "ground_variants/v4_local_fresh_powder",
+          "weight": 1.0
+        },
+        {
+          "id": "v5_local_windpack",
+          "source": "ground_variants/v5_local_windpack",
+          "weight": 1.0
+        },
+        {
+          "id": "v6_local_firn_dense",
+          "source": "ground_variants/v6_local_firn_dense",
+          "weight": 1.0
         }
       ]
     },
@@ -51,6 +76,26 @@
           "id": "v2_lichen_moss_s45",
           "source": "mid_variants/v2_lichen_moss_s45",
           "weight": 1.0
+        },
+        {
+          "id": "v3_scree_base",
+          "source": "mid_variants/v3_scree_base",
+          "weight": 1.0
+        },
+        {
+          "id": "v4_wet_rock_moss_base",
+          "source": "mid_variants/v4_wet_rock_moss_base",
+          "weight": 1.0
+        },
+        {
+          "id": "v5_local_lichen_thin_snow",
+          "source": "mid_variants/v5_local_lichen_thin_snow",
+          "weight": 1.0
+        },
+        {
+          "id": "v6_local_moss_grey_rock",
+          "source": "mid_variants/v6_local_moss_grey_rock",
+          "weight": 1.0
         }
       ]
     },
@@ -74,8 +119,28 @@
           "weight": 1.0
         },
         {
-          "id": "v2_local_schist_layered",
-          "source": "rock_variants/v2_local_schist_layered",
+          "id": "v2_local_frost_shattered",
+          "source": "rock_variants/v2_local_frost_shattered",
+          "weight": 1.0
+        },
+        {
+          "id": "v3_local_schist_layered",
+          "source": "rock_variants/v3_local_schist_layered",
+          "weight": 1.0
+        },
+        {
+          "id": "v4_local_cracked_bedrock",
+          "source": "rock_variants/v4_local_cracked_bedrock",
+          "weight": 1.0
+        },
+        {
+          "id": "v5_granite_lichen_base",
+          "source": "rock_variants/v5_granite_lichen_base",
+          "weight": 1.0
+        },
+        {
+          "id": "v6_dark_slate_s_main",
+          "source": "rock_variants/v6_dark_slate_s_main",
           "weight": 1.0
         }
       ]
@@ -103,6 +168,26 @@
           "id": "v2_leaf_litter_s342",
           "source": "ground_variants/v2_leaf_litter_s342",
           "weight": 1.0
+        },
+        {
+          "id": "v3_dirt_mossy_base",
+          "source": "ground_variants/v3_dirt_mossy_base",
+          "weight": 1.0
+        },
+        {
+          "id": "v4_pine_needles_base",
+          "source": "ground_variants/v4_pine_needles_base",
+          "weight": 1.0
+        },
+        {
+          "id": "v5_local_dark_humus",
+          "source": "ground_variants/v5_local_dark_humus",
+          "weight": 1.0
+        },
+        {
+          "id": "v6_local_pine_needles_brown",
+          "source": "ground_variants/v6_local_pine_needles_brown",
+          "weight": 1.0
         }
       ]
     },
@@ -129,6 +214,26 @@
           "id": "v2_ferns_s45",
           "source": "mid_variants/v2_ferns_s45",
           "weight": 1.0
+        },
+        {
+          "id": "v3_roots_moss_base",
+          "source": "mid_variants/v3_roots_moss_base",
+          "weight": 1.0
+        },
+        {
+          "id": "v4_mossy_log_base",
+          "source": "mid_variants/v4_mossy_log_base",
+          "weight": 1.0
+        },
+        {
+          "id": "v5_local_lichen_on_rock_brown",
+          "source": "mid_variants/v5_local_lichen_on_rock_brown",
+          "weight": 1.0
+        },
+        {
+          "id": "v6_local_dark_moss_dense",
+          "source": "mid_variants/v6_local_dark_moss_dense",
+          "weight": 1.0
         }
       ]
     },
@@ -154,6 +259,26 @@
         {
           "id": "v2_granite_mossy_s45",
           "source": "rock_variants/v2_granite_mossy_s45",
+          "weight": 1.0
+        },
+        {
+          "id": "v3_bedrock_lichen_base",
+          "source": "rock_variants/v3_bedrock_lichen_base",
+          "weight": 1.0
+        },
+        {
+          "id": "v4_local_granite_grey",
+          "source": "rock_variants/v4_local_granite_grey",
+          "weight": 1.0
+        },
+        {
+          "id": "v5_local_bedrock_dark",
+          "source": "rock_variants/v5_local_bedrock_dark",
+          "weight": 1.0
+        },
+        {
+          "id": "v6_local_schist_layered",
+          "source": "rock_variants/v6_local_schist_layered",
           "weight": 1.0
         }
       ]

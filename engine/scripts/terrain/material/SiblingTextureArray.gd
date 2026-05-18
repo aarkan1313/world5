@@ -99,9 +99,9 @@ static func build(manifest: MaterialVariants, materials_root: String,
 			# correctly. Without mips, the GPU sparse-samples raw
 			# pixels — high-contrast textures (snow_over_rock,
 			# leaf_litter) collapse to flat-color washes at distance.
-			# 256×1 T_inv LUTs skip this since they're not view-
-			# distance-sampled. Phase 6 visual A/B 2026-05-17 hunt.
-			if img.get_width() > 256:
+			# 1D T_inv LUTs skip this since they're lookup tables, not
+			# view-distance-sampled terrain tiles.
+			if img.get_width() > 1 and img.get_height() > 1:
 				img.generate_mipmaps()
 			images.append(img)
 			count += 1

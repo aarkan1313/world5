@@ -1,7 +1,7 @@
 ## One-shot capture helper for agent-side visual review.
 ## Attached as a child of WalkingDemo via walking_demo_capture.tscn.
 ##
-## Reorients the WalkCamera to look down at the terrain, waits for
+## Reorients the WalkCamera to a walking-height terrain view, waits for
 ## pages to stream, captures the main viewport, saves a PNG, quits.
 
 extends Node
@@ -21,11 +21,12 @@ func _ready() -> void:
 		return
 	if cam.has_method("_capture_mouse"):
 		cam._capture_mouse(false)
-	# Oblique top-down angle so heightmap displacement is visible
-	# when textures land in Phase 5.
-	cam.position = Vector3(40.0, 70.0, 40.0)
-	cam.rotation_degrees = Vector3(-30.0, -45.0, 0.0)
-	cam.fov = 75.0
+	cam.set("terrain_follow_enabled", true)
+	cam.set("fly_mode", false)
+	# Walking-height oblique view so close-ground texture scale is visible.
+	cam.position = Vector3(40.0, 2.0, 40.0)
+	cam.rotation_degrees = Vector3(-18.0, -45.0, 0.0)
+	cam.fov = 70.0
 	cam.far = 5000.0
 
 

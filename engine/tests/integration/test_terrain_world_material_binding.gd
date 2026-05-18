@@ -38,6 +38,7 @@ func before_each() -> void:
 	_tw.inner_cell_size_m = 1.0
 	_tw.page_extent_m = 16.0
 	_tw.terrain_pages_max = 8
+	_tw.quality_tier_override = "high"
 	_tw.camera_path = NodePath("../Camera")
 
 
@@ -63,6 +64,12 @@ func _write_image(rel_path: String, color: Color, size: int = 8) -> void:
 	img.save_png(ProjectSettings.globalize_path(full))
 
 
+func _write_pbr_maps(rel_dir: String) -> void:
+	_write_image("%s/normal.png" % rel_dir, Color(0.5, 0.5, 1.0, 1.0))
+	_write_image("%s/roughness.png" % rel_dir, Color(0.75, 0.75, 0.75, 1.0))
+	_write_image("%s/ao.png" % rel_dir, Color(1.0, 1.0, 1.0, 1.0))
+
+
 func _write_json(rel_path: String, content: Dictionary) -> void:
 	var full: String = "%s/%s" % [FIXTURE_ROOT, rel_path]
 	DirAccess.make_dir_recursive_absolute(
@@ -79,10 +86,13 @@ func _build_world_with_textures() -> String:
 	# A 1-biome bundle with one base + 2 siblings + 2 detail tiles.
 	# Source paths are biome-relative per spec 24 short form.
 	_write_image("materials/biome_alpine/ground/albedo.png", Color(1, 0, 0, 1))
+	_write_pbr_maps("materials/biome_alpine/ground")
 	_write_image("materials/biome_alpine/ground_variants/v0_a/albedo.png",
 		Color(0, 1, 0, 1))
+	_write_pbr_maps("materials/biome_alpine/ground_variants/v0_a")
 	_write_image("materials/biome_alpine/ground_variants/v1_b/albedo.png",
 		Color(0, 0, 1, 1))
+	_write_pbr_maps("materials/biome_alpine/ground_variants/v1_b")
 	_write_image("materials/biome_alpine/detail/wet_albedo.png",
 		Color(0.2, 0.2, 0.8, 0.7))
 	_write_image("materials/biome_alpine/detail/moss_albedo.png",
@@ -157,6 +167,17 @@ func test_world_with_textures_flips_has_siblings_on_all_rings() -> void:
 			assert_not_null(windows, "slot_windows uniform must be set")
 			assert_eq(int((windows[0] as Vector4i).y), 3,
 				"ring %s slot_windows[0].y (count) must = 3 variants" % c.name)
+			assert_almost_eq(float(mat.get_shader_parameter("sibling_tile_m")),
+				8.0, 0.001,
+				"ring %s must bind high-tier terrain_pbr_tile_size_m" % c.name)
+			assert_eq((mat.get_shader_parameter("has_sibling_normals") as bool), true,
+				"ring %s must bind layer-matched normal maps" % c.name)
+			assert_eq((mat.get_shader_parameter("has_sibling_roughness") as bool), true,
+				"ring %s must bind layer-matched roughness maps" % c.name)
+			assert_eq((mat.get_shader_parameter("has_sibling_ao") as bool), true,
+				"ring %s must bind layer-matched AO maps" % c.name)
+			assert_true(mat.get_shader_parameter("sibling_normal_array") is Texture2DArray,
+				"ring %s normal map uniform must be a Texture2DArray" % c.name)
 	assert_gt(ring_count, 0, "test must find at least one ring")
 
 

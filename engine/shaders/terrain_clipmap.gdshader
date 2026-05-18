@@ -43,15 +43,12 @@ uniform float height_array_page_extent_m = 256.0;
 uniform sampler2D macro_albedo : repeat_disable, filter_linear;
 uniform vec4 macro_aabb = vec4(-1024.0, -1024.0, 1024.0, 1024.0);
 uniform vec3 fallback_color : source_color = vec3(0.35, 0.45, 0.25);
-// TEMP diagnostic 2026-05-17: toggle macro/fallback contributions to
-// isolate what's washing out slot textures. Set from script via
-// material.set_shader_parameter("macro_debug_mode", N).
-//   0 = production (macro 0.35 mix into fallback, slot mix 0.7)
-//   1 = no macro, no fallback contamination — pure slot color
-//   2 = pure macro (no fallback olive), slot mix 0.85 = 85% slot
-//   3 = macro fully off (fallback green visible where no slot)
-// Remove this uniform + branch once we pick the production behavior.
-uniform int macro_debug_mode = 0;
+// Macro overlay strength. 0 = slots are fully authoritative
+// (macro/fallback only fill coverage gaps). Phase 6 visual A/B
+// 2026-05-17 chose this — the 0.35 prior default was contaminating
+// the slot detail. Macro stays bound for the gap-fill case and any
+// future biome-character authoring.
+uniform float macro_strength_global : hint_range(0.0, 1.0) = 0.0;
 
 // --- Layer 1: sibling array (Phase 5.5, spec 24) ---
 //
@@ -71,10 +68,19 @@ uniform bool has_siblings = false;
 // `w5_variety_sample_combined` which uses region+HN sampling.)
 uniform float sibling_blend_freq = 0.10;
 // World-space wavelength (m) for tiling the sibling textures themselves.
-// Bumped 2026-05-17 from 4 → 16: with region_size_m=512 a 4m tile
-// repeats 128× per region (visible wallpaper). 16m repeats 32× per
-// region, reads as natural ground texture at walking eye height.
-uniform float sibling_tile_m = 16.0;
+// Default mirrors the quality-tier terrain_pbr_tile_size_m. TerrainWorld
+// binds the active tier value explicitly for real bundles.
+uniform float sibling_tile_m = 8.0;
+// Optional PBR maps layer-matched 1:1 with sibling_array. The same
+// slot window + region pick is used across maps so albedo/normal/
+// roughness/AO stay visually coherent.
+uniform sampler2DArray sibling_normal_array : filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2DArray sibling_roughness_array : filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2DArray sibling_ao_array : filter_linear_mipmap_anisotropic, repeat_enable;
+uniform bool has_sibling_normals = false;
+uniform bool has_sibling_roughness = false;
+uniform bool has_sibling_ao = false;
+uniform float normal_strength : hint_range(0.0, 1.0) = 0.75;
 
 // Heitz-Neyret 2018 inverse-histogram LUT array (Phase 6 follow-up).
 // Layer-matched 1:1 with sibling_array; each entry is a 256×1 LUT.
@@ -88,12 +94,6 @@ uniform bool has_t_inv = false;
 uniform float region_size_m = 0.0;
 uniform float edge_blend_m = 0.0;
 uniform int world_seed = 0;
-// Phase 6 follow-up diagnostic: bypass HN tiling, just region-pick +
-// plain texture sample. Lets us isolate region-system correctness
-// from HN sampler correctness during visual review. Default false
-// (region-only) since first HN impl had visible white-patch artifacts;
-// will re-enable after fixing variance correction. Toggle: 4=off, 5=on.
-uniform bool hn_enabled = false;
 
 // --- Per-fragment slot selection (Phase 4.9.b, spec 23 §Surface slot model) ---
 //
@@ -195,6 +195,11 @@ varying vec2 v_world_xz;
 // differences; flat = 0 deg, vertical cliff = 90 deg.
 varying float v_world_y;
 varying float v_slope_deg;
+// World-space surface normal from the heightmap finite differences
+// (same source as v_slope_deg). Used by fragment for triplanar
+// projection: textures get sampled from XY/XZ/YZ planes and blended
+// by the absolute normal so slopes don't stretch the planar UV.
+varying vec3 v_world_normal;
 
 // Snap a UV to the parent-ring sample grid: every other vertex along
 // each axis matches a parent-ring vertex, so rounding to the nearest
@@ -304,6 +309,9 @@ void vertex() {
     float dyz = (wy_v_pos - wy_v_neg) * 0.5;
     float gradient_mag = length(vec2(dyx, dyz) / max(cell_m, 0.001));
     v_slope_deg = degrees(atan(gradient_mag));
+    // World normal from the same finite differences. Used by fragment
+    // for triplanar projection so steep slopes don't stretch textures.
+    v_world_normal = normalize(vec3(-dyx, max(cell_m, 0.001), -dyz));
 }
 
 void fragment() {
@@ -359,60 +367,197 @@ void fragment() {
     vec2 mu = w5_macro_uv(world_xz, macro_aabb);
     vec3 macro_col = texture(macro_albedo, mu).rgb;
     bool macro_present = dot(macro_col, vec3(1.0)) > 0.001;
-    // Per-mode macro strength (see macro_debug_mode uniform comment).
-    float macro_strength = 0.35;
-    if (macro_debug_mode == 1) macro_strength = 0.0;
-    else if (macro_debug_mode == 2) macro_strength = 1.0;
-    else if (macro_debug_mode == 3) macro_strength = 0.0;
-    if (!macro_present) macro_strength = 0.0;
+    float macro_strength = macro_present ? macro_strength_global : 0.0;
 
     // Phase 4.10.c (W4 PITFALLS #31 fix): brightness modulator removed.
     // See git log f571576-era comments for history.
     vec3 base = mix(frag_fallback, macro_col, macro_strength);
+    vec3 material_normal = vec3(0.5, 0.5, 1.0);
+    float material_roughness = 0.85;
+    float material_ao = 1.0;
+    float material_coverage = 0.0;
 
     // --- Layer 1 (Phase 5.5 + 4.9.b): siblings + per-fragment slot selection ---
     if (slot_count > 0 && has_siblings) {
         vec2 tile_uv = world_xz / max(sibling_tile_m, 0.01);
-        vec3 weighted = vec3(0.0);
-        float wsum = 0.0;
+        // Within each biome, surface_slots are layered in catalog/manifest
+        // order: ground baseline first, then mid/rock override via their
+        // selector weight. This avoids averaging always-on ground with
+        // mid/rock across broad overlaps. After per-biome layering, biome
+        // colors are blended by biome_w for the cross-biome transition.
+        // Accumulators start at ZERO so the per-fragment weighted-sum
+        // math is clean (defaults like vec3(0.5,0.5,1) would bias the
+        // mean toward neutral-blue normal). Coverage tracks the sum of
+        // weights; result is acc/cov. Final normal is renormalized.
+        vec3 layered_rgb = vec3(0.0);
+        vec3 layered_normal = vec3(0.0);
+        float layered_roughness = 0.0;
+        float layered_ao = 0.0;
+        float layered_cov = 0.0;
+        vec3 biome_slot_rgb[8];
+        vec3 biome_slot_normal[8];
+        float biome_slot_roughness[8];
+        float biome_slot_ao[8];
+        float biome_slot_cov[8];
+        for (int b = 0; b < 8; b++) {
+            biome_slot_rgb[b] = vec3(0.0);
+            biome_slot_normal[b] = vec3(0.0);
+            biome_slot_roughness[b] = 0.0;
+            biome_slot_ao[b] = 0.0;
+            biome_slot_cov[b] = 0.0;
+        }
         // Loop over MAX_SLOTS (8) with early-out via slot_count guard;
         // GLSL prefers fixed-iter loops over dynamic ones for inlining.
         for (int i = 0; i < 8; i++) {
             if (i >= slot_count) break;
             float w = w5_slot_weight(slot_elev_bands[i], slot_slope_bands[i],
                                      v_world_y, v_slope_deg);
-            // Multiply by this slot's biome weight (1.0 if single-biome).
-            if (biome_count > 0) {
-                int bi = slot_biome_index[i];
-                w *= biome_w[bi];
-            }
             if (w > 0.001) {
                 ivec4 window = slot_windows[i];
-                // Phase 6 follow-up: region-based variant pick + Heitz-Neyret
-                // sampling. Salt with the slot's start index so each slot's
-                // region pattern is independent of others.
-                vec4 sib = w5_variety_sample_combined(
-                    sibling_array, sibling_t_inv_array, has_t_inv,
-                    tile_uv, world_xz,
+                // W3 M11-derived: triplanar projection + hex sampling.
+                // Triplanar samples from XY/XZ/YZ planes and blends by
+                // the world normal so steep slopes don't stretch the
+                // planar UV. Hex sampling inside each plane sample is
+                // variance-preserving (preserves contrast) per
+                // Heitz-Neyret 2018. Region-pick within each plane keeps
+                // sibling variation deterministic per ~512m world region.
+                vec3 world_pos3 = vec3(world_xz.x, v_world_y, world_xz.y);
+                vec3 wn = normalize(v_world_normal);
+                vec4 sib = w5_variety_sample_triplanar(
+                    sibling_array, world_pos3, wn,
+                    sibling_tile_m, 4.0,
                     window.x, window.y,
                     region_size_m, edge_blend_m,
-                    world_seed, window.x, hn_enabled);
-                weighted += sib.rgb * w;
-                wsum += w;
+                    world_seed, window.x);
+                vec3 sib_normal = vec3(0.5, 0.5, 1.0);
+                float sib_roughness = 0.85;
+                float sib_ao = 1.0;
+                if (has_sibling_normals) {
+                    sib_normal = w5_variety_sample_triplanar(
+                        sibling_normal_array, world_pos3, wn,
+                        sibling_tile_m, 4.0,
+                        window.x, window.y,
+                        region_size_m, edge_blend_m,
+                        world_seed, window.x).rgb;
+                }
+                if (has_sibling_roughness) {
+                    sib_roughness = w5_variety_sample_triplanar(
+                        sibling_roughness_array, world_pos3, wn,
+                        sibling_tile_m, 4.0,
+                        window.x, window.y,
+                        region_size_m, edge_blend_m,
+                        world_seed, window.x).r;
+                }
+                if (has_sibling_ao) {
+                    sib_ao = w5_variety_sample_triplanar(
+                        sibling_ao_array, world_pos3, wn,
+                        sibling_tile_m, 4.0,
+                        window.x, window.y,
+                        region_size_m, edge_blend_m,
+                        world_seed, window.x).r;
+                }
+                // Proper weighted accumulator (W3 pattern): sum of
+                // (sample * weight); normalize at the end by sum of
+                // weights. The previous mix()-chain ("biome_slot_rgb =
+                // mix(prev, new, alpha)") was wrong math — successive
+                // mix overwrites with later samples weighted by their
+                // own alpha, which biased toward whichever slot ran
+                // last in the loop. Result: visible meshing of textures
+                // even when one slot clearly dominated.
+                float alpha = clamp(w, 0.0, 1.0);
+                if (biome_count > 0) {
+                    int bi = slot_biome_index[i];
+                    if (bi >= 0 && bi < biome_count) {
+                        biome_slot_rgb[bi]       += sib.rgb       * alpha;
+                        biome_slot_normal[bi]    += sib_normal    * alpha;
+                        biome_slot_roughness[bi] += sib_roughness * alpha;
+                        biome_slot_ao[bi]        += sib_ao        * alpha;
+                        biome_slot_cov[bi]       += alpha;
+                    }
+                } else {
+                    layered_rgb       += sib.rgb       * alpha;
+                    layered_normal    += sib_normal    * alpha;
+                    layered_roughness += sib_roughness * alpha;
+                    layered_ao        += sib_ao        * alpha;
+                    layered_cov       += alpha;
+                }
             }
         }
-        // Normalize. If no slot won this fragment (player is OUTSIDE
-        // all bands — possible at e.g. mid-elevation flat with author
-        // bands that have a gap), fall through to the macro base
-        // unchanged so terrain still reads as terrain (not black).
-        if (wsum > 0.001) {
-            vec3 slot_color = weighted / wsum;
-            // Per-mode slot mix strength (see macro_debug_mode comment).
-            float slot_mix = 0.7;
-            if (macro_debug_mode == 1) slot_mix = 1.0;       // pure slot, no fallback
-            else if (macro_debug_mode == 2) slot_mix = 0.85; // 85% slot, 15% macro
-            else if (macro_debug_mode == 3) slot_mix = 1.0;  // pure slot, macro off
-            base = mix(base, slot_color, slot_mix);
+        // Two-stage normalization:
+        //   1. Within each biome, divide the slot-weighted sum by the
+        //      sum of slot weights = proper weighted mean of "which
+        //      slot owns this fragment in this biome's catalog."
+        //   2. Across biomes, multiply each biome's mean by biome_w
+        //      (the auto_biome_rules softmax weight). Sum + normalize
+        //      = proper biome crossfade only.
+        vec3 slot_color = vec3(0.0);
+        vec3 slot_normal = vec3(0.5, 0.5, 1.0);
+        float slot_roughness = 0.85;
+        float slot_ao = 1.0;
+        float slot_coverage = 0.0;
+        if (biome_count > 0) {
+            // Stage 1: normalize per-biome accumulators.
+            for (int b = 0; b < 8; b++) {
+                if (b >= biome_count) break;
+                float cov = biome_slot_cov[b];
+                if (cov > 0.001) {
+                    biome_slot_rgb[b]       /= cov;
+                    biome_slot_normal[b]    /= cov;
+                    biome_slot_roughness[b] /= cov;
+                    biome_slot_ao[b]        /= cov;
+                }
+            }
+            // Stage 2: cross-biome blend by biome_w only (NOT by slot
+            // coverage — each biome has fully-determined slot color now;
+            // biome_w decides who owns the fragment at the biome boundary).
+            vec3 biome_weighted = vec3(0.0);
+            vec3 biome_normal_weighted = vec3(0.0);
+            float biome_roughness_weighted = 0.0;
+            float biome_ao_weighted = 0.0;
+            float biome_wsum = 0.0;
+            for (int b = 0; b < 8; b++) {
+                if (b >= biome_count) break;
+                if (biome_slot_cov[b] > 0.001) {
+                    float bw = biome_w[b];
+                    biome_weighted          += biome_slot_rgb[b]       * bw;
+                    biome_normal_weighted   += biome_slot_normal[b]    * bw;
+                    biome_roughness_weighted += biome_slot_roughness[b] * bw;
+                    biome_ao_weighted        += biome_slot_ao[b]        * bw;
+                    biome_wsum += bw;
+                }
+            }
+            if (biome_wsum > 0.001) {
+                slot_color      = biome_weighted          / biome_wsum;
+                slot_normal     = biome_normal_weighted   / biome_wsum;
+                slot_roughness  = biome_roughness_weighted / biome_wsum;
+                slot_ao         = biome_ao_weighted        / biome_wsum;
+                slot_coverage = 1.0;
+            }
+        } else {
+            // Single-biome path: just normalize layered accumulator.
+            if (layered_cov > 0.001) {
+                slot_color     = layered_rgb       / layered_cov;
+                slot_normal    = layered_normal    / layered_cov;
+                slot_roughness = layered_roughness / layered_cov;
+                slot_ao        = layered_ao        / layered_cov;
+                slot_coverage = 1.0;
+            }
+        }
+        // If no slot won this fragment, fall through to the macro/fallback
+        // base unchanged so terrain still reads as terrain (not black).
+        if (slot_coverage > 0.001) {
+            // Slot color is authoritative at full strength. Macro/
+            // fallback only fill coverage gaps where no slot won.
+            base = slot_color;
+            // Normal-map values are 0..1-encoded vectors (.xy = ±1
+            // packed into 0..1, .z derived). Weighted sum of those
+            // 0..1 values stays in 0..1, so no renormalize needed
+            // here. (Real-space unit-vector renormalization would
+            // happen if we decoded -> blended -> re-encoded.)
+            material_normal = slot_normal;
+            material_roughness = slot_roughness;
+            material_ao = slot_ao;
+            material_coverage = slot_coverage;
         }
     } else if (has_siblings && sibling_count > 0) {
         // Legacy single-slot path (Phase 5.5 binding); kept for back-compat
@@ -420,7 +565,23 @@ void fragment() {
         vec2 tile_uv = world_xz / max(sibling_tile_m, 0.01);
         vec4 sib = w5_variety_sample_3tap(sibling_array, tile_uv,
             world_xz, sibling_start, sibling_count, sibling_blend_freq);
-        base = mix(base, sib.rgb, 0.7);
+        base = sib.rgb;
+        if (has_sibling_normals) {
+            material_normal = w5_variety_sample_3tap(sibling_normal_array,
+                tile_uv, world_xz, sibling_start, sibling_count,
+                sibling_blend_freq).rgb;
+        }
+        if (has_sibling_roughness) {
+            material_roughness = w5_variety_sample_3tap(
+                sibling_roughness_array, tile_uv, world_xz, sibling_start,
+                sibling_count, sibling_blend_freq).r;
+        }
+        if (has_sibling_ao) {
+            material_ao = w5_variety_sample_3tap(sibling_ao_array,
+                tile_uv, world_xz, sibling_start, sibling_count,
+                sibling_blend_freq).r;
+        }
+        material_coverage = 1.0;
     }
 
     // --- Layer 2 (Phase 5.5): detail overlays ---
@@ -444,6 +605,11 @@ void fragment() {
     }
 
     ALBEDO = base;
-    ROUGHNESS = 0.85;
+    ROUGHNESS = clamp(material_roughness, 0.02, 1.0);
+    AO = clamp(material_ao, 0.0, 1.0);
+    if (has_sibling_normals && material_coverage > 0.001) {
+        NORMAL_MAP = material_normal;
+        NORMAL_MAP_DEPTH = normal_strength;
+    }
     METALLIC = 0.0;
 }

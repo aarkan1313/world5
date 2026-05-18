@@ -194,10 +194,9 @@ func test_siblings_path_changes_output_vs_macro_only() -> void:
 	var img_no: Image = await _render_quad(mat_no)
 	var col_no: Color = _avg_color(img_no)
 
-	# With siblings: three magenta-family colors. avg(rgb) = (0.67, 0,
-	# 0.67); blended at 70/30 with the fallback's (0.30, 0.38, 0.21)
-	# gives ~(0.56, 0.11, 0.49). Per-channel distance from baseline
-	# must be > a sensible threshold.
+	# With siblings: three magenta-family colors. Active slots now render
+	# at full strength, so per-channel distance from baseline must be >
+	# a sensible threshold.
 	var mat_yes: ShaderMaterial = p.make_ring_material(0)
 	p.bind_height_map(mat_yes, htex, 0.0, 0.0)
 	var arr: Texture2DArray = _make_array(3, [

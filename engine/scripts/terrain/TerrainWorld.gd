@@ -101,38 +101,6 @@ func _ready() -> void:
 		_loaded = true
 
 
-# TEMP diagnostic 2026-05-17: keyboard toggle for macro_debug_mode
-# shader uniform. 0 = production, 1 = pure slot, 2 = pure macro,
-# 3 = no macro. Remove once we pick the production behavior.
-func _unhandled_input(event: InputEvent) -> void:
-	if not (event is InputEventKey) or not event.pressed:
-		return
-	# Numbers 0-3 = macro_debug_mode (0=prod, 1=pure slot, 2=pure macro, 3=macro off).
-	# Numbers 4/5 = HN sampler toggle (4=off, 5=on).
-	var macro_mode: int = -1
-	if event.keycode == KEY_0: macro_mode = 0
-	elif event.keycode == KEY_1: macro_mode = 1
-	elif event.keycode == KEY_2: macro_mode = 2
-	elif event.keycode == KEY_3: macro_mode = 3
-	var hn_toggle: int = -1
-	if event.keycode == KEY_4: hn_toggle = 0
-	elif event.keycode == KEY_5: hn_toggle = 1
-	if macro_mode < 0 and hn_toggle < 0:
-		return
-	for ring in _rings:
-		var mat: ShaderMaterial = ring.mesh_instance.material_override as ShaderMaterial
-		if mat == null:
-			continue
-		if macro_mode >= 0:
-			mat.set_shader_parameter("macro_debug_mode", macro_mode)
-		if hn_toggle >= 0:
-			mat.set_shader_parameter("hn_enabled", hn_toggle == 1)
-	if macro_mode >= 0:
-		Log.info("terrain_world", "macro_debug_mode set", {"mode": macro_mode})
-	if hn_toggle >= 0:
-		Log.info("terrain_world", "hn_enabled set", {"on": hn_toggle == 1})
-
-
 func _process(_delta: float) -> void:
 	if not _loaded:
 		return
@@ -506,14 +474,24 @@ func _load_world_bundle(bundle_path: String) -> void:
 			# weighted HN blend (still anti-repeat, loses contrast).
 			var sta_tinv: SiblingTextureArray = SiblingTextureArray.build(
 				mv, materials_root, "albedo_tinv")
+			var sta_normal: SiblingTextureArray = SiblingTextureArray.build(
+				mv, materials_root, "normal")
+			var sta_roughness: SiblingTextureArray = SiblingTextureArray.build(
+				mv, materials_root, "roughness")
+			var sta_ao: SiblingTextureArray = SiblingTextureArray.build(
+				mv, materials_root, "ao")
 			Log.info("terrain_world", "sibling array built", {
 				"slots": mv.slots.size(),
 				"layers": sta.layer_count(),
 				"tinv_layers": sta_tinv.layer_count(),
+				"normal_layers": sta_normal.layer_count(),
+				"roughness_layers": sta_roughness.layer_count(),
+				"ao_layers": sta_ao.layer_count(),
 				"materials_root": materials_root,
 			})
 			if sta.layer_count() > 0:
-				_bind_slots_with_catalog(sta, sta_tinv, mv, catalog, materials_root)
+				_bind_slots_with_catalog(sta, sta_tinv, mv, catalog,
+					materials_root, sta_normal, sta_roughness, sta_ao)
 	else:
 		Log.warn("terrain_world", "bundle missing material_variants.json",
 			{"path": mv_cfg})
@@ -720,7 +698,10 @@ func _rebuild_and_bind_ring_height_array(ring_idx: int) -> void:
 func _bind_slots_with_catalog(sta: SiblingTextureArray,
 		sta_tinv: SiblingTextureArray,
 		mv: MaterialVariants, catalog: BiomeCatalog,
-		materials_root: String = "") -> void:
+		materials_root: String = "",
+		sta_normal: SiblingTextureArray = null,
+		sta_roughness: SiblingTextureArray = null,
+		sta_ao: SiblingTextureArray = null) -> void:
 	# Build per-slot windows + bands. We iterate over the manifest's
 	# slot order (the order SiblingTextureArray packed the layers).
 	# For each (biome, slot) in the manifest, look up the catalog
@@ -831,6 +812,9 @@ func _bind_slots_with_catalog(sta: SiblingTextureArray,
 		"biome_weights_active": enable_biome_weights,
 		"has_catalog": catalog != null,
 		"rings": _rings.size(),
+		"region_size_m": mv.region_size_m,
+		"edge_blend_m": mv.edge_blend_m,
+		"world_seed": mv.world_seed,
 	})
 
 	# Phase 5.4.b audit C3 fix: bind per-tier sibling_blend_freq from
@@ -838,6 +822,13 @@ func _bind_slots_with_catalog(sta: SiblingTextureArray,
 	# less visible tile repeat at standing eye height.
 	var tier: Dictionary = _active_quality_tier()
 	var blend_freq: float = float(tier.get("terrain_sibling_blend_freq", 0.30))
+	var tile_size_m: float = float(tier.get("terrain_pbr_tile_size_m", 8.0))
+	var normal_array: Texture2DArray = _matched_sibling_texture_or_null(
+		sta, sta_normal, "normal")
+	var roughness_array: Texture2DArray = _matched_sibling_texture_or_null(
+		sta, sta_roughness, "roughness")
+	var ao_array: Texture2DArray = _matched_sibling_texture_or_null(
+		sta, sta_ao, "ao")
 
 	# Phase 6 visual A/B 2026-05-17: per-biome ground avg color → shader
 	# per-fragment biome-weighted fallback. Replaces the single global
@@ -860,6 +851,11 @@ func _bind_slots_with_catalog(sta: SiblingTextureArray,
 				slot_biome_indices)
 			_material_pipeline.bind_sibling_blend_freq(
 				rmat as ShaderMaterial, blend_freq)
+			_material_pipeline.bind_sibling_tile_size_m(
+				rmat as ShaderMaterial, tile_size_m)
+			_material_pipeline.bind_sibling_pbr_arrays(
+				rmat as ShaderMaterial,
+				normal_array, roughness_array, ao_array)
 			# Phase 6 follow-up: region + Heitz-Neyret sampler config.
 			# region_size_m + edge_blend_m + world_seed read from manifest.
 			_material_pipeline.bind_variety_combined(
@@ -877,6 +873,46 @@ func _bind_slots_with_catalog(sta: SiblingTextureArray,
 					rmat as ShaderMaterial, 0, [], [])
 				_material_pipeline.bind_biome_fallback_colors(
 					rmat as ShaderMaterial, [])
+
+
+func _matched_sibling_texture_or_null(albedo_sta: SiblingTextureArray,
+		pbr_sta: SiblingTextureArray, map_name: String) -> Texture2DArray:
+	if albedo_sta == null or pbr_sta == null:
+		return null
+	if pbr_sta.layer_count() <= 0:
+		return null
+	if pbr_sta.layer_count() != albedo_sta.layer_count():
+		Log.warn("terrain_world", "sibling PBR layer mismatch", {
+			"map": map_name,
+			"albedo_layers": albedo_sta.layer_count(),
+			"pbr_layers": pbr_sta.layer_count(),
+		})
+		return null
+	if not _sibling_windows_match(albedo_sta.slot_windows, pbr_sta.slot_windows):
+		Log.warn("terrain_world", "sibling PBR window mismatch", {
+			"map": map_name,
+		})
+		return null
+	return pbr_sta.texture
+
+
+func _sibling_windows_match(a: Array, b: Array) -> bool:
+	if a.size() != b.size():
+		return false
+	for i in range(a.size()):
+		if not (a[i] is Dictionary) or not (b[i] is Dictionary):
+			return false
+		var aw: Dictionary = a[i]
+		var bw: Dictionary = b[i]
+		if String(aw.get("biome", "")) != String(bw.get("biome", "")):
+			return false
+		if String(aw.get("slot", "")) != String(bw.get("slot", "")):
+			return false
+		if int(aw.get("start", -1)) != int(bw.get("start", -1)):
+			return false
+		if int(aw.get("count", -1)) != int(bw.get("count", -1)):
+			return false
+	return true
 
 
 func _compute_biome_ground_avg(biome_name: String,

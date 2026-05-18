@@ -266,6 +266,53 @@ func test_bind_sibling_blend_freq_clamps_negative() -> void:
 	assert_eq(int(mat.get_shader_parameter("slot_count")), 0)
 
 
+func test_bind_sibling_tile_size_m_sets_uniform() -> void:
+	# terrain_pbr_tile_size_m from quality_tiers.json must reach the
+	# shader's sibling_tile_m uniform; shader defaults are only fallback.
+	var p: MaterialPipeline = MaterialPipeline.new()
+	var mat: ShaderMaterial = p.make_ring_material(0)
+	p.bind_sibling_tile_size_m(mat, 12.5)
+	assert_almost_eq(float(mat.get_shader_parameter("sibling_tile_m")),
+		12.5, 0.001, "binder must set PBR tile size exactly as passed")
+
+
+func test_bind_sibling_tile_size_m_clamps_nonpositive() -> void:
+	var p: MaterialPipeline = MaterialPipeline.new()
+	var mat: ShaderMaterial = p.make_ring_material(0)
+	p.bind_sibling_tile_size_m(mat, 0.0)
+	assert_gt(float(mat.get_shader_parameter("sibling_tile_m")), 0.0,
+		"nonpositive tile size must be clamped to a small positive")
+
+
+func test_bind_sibling_pbr_arrays_sets_uniforms() -> void:
+	var p: MaterialPipeline = MaterialPipeline.new()
+	var mat: ShaderMaterial = p.make_ring_material(0)
+	var normal_arr: Texture2DArray = _make_sibling_array(3)
+	var roughness_arr: Texture2DArray = _make_sibling_array(3)
+	var ao_arr: Texture2DArray = _make_sibling_array(3)
+	p.bind_sibling_pbr_arrays(mat, normal_arr, roughness_arr, ao_arr)
+	assert_eq(mat.get_shader_parameter("sibling_normal_array"), normal_arr,
+		"normal PBR array must be bound")
+	assert_eq(mat.get_shader_parameter("sibling_roughness_array"), roughness_arr,
+		"roughness PBR array must be bound")
+	assert_eq(mat.get_shader_parameter("sibling_ao_array"), ao_arr,
+		"AO PBR array must be bound")
+	assert_eq((mat.get_shader_parameter("has_sibling_normals") as bool), true)
+	assert_eq((mat.get_shader_parameter("has_sibling_roughness") as bool), true)
+	assert_eq((mat.get_shader_parameter("has_sibling_ao") as bool), true)
+
+
+func test_bind_sibling_pbr_arrays_allows_partial_maps() -> void:
+	var p: MaterialPipeline = MaterialPipeline.new()
+	var mat: ShaderMaterial = p.make_ring_material(0)
+	var roughness_arr: Texture2DArray = _make_sibling_array(3)
+	p.bind_sibling_pbr_arrays(mat, null, roughness_arr, null)
+	assert_eq((mat.get_shader_parameter("has_sibling_normals") as bool), false)
+	assert_eq((mat.get_shader_parameter("has_sibling_roughness") as bool), true)
+	assert_eq((mat.get_shader_parameter("has_sibling_ao") as bool), false)
+	assert_true(mat.get_shader_parameter("sibling_roughness_array") is Texture2DArray)
+
+
 # --- Phase 6 biome_weights (5.7.b GDScript runtime mirror) ---
 
 

@@ -6,26 +6,31 @@
 > Per spec 05 doc architecture: this file ≤ 200 lines. Detail lives in
 > per-phase files.
 >
-> Last updated: 2026-05-17.
+> Last updated: 2026-05-18.
 
 ## One-paragraph current focus
 
-**Phase 5.7.a + 5.7.b + 5.7.c shipped — kernel system Python-side
-end-to-end.** ErosionKernel emits eroded height + drainage_map +
-flow_direction + flow_accumulation. KernelComposer emits
-`biome_weights` (the multi-biome material unblocker) + `sample_height`
-+ now `bake_page` that runs erosion stages on whole pages with
-spec 12 content-addressed caching (cache key = sha256 of
-catalog_hash + world_origin + extent + grid + seed + biome; any
-catalog edit invalidates downstream bakes). Erosion-in-chain is
-real: walking_demo can now declare `kernel: {type: chain, stages:
-[noise_stack, erosion]}` and get baked, cached eroded pages. 29 new
-TDD tests (8 erosion + 12 composer + 9 bake); pytest total now 174.
-**Next** (Phase 6 unblocker): GDScript runtime mirror of
-`_band_weight` → MaterialPipeline binder for per-biome auto_rules →
-shader multiplies slot_weight by biome_weight per fragment. Pending
-the in-flight Phase 5.6 budget pass settling on the GDScript side
-(other chat's territory).
+**Phase 6 closed (2026-05-18).** Forest = second biome renders end-to-
+end. Multi-biome rendering pipeline is now correct: 6 slots × 8 sibling
+variants (48 PBR-textured layers total) drawn via W3 M11-derived
+triplanar + hex sampling + region-based variant selection, with proper
+weighted-sum slot/biome accumulator math. Side effects of getting
+there: PBR maps (normal/roughness/AO) finally wired through the
+sampler; mesh tangents added; SiblingTextureArray generates mipmaps;
+per-biome ground-avg fallback color; macro overlay default neutralized
+(was contaminating slots at 35%); diagnostic toggles stripped. Pytest
+174 passed, gut/preflight green. Walking demo shows
+`region_size_m=512.0 edge_blend_m=48.0 world_seed=42` at bind time
+with 48 layers per array, slot_count=6, biome_count=2,
+biome_weights_active=true. See
+[build-notes/phase_6_close_2026_05_18.md](build-notes/phase_6_close_2026_05_18.md)
+for the full chronology. **Next** options (pick one): (a) **Phase 7
+decoration sprint** — biggest visible richness lift after terrain,
+W4 has a working system to port from. (b) **TerrainWorld loader
+switch** — wire catalog-driven kernel + cached bake_page output into
+live render path (eroded terrain currently demo-only). (c) **Phase
+5.4.b.3 detail overlays** — close-range high-frequency authoring,
+significant lift on ground close-up quality.
 
 ## Phase status
 
@@ -52,7 +57,7 @@ the in-flight Phase 5.6 budget pass settling on the GDScript side
 | Phase 5.4.b — Detail overlays + sibling_blend_freq tune + per-biome YAMLs | ⚠️ partial (b.1 + b.2 shipped — C3 + S7 closed; b.3 detail overlays deferred) | [phase_5_4_b_detail_overlays_and_tune.md](roadmap/phase_5_4_b_detail_overlays_and_tune.md) + [build-notes/phase_5_4_b_partial_2026_05_17.md](build-notes/phase_5_4_b_partial_2026_05_17.md) | 3-4 |
 | Phase 5.6 — Calibration on real hardware | pending | — | 1-2 |
 | **Phase 5.7 — Erosion sprint (ErosionKernel + KernelComposer)** | 🚧 in progress (5.7.a + 5.7.b + 5.7.c ✅ done + walking_demo demonstration bake proves end-to-end; TerrainWorld loader switch to catalog-driven kernel is the next pairing with GDScript biome_weights mirror for Phase 6) | [phase_5_7_erosion_sprint.md](roadmap/phase_5_7_erosion_sprint.md) + [build-notes/phase_5_7_a_erosion_kernel_2026_05_17.md](build-notes/phase_5_7_a_erosion_kernel_2026_05_17.md) + [build-notes/phase_5_7_b_kernel_composer_2026_05_17.md](build-notes/phase_5_7_b_kernel_composer_2026_05_17.md) + [build-notes/phase_5_7_c_bake_page_cache_2026_05_17.md](build-notes/phase_5_7_c_bake_page_cache_2026_05_17.md) + [build-notes/phase_5_7_demo_walking_demo_erosion_2026_05_17.md](build-notes/phase_5_7_demo_walking_demo_erosion_2026_05_17.md) | multi-sprint (~10-15 sessions across 5 sub-sprints) |
-| Phase 6 — Second biome (forest) | ⏸ paused 2026-05-17 (test fixture landed: forest textures promoted + biome_catalog extended; render gated on 5.7.b KernelComposer) | [build-notes/phase_6_paused_2026_05_17.md](build-notes/phase_6_paused_2026_05_17.md) | 3-5 (post 5.7.b) |
+| **Phase 6 — Second biome (forest)** | ✅ closed 2026-05-18 (multi-biome rendering end-to-end: 48 sibling layers + W3 M11-derived triplanar+hex sampler + proper weighted-sum slot/biome accumulator + PBR maps wired + mipmaps fixed + macro contamination removed) | [build-notes/phase_6_close_2026_05_18.md](build-notes/phase_6_close_2026_05_18.md) (close) + [build-notes/phase_6_paused_2026_05_17.md](build-notes/phase_6_paused_2026_05_17.md) (pause history) | 2 sessions (paused + closed) |
 | Phase 7 — Decoration end-to-end | pending | (write when starting) | 5-10 |
 | Phase 8 — Foliage system | pending | (write when starting) | 25-100 (see SA-S1) |
 | Phase 9 — Atmosphere + lighting | pending | (write when starting) | 3-5 |

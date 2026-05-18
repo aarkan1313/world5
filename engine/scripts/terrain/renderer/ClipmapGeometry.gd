@@ -43,9 +43,11 @@ func _build_ring_mesh(grid_n: int, cell_m: float) -> ArrayMesh:
 	var half_extent: float = float(grid_n - 1) * cell_m * 0.5
 	var verts: PackedVector3Array = PackedVector3Array()
 	var normals: PackedVector3Array = PackedVector3Array()
+	var tangents: PackedFloat32Array = PackedFloat32Array()
 	var uvs: PackedVector2Array = PackedVector2Array()
 	verts.resize(grid_n * grid_n)
 	normals.resize(grid_n * grid_n)
+	tangents.resize(grid_n * grid_n * 4)
 	uvs.resize(grid_n * grid_n)
 	for row in range(grid_n):
 		for col in range(grid_n):
@@ -55,6 +57,11 @@ func _build_ring_mesh(grid_n: int, cell_m: float) -> ArrayMesh:
 			# Y=0; vertex shader displaces from heightmap sample
 			verts[idx] = Vector3(x, 0.0, z)
 			normals[idx] = Vector3.UP
+			var tidx: int = idx * 4
+			tangents[tidx] = 1.0
+			tangents[tidx + 1] = 0.0
+			tangents[tidx + 2] = 0.0
+			tangents[tidx + 3] = -1.0
 			# UV in [0,1] for heightmap sampling
 			uvs[idx] = Vector2(float(col) / float(grid_n - 1),
 				float(row) / float(grid_n - 1))
@@ -81,6 +88,7 @@ func _build_ring_mesh(grid_n: int, cell_m: float) -> ArrayMesh:
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = verts
 	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_TANGENT] = tangents
 	arrays[Mesh.ARRAY_TEX_UV] = uvs
 	arrays[Mesh.ARRAY_INDEX] = indices
 

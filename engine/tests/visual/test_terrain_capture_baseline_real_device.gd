@@ -173,10 +173,12 @@ func test_ring_meshinstance_has_nonzero_y_aabb() -> void:
 			continue
 		var mi: MeshInstance3D = c as MeshInstance3D
 		var aabb: AABB = mi.custom_aabb
-		assert_gt(aabb.size.y, 100.0,
+		var msg: String = (
 			"%s.custom_aabb.size.y must be > 100m to survive heightmap " +
 			"displacement (got %f). If 0, ArrayMesh.custom_aabb regression " +
-			"and frustum culling will reject every ring." % [mi.name, aabb.size.y])
+			"and frustum culling will reject every ring."
+		) % [mi.name, aabb.size.y]
+		assert_gt(aabb.size.y, 100.0, msg)
 
 
 func test_ring_mesh_has_upward_normals() -> void:
@@ -201,3 +203,27 @@ func test_ring_mesh_has_upward_normals() -> void:
 			assert_gt(n_arr.size(), 0, "%s normals must be non-empty" % mi.name)
 			assert_gt(n_arr[0].dot(Vector3.UP), 0.99,
 				"%s normals must point up (sample[0]=%s)" % [mi.name, str(n_arr[0])])
+
+
+func test_ring_mesh_has_tangents_for_normal_maps() -> void:
+	# Spec 23 terrain PBR uses tangent-space normal maps. Without a
+	# tangent array, the shader can bind normal textures while lighting
+	# still reads flat at walking height.
+	for c in _tw.get_children():
+		if not c.name.begins_with("ClipmapRing_"):
+			continue
+		var mi: MeshInstance3D = c as MeshInstance3D
+		var mesh: ArrayMesh = mi.mesh as ArrayMesh
+		if mesh == null or mesh.get_surface_count() == 0:
+			continue
+		var arrays: Array = mesh.surface_get_arrays(0)
+		var tangents: Variant = arrays[Mesh.ARRAY_TANGENT]
+		assert_true(tangents is PackedFloat32Array,
+			"%s mesh must have TANGENT array for NORMAL_MAP" % mi.name)
+		if tangents is PackedFloat32Array:
+			var t_arr: PackedFloat32Array = tangents
+			assert_gt(t_arr.size(), 0, "%s tangents must be non-empty" % mi.name)
+			assert_almost_eq(t_arr[0], 1.0, 0.001,
+				"%s tangent.x should point along +X" % mi.name)
+			assert_almost_eq(t_arr[3], -1.0, 0.001,
+				"%s tangent sign should preserve +Z bitangent" % mi.name)

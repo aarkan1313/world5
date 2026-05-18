@@ -122,11 +122,12 @@ func test_two_page_array_picks_correct_page_per_fragment() -> void:
 	# modulation flatten the displacement contrast; ANY non-zero delta
 	# proves per-fragment page selection is firing.
 	var delta: float = abs(right_avg - left_avg)
-	assert_gt(delta, 0.005,
+	var msg: String = (
 		"left vs right half of two-page render must differ " +
 		"(left=%f right=%f delta=%f); equal halves means shader didn't " +
-		"pick the right page per fragment (chunk-seam regression)." % [
-			left_avg, right_avg, delta])
+		"pick the right page per fragment (chunk-seam regression)."
+	) % [left_avg, right_avg, delta]
+	assert_gt(delta, 0.005, msg)
 
 	# Cleanup
 	mesh_inst.free()
