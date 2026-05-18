@@ -1,9 +1,12 @@
 {
 	"_schema_version": 1,
-	"_note": "Walking demo biome catalog. Phase 4 shipped alpine-only; Phase 6 added forest as a second biome. Per spec 22 §Catalog schema: each biome has its own surface_slots + auto_biome_rules. The renderer (a) computes a per-fragment biome weight from auto_biome_rules elev+slope bands; (b) multiplies by the per-slot weight within that biome. Auto-rules: forest owns low-elevation flatlands, alpine owns higher/steeper. Crossover band ~5-15m elevation produces a natural transition (no hard seam).",
+	"_note": "Walking demo biome catalog. Phase 4 shipped alpine-only; Phase 6 added forest as a second biome. Per spec 22 \u00a7Catalog schema: each biome has its own surface_slots + auto_biome_rules. The renderer (a) computes a per-fragment biome weight from auto_biome_rules elev+slope bands; (b) multiplies by the per-slot weight within that biome. Auto-rules: forest owns low-elevation flatlands, alpine owns higher/steeper. Crossover band ~5-15m elevation produces a natural transition (no hard seam).",
 	"world_name": "walking_demo",
 	"biome_scale_m": 1024.0,
-	"elevation_range_m": [-50.0, 50.0],
+	"elevation_range_m": [
+		-50.0,
+		50.0
+	],
 	"biomes": [
 		{
 			"name": "alpine",
@@ -30,10 +33,10 @@
 							"rain_rate": 0.025,
 							"evaporation": 0.015,
 							"sediment_capacity": 0.15,
-							"dissolve_rate": 0.40,
-							"deposit_rate": 0.30,
+							"dissolve_rate": 0.4,
+							"deposit_rate": 0.3,
 							"talus_angle_deg": 35.0,
-							"talus_rate": 0.30
+							"talus_rate": 0.3
 						}
 					}
 				]
@@ -52,10 +55,16 @@
 					"name": "ground",
 					"weight": 1.0,
 					"selector": {
-						"_note": "Low / flat terrain — alpine firn snow basin. Phase 4.11.b: widened slope window to 0..25 with a tight 3deg band so flat snow stays pure ground (no mid bleed).",
-						"elevation_m": [-50.0, 15.0],
-						"slope_deg": [0.0, 25.0],
-						"band_width_elevation_m": 5.0,
+						"_note": "Phase 6 follow-up 2026-05-17: widened to cover full demo elev+slope range with 10m/10deg crossfades. Mid + rock still dominate via their own bands; ground is now the always-on baseline (no coverage gaps).",
+						"elevation_m": [
+							-50.0,
+							50.0
+						],
+						"slope_deg": [
+							0.0,
+							50.0
+						],
+						"band_width_elevation_m": 3.0,
 						"band_width_slope_deg": 3.0
 					}
 				},
@@ -63,10 +72,16 @@
 					"name": "mid",
 					"weight": 1.0,
 					"selector": {
-						"_note": "Mid slopes — lichen + moss on transitional rock. Phase 4.11.b: raised slope start to 25deg so mid only activates on real slopes; tightened bands to reduce bleed on near-flat ground.",
-						"elevation_m": [-5.0, 35.0],
-						"slope_deg": [25.0, 50.0],
-						"band_width_elevation_m": 5.0,
+						"_note": "Mid slopes \u2014 lichen + moss on transitional rock. Phase 4.11.b: raised slope start to 25deg so mid only activates on real slopes; tightened bands to reduce bleed on near-flat ground.",
+						"elevation_m": [
+							-5.0,
+							35.0
+						],
+						"slope_deg": [
+							25.0,
+							50.0
+						],
+						"band_width_elevation_m": 4.0,
 						"band_width_slope_deg": 4.0
 					}
 				},
@@ -74,9 +89,15 @@
 					"name": "rock",
 					"weight": 1.0,
 					"selector": {
-						"_note": "High / steep — granite + lichen on exposed bedrock.",
-						"elevation_m": [15.0, 60.0],
-						"slope_deg": [45.0, 90.0],
+						"_note": "High / steep \u2014 granite + lichen on exposed bedrock.",
+						"elevation_m": [
+							15.0,
+							60.0
+						],
+						"slope_deg": [
+							45.0,
+							90.0
+						],
 						"band_width_elevation_m": 5.0,
 						"band_width_slope_deg": 5.0
 					}
@@ -84,8 +105,14 @@
 			],
 			"auto_biome_rules": {
 				"_note": "Alpine owns mid-to-high elevation. Crossover with forest in [5, 15] m via 10m band. Outside this range alpine weight ramps down.",
-				"elevation_m": [10.0, 60.0],
-				"slope_deg": [0.0, 90.0],
+				"elevation_m": [
+					10.0,
+					60.0
+				],
+				"slope_deg": [
+					0.0,
+					90.0
+				],
 				"band_width_elevation_m": 10.0,
 				"band_width_slope_deg": 5.0
 			},
@@ -118,10 +145,16 @@
 					"name": "ground",
 					"weight": 1.0,
 					"selector": {
-						"_note": "Forest floor — dirt + moss. Active across the forest's elevation range, flat-to-mild slopes.",
-						"elevation_m": [-50.0, 20.0],
-						"slope_deg": [0.0, 25.0],
-						"band_width_elevation_m": 5.0,
+						"_note": "Phase 6 follow-up 2026-05-17: widened to cover full demo elev+slope range with 10m/10deg crossfades. Mid + rock still dominate via their own bands; ground is now the always-on baseline (no coverage gaps).",
+						"elevation_m": [
+							-50.0,
+							50.0
+						],
+						"slope_deg": [
+							0.0,
+							50.0
+						],
+						"band_width_elevation_m": 3.0,
 						"band_width_slope_deg": 3.0
 					}
 				},
@@ -129,10 +162,16 @@
 					"name": "mid",
 					"weight": 1.0,
 					"selector": {
-						"_note": "Mid slopes — exposed roots + moss carpet on transitional ground.",
-						"elevation_m": [-10.0, 30.0],
-						"slope_deg": [25.0, 50.0],
-						"band_width_elevation_m": 5.0,
+						"_note": "Mid slopes \u2014 exposed roots + moss carpet on transitional ground.",
+						"elevation_m": [
+							-10.0,
+							30.0
+						],
+						"slope_deg": [
+							25.0,
+							50.0
+						],
+						"band_width_elevation_m": 4.0,
 						"band_width_slope_deg": 4.0
 					}
 				},
@@ -140,9 +179,15 @@
 					"name": "rock",
 					"weight": 1.0,
 					"selector": {
-						"_note": "Forest rock — mossy granite outcrops on steep terrain.",
-						"elevation_m": [0.0, 50.0],
-						"slope_deg": [45.0, 90.0],
+						"_note": "Forest rock \u2014 mossy granite outcrops on steep terrain.",
+						"elevation_m": [
+							0.0,
+							50.0
+						],
+						"slope_deg": [
+							45.0,
+							90.0
+						],
 						"band_width_elevation_m": 5.0,
 						"band_width_slope_deg": 5.0
 					}
@@ -150,8 +195,14 @@
 			],
 			"auto_biome_rules": {
 				"_note": "Forest owns low-to-mid elevation. Crossover with alpine in [5, 15] m via 10m band.",
-				"elevation_m": [-50.0, 10.0],
-				"slope_deg": [0.0, 90.0],
+				"elevation_m": [
+					-50.0,
+					10.0
+				],
+				"slope_deg": [
+					0.0,
+					90.0
+				],
 				"band_width_elevation_m": 10.0,
 				"band_width_slope_deg": 5.0
 			},

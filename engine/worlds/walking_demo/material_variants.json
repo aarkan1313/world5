@@ -1,6 +1,6 @@
 {
   "_schema_version": 1,
-  "_note": "Walking demo sibling manifest. Phase 5.4 promoted alpine (3 slots × 4 variants). Phase 6 unblock (2026-05-17): forest slots moved back from _pending_slots → slots now that the GDScript Composer mirror is wired (TerrainWorld._bind_slots_with_catalog passes per-slot biome_index + per-biome auto_rules to the shader). 6 slots x 4 variants = 24 layers (under 256 cap). Per-fragment biome_weights multiply slot weights so alpine vs forest slots only activate where each biome's auto_rule says it should.",
+  "_note": "Walking demo sibling manifest. Phase 5.4 promoted alpine (3 slots \u00d7 4 variants). Phase 6 unblock (2026-05-17): forest slots moved back from _pending_slots \u2192 slots now that the GDScript Composer mirror is wired (TerrainWorld._bind_slots_with_catalog passes per-slot biome_index + per-biome auto_rules to the shader). 6 slots x 4 variants = 24 layers (under 256 cap). Per-fragment biome_weights multiply slot weights so alpine vs forest slots only activate where each biome's auto_rule says it should.",
   "world_seed": 42,
   "region_size_m": 512.0,
   "edge_blend_m": 48.0,
@@ -17,18 +17,13 @@
           "weight": 1.0
         },
         {
-          "id": "v0_firn_dense_s43",
-          "source": "ground_variants/v0_firn_dense_s43",
+          "id": "v0_snow_over_rock_s43",
+          "source": "ground_variants/v0_snow_over_rock_s43",
           "weight": 1.0
         },
         {
-          "id": "v1_firn_dense_s44",
-          "source": "ground_variants/v1_firn_dense_s44",
-          "weight": 1.0
-        },
-        {
-          "id": "v2_firn_dense_s45",
-          "source": "ground_variants/v2_firn_dense_s45",
+          "id": "v1_snow_over_rock_s45",
+          "source": "ground_variants/v1_snow_over_rock_s45",
           "weight": 1.0
         }
       ]
@@ -69,18 +64,18 @@
           "weight": 1.0
         },
         {
-          "id": "v0_granite_lichen_s43",
-          "source": "rock_variants/v0_granite_lichen_s43",
+          "id": "v0_local_dark_slate",
+          "source": "rock_variants/v0_local_dark_slate",
           "weight": 1.0
         },
         {
-          "id": "v1_granite_lichen_s44",
-          "source": "rock_variants/v1_granite_lichen_s44",
+          "id": "v1_local_weathered_basalt",
+          "source": "rock_variants/v1_local_weathered_basalt",
           "weight": 1.0
         },
         {
-          "id": "v2_granite_lichen_s45",
-          "source": "rock_variants/v2_granite_lichen_s45",
+          "id": "v2_local_schist_layered",
+          "source": "rock_variants/v2_local_schist_layered",
           "weight": 1.0
         }
       ]
@@ -89,30 +84,78 @@
       "biome": "forest",
       "slot": "ground",
       "variants": [
-        {"id": "default", "source": "ground", "weight": 1.0},
-        {"id": "v0_dirt_mossy_s43", "source": "ground_variants/v0_dirt_mossy_s43", "weight": 1.0},
-        {"id": "v1_dirt_mossy_s44", "source": "ground_variants/v1_dirt_mossy_s44", "weight": 1.0},
-        {"id": "v2_dirt_mossy_s45", "source": "ground_variants/v2_dirt_mossy_s45", "weight": 1.0}
+        {
+          "id": "default",
+          "source": "ground",
+          "weight": 1.0
+        },
+        {
+          "id": "v0_leaf_litter_s44",
+          "source": "ground_variants/v0_leaf_litter_s44",
+          "weight": 1.0
+        },
+        {
+          "id": "v1_leaf_litter_s242",
+          "source": "ground_variants/v1_leaf_litter_s242",
+          "weight": 1.0
+        },
+        {
+          "id": "v2_leaf_litter_s342",
+          "source": "ground_variants/v2_leaf_litter_s342",
+          "weight": 1.0
+        }
       ]
     },
     {
       "biome": "forest",
       "slot": "mid",
       "variants": [
-        {"id": "default", "source": "mid", "weight": 1.0},
-        {"id": "v0_roots_moss_s43", "source": "mid_variants/v0_roots_moss_s43", "weight": 1.0},
-        {"id": "v1_roots_moss_s44", "source": "mid_variants/v1_roots_moss_s44", "weight": 1.0},
-        {"id": "v2_roots_moss_s45", "source": "mid_variants/v2_roots_moss_s45", "weight": 1.0}
+        {
+          "id": "default",
+          "source": "mid",
+          "weight": 1.0
+        },
+        {
+          "id": "v0_ferns_s43",
+          "source": "mid_variants/v0_ferns_s43",
+          "weight": 1.0
+        },
+        {
+          "id": "v1_ferns_s44",
+          "source": "mid_variants/v1_ferns_s44",
+          "weight": 1.0
+        },
+        {
+          "id": "v2_ferns_s45",
+          "source": "mid_variants/v2_ferns_s45",
+          "weight": 1.0
+        }
       ]
     },
     {
       "biome": "forest",
       "slot": "rock",
       "variants": [
-        {"id": "default", "source": "rock", "weight": 1.0},
-        {"id": "v0_granite_mossy_s43", "source": "rock_variants/v0_granite_mossy_s43", "weight": 1.0},
-        {"id": "v1_granite_mossy_s44", "source": "rock_variants/v1_granite_mossy_s44", "weight": 1.0},
-        {"id": "v2_granite_mossy_s45", "source": "rock_variants/v2_granite_mossy_s45", "weight": 1.0}
+        {
+          "id": "default",
+          "source": "rock",
+          "weight": 1.0
+        },
+        {
+          "id": "v0_granite_mossy_s43",
+          "source": "rock_variants/v0_granite_mossy_s43",
+          "weight": 1.0
+        },
+        {
+          "id": "v1_granite_mossy_s44",
+          "source": "rock_variants/v1_granite_mossy_s44",
+          "weight": 1.0
+        },
+        {
+          "id": "v2_granite_mossy_s45",
+          "source": "rock_variants/v2_granite_mossy_s45",
+          "weight": 1.0
+        }
       ]
     }
   ]

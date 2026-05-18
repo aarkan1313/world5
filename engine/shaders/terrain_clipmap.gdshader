@@ -43,6 +43,15 @@ uniform float height_array_page_extent_m = 256.0;
 uniform sampler2D macro_albedo : repeat_disable, filter_linear;
 uniform vec4 macro_aabb = vec4(-1024.0, -1024.0, 1024.0, 1024.0);
 uniform vec3 fallback_color : source_color = vec3(0.35, 0.45, 0.25);
+// TEMP diagnostic 2026-05-17: toggle macro/fallback contributions to
+// isolate what's washing out slot textures. Set from script via
+// material.set_shader_parameter("macro_debug_mode", N).
+//   0 = production (macro 0.35 mix into fallback, slot mix 0.7)
+//   1 = no macro, no fallback contamination — pure slot color
+//   2 = pure macro (no fallback olive), slot mix 0.85 = 85% slot
+//   3 = macro fully off (fallback green visible where no slot)
+// Remove this uniform + branch once we pick the production behavior.
+uniform int macro_debug_mode = 0;
 
 // --- Layer 1: sibling array (Phase 5.5, spec 24) ---
 //
@@ -52,16 +61,39 @@ uniform vec3 fallback_color : source_color = vec3(0.35, 0.45, 0.25);
 // has_siblings flips false when no array is bound so the fragment falls
 // through to the pre-Phase-5 macro-only path (walking demo still
 // renders before textures land).
-uniform sampler2DArray sibling_array : filter_linear, repeat_enable;
+uniform sampler2DArray sibling_array : filter_linear_mipmap_anisotropic, repeat_enable;
 uniform int sibling_start = 0;
 uniform int sibling_count = 0;
 uniform bool has_siblings = false;
 // World-XZ frequency for the per-fragment sibling selection noise.
-// 0.10 → ~10 m noise period; tweakable. Cheap (no per-fragment matmul).
+// (Legacy `w5_variety_sample_3tap`; kept for back-compat with single-slot
+// scenes + tests. Phase 6 visual A/B replaced primary path with
+// `w5_variety_sample_combined` which uses region+HN sampling.)
 uniform float sibling_blend_freq = 0.10;
 // World-space wavelength (m) for tiling the sibling textures themselves.
-// 4.0 → 4 m per tile; matches W4 alpine ground reference cadence.
-uniform float sibling_tile_m = 4.0;
+// Bumped 2026-05-17 from 4 → 16: with region_size_m=512 a 4m tile
+// repeats 128× per region (visible wallpaper). 16m repeats 32× per
+// region, reads as natural ground texture at walking eye height.
+uniform float sibling_tile_m = 16.0;
+
+// Heitz-Neyret 2018 inverse-histogram LUT array (Phase 6 follow-up).
+// Layer-matched 1:1 with sibling_array; each entry is a 256×1 LUT.
+// has_t_inv flips false when missing → HN falls back to plain blend.
+uniform sampler2DArray sibling_t_inv_array : filter_linear, repeat_disable;
+uniform bool has_t_inv = false;
+// Region-based variant selection (W4 pattern, terrain_world_v3.gdshader).
+// region_size_m: world meters per region (typical 32-128).
+// edge_blend_m: crossfade width at region borders (0 = hard borders).
+// world_seed: scene seed (from material_variants.json) for the region hash.
+uniform float region_size_m = 0.0;
+uniform float edge_blend_m = 0.0;
+uniform int world_seed = 0;
+// Phase 6 follow-up diagnostic: bypass HN tiling, just region-pick +
+// plain texture sample. Lets us isolate region-system correctness
+// from HN sampler correctness during visual review. Default false
+// (region-only) since first HN impl had visible white-patch artifacts;
+// will re-enable after fixing variance correction. Toggle: 4=off, 5=on.
+uniform bool hn_enabled = false;
 
 // --- Per-fragment slot selection (Phase 4.9.b, spec 23 §Surface slot model) ---
 //
@@ -90,6 +122,13 @@ uniform int slot_biome_index[8];
 uniform int biome_count = 0;
 uniform vec4 biome_auto_elev_bands[8];
 uniform vec4 biome_auto_slope_bands[8];
+// Per-biome avg ground albedo. Used as a per-fragment biome-weighted
+// fallback color so coverage gaps (no slot wins, e.g. mid-elev flats
+// where ground band ends but mid needs steep slope) blend to neighbor-
+// biome's ground color instead of a single global olive. Bound from
+// TerrainWorld._bind_slots_with_catalog by sampling each biome's first
+// ground slot albedo and downscaling to a 1×1 average.
+uniform vec3 biome_fallback_colors[8];
 
 // --- Layer 2: detail array (Phase 5.5, spec 24) ---
 //
@@ -276,66 +315,66 @@ void fragment() {
     // 15% blend (which made unbound-macro terrain near-black against
     // the procedural-sky ground band, invisible — Phase 4.6 visual
     // review caught this).
+    // Phase 6 / 5.7.b GDScript Composer mirror — lifted out of the
+    // slot_count branch so it can also feed the biome-weighted
+    // fallback color below.
+    float biome_w[8];
+    float biome_w_sum = 0.0;
+    for (int b = 0; b < 8; b++) {
+        biome_w[b] = 0.0;
+        if (b >= biome_count) continue;
+        biome_w[b] = w5_slot_weight(
+            biome_auto_elev_bands[b],
+            biome_auto_slope_bands[b],
+            v_world_y, v_slope_deg);
+        biome_w_sum += biome_w[b];
+    }
+    if (biome_count > 0) {
+        if (biome_w_sum > 0.001) {
+            for (int b = 0; b < 8; b++) biome_w[b] /= biome_w_sum;
+        } else {
+            float uniform_w = 1.0 / float(biome_count);
+            for (int b = 0; b < 8; b++) {
+                biome_w[b] = (b < biome_count) ? uniform_w : 0.0;
+            }
+        }
+    }
+
+    // Per-fragment biome-weighted fallback color. Replaces the single
+    // global `fallback_color` so coverage gaps blend neighbor-biome's
+    // ground color (no green olive screaming "BUG HERE"). Single-biome
+    // scenes (biome_count==0) keep the legacy global fallback.
+    vec3 frag_fallback = fallback_color;
+    if (biome_count > 0) {
+        frag_fallback = vec3(0.0);
+        for (int b = 0; b < 8; b++) {
+            if (b >= biome_count) break;
+            frag_fallback += biome_w[b] * biome_fallback_colors[b];
+        }
+    }
+
+    // Sample macro albedo (the anti-repeat layer). When no macro
+    // texture is bound, texture() returns vec3(0); detect that and
+    // fall back to frag_fallback at full strength.
     vec2 mu = w5_macro_uv(world_xz, macro_aabb);
     vec3 macro_col = texture(macro_albedo, mu).rgb;
-    float macro_strength = dot(macro_col, vec3(1.0)) > 0.001 ? 0.85 : 0.0;
+    bool macro_present = dot(macro_col, vec3(1.0)) > 0.001;
+    // Per-mode macro strength (see macro_debug_mode uniform comment).
+    float macro_strength = 0.35;
+    if (macro_debug_mode == 1) macro_strength = 0.0;
+    else if (macro_debug_mode == 2) macro_strength = 1.0;
+    else if (macro_debug_mode == 3) macro_strength = 0.0;
+    if (!macro_present) macro_strength = 0.0;
 
-    // Phase 4.10.c (W4 PITFALLS #31 fix): the Phase 4 brightness
-    // modulator `0.85 + 0.30 * nv` at noise freq 0.05 (= 20m
-    // wavelength, ±15% brightness) produced visible 20m-scale blocky
-    // patches on near-uniform surfaces (e.g. alpine snow). Macro
-    // albedo + sibling textures now provide all needed variation;
-    // this redundant modulator just added user-flagged "tile to tile
-    // strangeness". Removed. If a future demo wants very-large-scale
-    // brightness modulation, do it via authored macro_albedo content,
-    // not a noise modulator in shader.
-    vec3 base = mix(fallback_color, macro_col, macro_strength);
+    // Phase 4.10.c (W4 PITFALLS #31 fix): brightness modulator removed.
+    // See git log f571576-era comments for history.
+    vec3 base = mix(frag_fallback, macro_col, macro_strength);
 
     // --- Layer 1 (Phase 5.5 + 4.9.b): siblings + per-fragment slot selection ---
-    //
-    // Three modes:
-    // 1) slot_count > 0 (Phase 4.9.b): loop over slots, compute per-
-    //    fragment weight from elev + slope bands, sample each slot's
-    //    sibling window, accumulate weighted average. The "right" path.
-    // 2) has_siblings + legacy sibling_start/count (Phase 5.5 fallback):
-    //    single-slot binding. Tests + old scenes that haven't migrated
-    //    to bind_all_slots() still work.
-    // 3) Otherwise: macro-only fallback (pre-Phase-5.5 behavior).
     if (slot_count > 0 && has_siblings) {
         vec2 tile_uv = world_xz / max(sibling_tile_m, 0.01);
         vec3 weighted = vec3(0.0);
         float wsum = 0.0;
-        // Phase 6 (5.7.b GDScript Composer mirror): when biome_count > 0,
-        // compute per-biome weight from auto_rules + normalize (softmax-
-        // shape), then multiply each slot's weight by its biome's weight.
-        // biome_count == 0 leaves all biome weights effectively 1.0
-        // (single-biome path).
-        float biome_w[8];
-        float biome_w_sum = 0.0;
-        for (int b = 0; b < 8; b++) {
-            biome_w[b] = 0.0;
-            if (b >= biome_count) continue;
-            biome_w[b] = w5_slot_weight(
-                biome_auto_elev_bands[b],
-                biome_auto_slope_bands[b],
-                v_world_y, v_slope_deg);
-            biome_w_sum += biome_w[b];
-        }
-        // Normalize biome weights so they sum to 1 (probability dist).
-        // Fall back to uniform if no biome owns this (elev, slope) so
-        // the renderer doesn't black out.
-        if (biome_count > 0) {
-            if (biome_w_sum > 0.001) {
-                for (int b = 0; b < 8; b++) {
-                    biome_w[b] /= biome_w_sum;
-                }
-            } else {
-                float uniform_w = 1.0 / float(biome_count);
-                for (int b = 0; b < 8; b++) {
-                    biome_w[b] = (b < biome_count) ? uniform_w : 0.0;
-                }
-            }
-        }
         // Loop over MAX_SLOTS (8) with early-out via slot_count guard;
         // GLSL prefers fixed-iter loops over dynamic ones for inlining.
         for (int i = 0; i < 8; i++) {
@@ -349,8 +388,15 @@ void fragment() {
             }
             if (w > 0.001) {
                 ivec4 window = slot_windows[i];
-                vec4 sib = w5_variety_sample_3tap(sibling_array, tile_uv,
-                    world_xz, window.x, window.y, sibling_blend_freq);
+                // Phase 6 follow-up: region-based variant pick + Heitz-Neyret
+                // sampling. Salt with the slot's start index so each slot's
+                // region pattern is independent of others.
+                vec4 sib = w5_variety_sample_combined(
+                    sibling_array, sibling_t_inv_array, has_t_inv,
+                    tile_uv, world_xz,
+                    window.x, window.y,
+                    region_size_m, edge_blend_m,
+                    world_seed, window.x, hn_enabled);
                 weighted += sib.rgb * w;
                 wsum += w;
             }
@@ -361,7 +407,12 @@ void fragment() {
         // unchanged so terrain still reads as terrain (not black).
         if (wsum > 0.001) {
             vec3 slot_color = weighted / wsum;
-            base = mix(base, slot_color, 0.7);
+            // Per-mode slot mix strength (see macro_debug_mode comment).
+            float slot_mix = 0.7;
+            if (macro_debug_mode == 1) slot_mix = 1.0;       // pure slot, no fallback
+            else if (macro_debug_mode == 2) slot_mix = 0.85; // 85% slot, 15% macro
+            else if (macro_debug_mode == 3) slot_mix = 1.0;  // pure slot, macro off
+            base = mix(base, slot_color, slot_mix);
         }
     } else if (has_siblings && sibling_count > 0) {
         // Legacy single-slot path (Phase 5.5 binding); kept for back-compat

@@ -28,6 +28,12 @@ W5_GpuResourceTracker="*uid://br3yuhlmpffci"
 W5_AssetStream="*uid://deklxvq6t0lpf"
 W5_ChangeBroadcast="*uid://jrkas53bk63x"
 
+[display]
+
+window/size/viewport_width=2560
+window/size/viewport_height=1600
+window/size/mode=2
+
 [dotnet]
 
 project/assembly_name="W5 Demo"

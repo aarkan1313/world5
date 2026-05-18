@@ -95,6 +95,14 @@ static func build(manifest: MaterialVariants, materials_root: String,
 				Log.warn("sibling_tex", "size mismatch (skipped)",
 					{"path": img_path, "got": sz, "want": expected_size})
 				continue
+			# Generate mipmaps so distant-camera sampling averages
+			# correctly. Without mips, the GPU sparse-samples raw
+			# pixels — high-contrast textures (snow_over_rock,
+			# leaf_litter) collapse to flat-color washes at distance.
+			# 256×1 T_inv LUTs skip this since they're not view-
+			# distance-sampled. Phase 6 visual A/B 2026-05-17 hunt.
+			if img.get_width() > 256:
+				img.generate_mipmaps()
 			images.append(img)
 			count += 1
 		if count > 0:

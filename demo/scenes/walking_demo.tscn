@@ -35,4 +35,3 @@ script = ExtResource("2_walkcamera")
 script = ExtResource("1_terrainworld")
 world_bundle_path = "res://addons/world5/worlds/walking_demo/"
 camera_path = NodePath("../WalkCamera")
-ring_count = 5

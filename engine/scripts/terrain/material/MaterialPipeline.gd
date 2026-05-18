@@ -356,3 +356,49 @@ func bind_biome_auto_rules(mat: ShaderMaterial, count: int,
 			packed_slope.append(Vector4(0.0, 0.0, 0.0, 0.0))
 	mat.set_shader_parameter("biome_auto_elev_bands", packed_elev)
 	mat.set_shader_parameter("biome_auto_slope_bands", packed_slope)
+
+
+## Bind per-biome avg ground albedo. Used as a per-fragment biome-
+## weighted fallback color in the shader (replaces the single global
+## fallback_color) so coverage gaps blend to neighbor-biome ground
+## color instead of olive green. colors is an Array of Color (or
+## Vector3) in the same biome order as bind_biome_auto_rules.
+##
+## Pass an empty array to skip — shader keeps using single-biome
+## fallback_color.
+func bind_biome_fallback_colors(mat: ShaderMaterial, colors: Array) -> void:
+	var packed: Array = []
+	for i in range(MAX_BIOMES):
+		if i < colors.size():
+			var c = colors[i]
+			if c is Color:
+				packed.append(Vector3(c.r, c.g, c.b))
+			else:
+				packed.append(c as Vector3)
+		else:
+			packed.append(Vector3.ZERO)
+	mat.set_shader_parameter("biome_fallback_colors", packed)
+
+
+## Bind the Heitz-Neyret + region-based sampler uniforms (Phase 6 visual
+## A/B 2026-05-17 follow-up). Replaces the in-fragment 3-tap stochastic
+## blend with the combined region-pick + HN-tile path.
+##
+## - sibling_t_inv_array: layer-matched Texture2DArray of 256×1 inverse-
+##   CDF LUTs (one per albedo). Pass null/empty to disable HN's variance-
+##   preserving step (shader falls back to plain weighted blend within HN3).
+## - region_size_m: world meters per region (e.g. 32-128). Manifest's
+##   region_size_m.
+## - edge_blend_m: crossfade band at region borders. Manifest's edge_blend_m.
+## - world_seed: scene seed for region hashing. Manifest's world_seed.
+func bind_variety_combined(mat: ShaderMaterial,
+		sibling_t_inv_array: Texture2DArray,
+		region_size_m: float, edge_blend_m: float,
+		world_seed: int) -> void:
+	var has_t_inv: bool = (sibling_t_inv_array != null)
+	mat.set_shader_parameter("sibling_t_inv_array",
+		sibling_t_inv_array if has_t_inv else Texture2DArray.new())
+	mat.set_shader_parameter("has_t_inv", has_t_inv)
+	mat.set_shader_parameter("region_size_m", max(region_size_m, 0.0))
+	mat.set_shader_parameter("edge_blend_m", max(edge_blend_m, 0.0))
+	mat.set_shader_parameter("world_seed", world_seed)
