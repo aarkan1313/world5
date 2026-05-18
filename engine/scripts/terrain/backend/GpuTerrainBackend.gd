@@ -469,7 +469,7 @@ func _apply_dem_feature_blend(heights: PackedFloat32Array,
 				if effective <= 0.0:
 					continue  # Outside DEM → keep noise base unchanged
 				var dem_h: float = src.call("sample_feature_world_xz",
-					kernel.mode, wx, wz)
+					kernel.mode, wx, wz, cell)
 				var dem_centered: float = dem_h - dem_mid
 				heights[i * n + j] = lerp(
 					heights[i * n + j], dem_centered, effective)
@@ -480,7 +480,7 @@ func _apply_dem_feature_blend(heights: PackedFloat32Array,
 				var wx: float = origin_x + float(j) * cell
 				var wz: float = origin_z + float(i) * cell
 				var f: float = src.call("sample_feature_world_xz",
-					kernel.mode, wx, wz)
+					kernel.mode, wx, wz, cell)
 				heights[i * n + j] += f * amp * strength
 	else:
 		# Other modes: centered around 0.5 so values < 0.5 shift down,
@@ -491,7 +491,7 @@ func _apply_dem_feature_blend(heights: PackedFloat32Array,
 				var wx: float = origin_x + float(j) * cell
 				var wz: float = origin_z + float(i) * cell
 				var f: float = src.call("sample_feature_world_xz",
-					kernel.mode, wx, wz)
+					kernel.mode, wx, wz, cell)
 				heights[i * n + j] += (f - center) * amp * strength
 
 

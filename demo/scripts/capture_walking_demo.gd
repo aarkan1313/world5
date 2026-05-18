@@ -27,11 +27,13 @@ func _ready() -> void:
 	# pitch -25° for a panoramic alpine view.
 	cam.set("terrain_follow_enabled", false)
 	cam.set("fly_mode", true)
-	# Inside DEM bounds: stand at z=1800 (near DEM south edge),
-	# y=600 (above terrain), look north toward DEM center (Mount Hood).
-	cam.position = Vector3(0.0, 600.0, 1800.0)
-	cam.rotation_degrees = Vector3(-15.0, 0.0, 0.0)
-	cam.fov = 70.0
+	# Sprint 4a polish: position deep inside DEM bounds at a sensible
+	# altitude (not extreme high or low). z=1500 looks north toward
+	# DEM center; y=350 puts camera ~150m above typical foothill peaks.
+	# Look slightly down to see the foothills shape.
+	cam.position = Vector3(0.0, 350.0, 1500.0)
+	cam.rotation_degrees = Vector3(-10.0, 0.0, 0.0)
+	cam.fov = 75.0
 	cam.far = 6000.0
 
 

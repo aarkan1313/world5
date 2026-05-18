@@ -23,8 +23,9 @@
 							"frequency": 0.005,
 							"lacunarity": 2.0,
 							"gain": 0.5,
-							"amplitude": 20.0
-						}
+							"amplitude": 200.0
+						},
+						"_note": "Bumped to 200m for outside-DEM areas \u2014 matches DEM amplitude scale so no cliff at DEM boundary fade."
 					},
 					{
 						"type": "dem_feature",
@@ -32,7 +33,7 @@
 							"_note": "DEM REPLACES height (strength=1.0). World IS Mount Hood foothills.",
 							"source": "cascades",
 							"mode": "dem_height",
-							"strength": 1.0
+							"strength": 0.85
 						}
 					},
 					{
