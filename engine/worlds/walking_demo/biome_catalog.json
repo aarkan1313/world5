@@ -13,39 +13,41 @@
 			"_kernel_note": "2026-05-17 Phase 5.7 demonstration: declared as a chain (noise_stack base + erosion post-process) per spec 19. Phase 5.7.c KernelComposer.bake_page can consume this; the runtime loader still reads kernels/noise_stack.json today (separate refactor to switch loader to catalog-driven). See docs/build-notes/phase_5_7_d_walking_demo_erosion_demo_2026_05_17.md for the bake-script + visual comparison.",
 			"kernel": {
 				"type": "chain",
+				"_note": "Sprint 3 polish 2026-05-18: alpine = DEM-anchored (Mount Hood foothills via Cascades excerpt). dem_height stage REPLACES the noise base with actual DEM elevation (re-centered around DEM midpoint). Erosion carves the real terrain. Noise stage retained at low amp so future strength<1.0 tweaks can mix DEM + procedural detail.",
 				"stages": [
 					{
 						"type": "noise_stack",
 						"params": {
-							"octaves": 6,
-							"frequency": 0.001953125,
+							"_note": "Small under-DEM noise; overwritten when dem_feature strength=1.0",
+							"octaves": 4,
+							"frequency": 0.005,
 							"lacunarity": 2.0,
 							"gain": 0.5,
-							"amplitude": 50.0
+							"amplitude": 20.0
 						}
 					},
 					{
-						"_note": "Sprint 3 of DEM/runtime-kernels epic \u2014 Cascades-anchored ridges blended into the noise base before erosion carves them. Cascades excerpt = Mount Hood foothills (Copernicus GLO-30, CC BY 4.0).",
 						"type": "dem_feature",
 						"params": {
+							"_note": "DEM REPLACES height (strength=1.0). World IS Mount Hood foothills.",
 							"source": "cascades",
-							"mode": "ridge_emphasis",
+							"mode": "dem_height",
 							"strength": 1.0
 						}
 					},
 					{
-						"_note": "iterations + rain_rate tuned 2026-05-17 for visibly-eroded demo terrain. Production tuning lands in Phase 5.7.e or a dedicated terrain-art sprint.",
 						"type": "erosion",
+						"_note": "Carve the real DEM terrain. Iterations reduced from 400 to 200 because DEM already has natural drainage; we just want to enhance + roughen.",
 						"params": {
-							"iterations": 400,
-							"thermal_iterations": 100,
+							"iterations": 200,
+							"thermal_iterations": 50,
 							"rain_rate": 0.025,
 							"evaporation": 0.015,
 							"sediment_capacity": 0.15,
 							"dissolve_rate": 0.4,
 							"deposit_rate": 0.3,
-							"talus_angle_deg": 35.0,
-							"talus_rate": 0.3
+							"talus_angle_deg": 40.0,
+							"talus_rate": 0.25
 						}
 					}
 				]

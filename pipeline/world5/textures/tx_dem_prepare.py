@@ -175,7 +175,7 @@ def prepare_dem(
     # back to world meters so the kernel operates on real-meter heights.
     norm_h = norm_u16.astype(np.float32) / 65535.0
     h_world_m = elev_min + norm_h * span
-    feature_modes = ("ridge_emphasis", "drainage_accumulation", "slope_deg", "aspect_deg")
+    feature_modes = ("dem_height", "ridge_emphasis", "drainage_accumulation", "slope_deg", "aspect_deg")
     kernel = DemFeatureKernel(modes=feature_modes)
     # Use full-size DEM grid (no extra resampling — features are at the
     # same resolution as the height PNG).

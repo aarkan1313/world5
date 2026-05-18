@@ -77,6 +77,15 @@ func clear_dem_sources() -> void:
 	_backend.clear_dem_sources()
 
 
+## Look up a registered DEM source by ID. Returns null if unknown.
+## Renderer uses this to introspect DEM bounds/elevation for height-
+## scale adjustment (DEM-anchored worlds need amp >= DEM span/2).
+func get_dem_source(source_id: String) -> Object:
+	if _backend == null:
+		return null
+	return _backend.get_dem_source(source_id)
+
+
 ## Submit a page-generation request. Returns the JobScheduler job id.
 ## Consumer awaits completion via JobScheduler.await_completion(id).
 ## Returns -1 if JobScheduler autoload is not available.

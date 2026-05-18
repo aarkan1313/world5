@@ -128,7 +128,16 @@ class DemFeatureKernel:
 
         features: dict[str, np.ndarray] = {}
         for mode in self.modes:
-            if mode == "ridge_emphasis":
+            if mode == "dem_height":
+                # Raw resampled DEM heights (already in world meters from
+                # the resample step). Sprint 3 dramatic mode: a DEM
+                # stage with mode=dem_height REPLACES the height stream
+                # instead of biasing it, anchoring the world directly
+                # to the source DEM's terrain. Use this when you want
+                # the world to LOOK like Mount Hood, not just be
+                # noise-shaped-by-Hood.
+                features[mode] = h_grid.astype(np.float32)
+            elif mode == "ridge_emphasis":
                 features[mode] = self._ridge_emphasis(h_grid).astype(np.float32)
             elif mode == "drainage_accumulation":
                 features[mode] = self._drainage_accumulation(h_grid).astype(np.float32)

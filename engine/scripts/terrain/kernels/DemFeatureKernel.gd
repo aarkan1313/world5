@@ -18,12 +18,14 @@ class_name DemFeatureKernel extends RefCounted
 
 
 ## Valid feature modes (must match the Python ref).
+const MODE_DEM_HEIGHT := "dem_height"
 const MODE_RIDGE_EMPHASIS := "ridge_emphasis"
 const MODE_DRAINAGE_ACCUMULATION := "drainage_accumulation"
 const MODE_SLOPE_DEG := "slope_deg"
 const MODE_ASPECT_DEG := "aspect_deg"
 
 const VALID_MODES := [
+	MODE_DEM_HEIGHT,
 	MODE_RIDGE_EMPHASIS,
 	MODE_DRAINAGE_ACCUMULATION,
 	MODE_SLOPE_DEG,

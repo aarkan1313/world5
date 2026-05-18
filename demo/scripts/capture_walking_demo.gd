@@ -21,13 +21,18 @@ func _ready() -> void:
 		return
 	if cam.has_method("_capture_mouse"):
 		cam._capture_mouse(false)
-	cam.set("terrain_follow_enabled", true)
-	cam.set("fly_mode", false)
-	# Walking-height oblique view so close-ground texture scale is visible.
-	cam.position = Vector3(40.0, 2.0, 40.0)
-	cam.rotation_degrees = Vector3(-18.0, -45.0, 0.0)
+	# Sprint 3 polish: fly-camera high enough to see Mount Hood
+	# foothills shape (Cascades excerpt spans ~800m vertically).
+	# Terrain_follow disabled. Stand back 3 km from center, height 800m,
+	# pitch -25° for a panoramic alpine view.
+	cam.set("terrain_follow_enabled", false)
+	cam.set("fly_mode", true)
+	# Inside DEM bounds: stand at z=1800 (near DEM south edge),
+	# y=600 (above terrain), look north toward DEM center (Mount Hood).
+	cam.position = Vector3(0.0, 600.0, 1800.0)
+	cam.rotation_degrees = Vector3(-15.0, 0.0, 0.0)
 	cam.fov = 70.0
-	cam.far = 5000.0
+	cam.far = 6000.0
 
 
 func _process(delta: float) -> void:

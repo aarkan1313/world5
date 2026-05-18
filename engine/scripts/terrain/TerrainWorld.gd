@@ -67,6 +67,10 @@ var _adapter: TerrainBackendAdapter = null
 var _diag: RingDebugOverlay = null
 var _probes: PageDebugProbes = null
 var _kernel: NoiseStackKernel = null
+# Sprint 3 of DEM/runtime-kernels epic: catalog-declared kernel chain
+# (composer) — stored so the renderer can introspect for DEM-driven
+# height-range adjustments and similar.
+var _composer: KernelComposer = null
 # Per-ring multi-page heightmap state (Phase 4.9.a, audit C1 fix).
 # Each ring has its own RingHeightArray maintaining a Texture2DArray
 # of resident pages; vertex shader picks the right layer per fragment
@@ -584,6 +588,7 @@ func _load_world_bundle(bundle_path: String) -> void:
 				# Keep _kernel for back-compat introspection (tests +
 				# diagnostics still read it).
 				_kernel = composer.base_noise_kernel()
+				_composer = composer
 
 	var kernel_cfg: String = bundle_path + "kernels/noise_stack.json"
 	if composer == null and FileAccess.file_exists(kernel_cfg):
@@ -736,6 +741,27 @@ func _rebuild_and_bind_ring_height_array(ring_idx: int) -> void:
 	var amp: float = ring_vertex_grid * 1.0
 	if _kernel != null:
 		amp = _kernel.amplitude
+	# Sprint 3 polish: if the composer has a dem_height stage with
+	# strength > 0, height range is bounded by the DEM's elevation span
+	# (re-centered around midpoint = ±span/2) rather than the noise
+	# amplitude. Use whichever is larger so DEM-anchored worlds aren't
+	# height-clipped.
+	if _composer != null:
+		for ds in _composer.dem_feature_stages():
+			if String(ds.mode) != DemFeatureKernel.MODE_DEM_HEIGHT:
+				continue
+			if ds.strength <= 0.0:
+				continue
+			var src_obj: Object = null
+			# Pull registered DemSource via adapter passthrough
+			if _adapter != null and _adapter.has_method("get_dem_source"):
+				src_obj = _adapter.get_dem_source(ds.source)
+			if src_obj == null:
+				continue
+			var er: Vector2 = src_obj.get("elevation_range_m")
+			var dem_amp: float = (er.y - er.x) * 0.5 * ds.strength
+			if dem_amp > amp:
+				amp = dem_amp
 	var tex: Texture2DArray = rha.build_texture_array()
 	if tex == null:
 		# No pages resident yet; leave material in unbound state

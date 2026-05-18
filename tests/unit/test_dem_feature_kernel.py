@@ -57,6 +57,30 @@ def test_extract_rejects_unknown_mode() -> None:
         k.extract((0.0, 0.0), (8.0, 8.0), 8, dem_array=h)
 
 
+# --- dem_height: raw passthrough ---
+
+
+def test_dem_height_passes_through_resampled_dem() -> None:
+    # Use a pyramid so we can verify the output isn't garbage —
+    # peak should still be near center after resampling.
+    h = _pyramid(32, peak=100.0)
+    k = DemFeatureKernel(modes=("dem_height",))
+    out = k.extract((0.0, 0.0), (32.0, 32.0), 32, dem_array=h)
+    dh = out.features["dem_height"]
+    assert dh.shape == (32, 32)
+    assert dh.dtype == np.float32
+    # Peak preserved within resample tolerance.
+    assert dh.max() > 50.0
+    assert dh.min() == 0.0  # corners of pyramid are 0
+
+
+def test_dem_height_resamples_to_requested_grid() -> None:
+    h = _pyramid(64, peak=42.0)
+    k = DemFeatureKernel(modes=("dem_height",))
+    out = k.extract((0.0, 0.0), (64.0, 64.0), 16, dem_array=h)
+    assert out.features["dem_height"].shape == (16, 16)
+
+
 def test_extract_rejects_non_2d_array() -> None:
     h = np.zeros((4, 4, 3), dtype=np.float32)
     k = DemFeatureKernel(modes=("slope_deg",))

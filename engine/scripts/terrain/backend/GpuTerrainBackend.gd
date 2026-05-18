@@ -77,6 +77,13 @@ func clear_dem_sources() -> void:
 	_dem_sources.clear()
 
 
+## Look up a registered DEM source by ID. Returns null if unknown.
+func get_dem_source(source_id: String) -> Object:
+	if not _dem_sources.has(source_id):
+		return null
+	return _dem_sources[source_id]
+
+
 ## Main entry. Validates request, dispatches compute, packs result.
 ## Always returns a TerrainPageResult; failure cases set
 ## version_stamp.error.
@@ -418,12 +425,55 @@ func _apply_dem_feature_blend(heights: PackedFloat32Array,
 	# amplitude so it stays proportional to the height stream's range.
 	var amp: float = base_kernel.amplitude if base_kernel != null else 50.0
 	var strength: float = clamp(kernel.strength, 0.0, 1.0)
-	# Mode-specific blend rules. ridge_emphasis is the v1 hero: it
-	# adds positive bias proportional to (already-normalized) ridge
-	# strength × amp × stage_strength. Other modes use a centered
-	# (signed) blend to avoid uniformly raising the height field.
-	var center: float = 0.5
-	if kernel.mode == DemFeatureKernel.MODE_RIDGE_EMPHASIS:
+	# Mode-specific blend rules:
+	# - dem_height: REPLACES the height stream with DEM elevation (re-
+	#   centered around 0 so the chain's amplitude semantics survive).
+	#   This is the "world IS Mount Hood" mode. strength interpolates
+	#   between the chain's current height (strength=0) and pure DEM
+	#   (strength=1) so authors can mix DEM with prior stages' output.
+	#   Feature values are in world meters from the source DEM.
+	# - ridge_emphasis: pure additive (already normalized [0, 1]) ×
+	#   amp × strength. Sparse positive bias on top of base height.
+	# - other modes (drainage / slope / aspect): centered around 0.5 so
+	#   values < 0.5 shift down, > 0.5 shift up. × amp × strength.
+	if kernel.mode == DemFeatureKernel.MODE_DEM_HEIGHT:
+		# DEM is in world meters; re-center on the DEM's own mean (its
+		# elevation_range_m midpoint) so the value sits in the same
+		# range as the noise stream rather than shifting everything up.
+		# Also: fade strength to 0 outside the DEM bounds + within a
+		# fade band inside so the world's noise base shows through
+		# beyond the DEM extent (no hard-cliff at DEM border).
+		var src_obj: Object = src
+		var elev_range: Vector2 = src_obj.get("elevation_range_m")
+		var dem_mid: float = (elev_range.x + elev_range.y) * 0.5
+		var dem_bounds: Rect2 = src_obj.get("bounds_world_xz")
+		var fade_band_m: float = 256.0  # falloff inside the border
+		for i in range(n):
+			for j in range(n):
+				var wx: float = origin_x + float(j) * cell
+				var wz: float = origin_z + float(i) * cell
+				# Distance from the nearest DEM bound edge (negative
+				# outside the DEM, positive inside). Use min over the
+				# 4 sides.
+				var inside_x: float = min(
+					wx - dem_bounds.position.x,
+					dem_bounds.position.x + dem_bounds.size.x - wx)
+				var inside_z: float = min(
+					wz - dem_bounds.position.y,
+					dem_bounds.position.y + dem_bounds.size.y - wz)
+				var inside_dist: float = min(inside_x, inside_z)
+				# Fade-in factor: 0 at/beyond DEM edge, 1 at fade_band_m
+				# inside. Clamp to [0, 1].
+				var fade: float = clamp(inside_dist / fade_band_m, 0.0, 1.0)
+				var effective: float = strength * fade
+				if effective <= 0.0:
+					continue  # Outside DEM → keep noise base unchanged
+				var dem_h: float = src.call("sample_feature_world_xz",
+					kernel.mode, wx, wz)
+				var dem_centered: float = dem_h - dem_mid
+				heights[i * n + j] = lerp(
+					heights[i * n + j], dem_centered, effective)
+	elif kernel.mode == DemFeatureKernel.MODE_RIDGE_EMPHASIS:
 		# Ridge mode: pure additive (already normalized [0,1]).
 		for i in range(n):
 			for j in range(n):
@@ -434,7 +484,8 @@ func _apply_dem_feature_blend(heights: PackedFloat32Array,
 				heights[i * n + j] += f * amp * strength
 	else:
 		# Other modes: centered around 0.5 so values < 0.5 shift down,
-		# > 0.5 shift up. Multiplied by amp * 0.5 * strength.
+		# > 0.5 shift up. Multiplied by amp * strength.
+		var center: float = 0.5
 		for i in range(n):
 			for j in range(n):
 				var wx: float = origin_x + float(j) * cell
