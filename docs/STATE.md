@@ -8,15 +8,16 @@
 
 ## One-sentence summary
 
-**Phase 5.7.b closed — Python KernelComposer shipped** (12 TDD pytests
-green; pytest total now 165). Computes `biome_weights(x,z,elev,slope)`
-via softmax over auto_biome_rules (the multi-biome unblocker for
-Phase 6) + `sample_height(x,z,seed)` via chain dispatch (shorthand
-and explicit forms). Walking_demo catalog (alpine + forest) is the
-canonical fixture. Erosion-in-chain recognized but per-point dispatch
-deferred to 5.7.c bake_page. **Next**: 5.7.c content-addressed
-bake_page OR GDScript runtime mirror of biome_weights (Phase 6
-multi-biome render unblock).
+**Phase 5.7.c closed — bake_page + content-addressed cache + erosion-
+in-chain dispatch shipped** (9 TDD pytests green; pytest total now
+174). Catalogs can declare `kernel: {type: chain, stages: [noise_stack,
+erosion]}` and the Composer bakes whole pages through the chain,
+caching by sha256 of (catalog_hash + world_origin + extent + grid +
+seed). Catalog edits invalidate downstream bakes. Auxiliary outputs
+(drainage_map etc.) still emitted by ErosionKernel but only the
+eroded height is cached — secondary outputs wait for spec 35 water
+consumer. **Next**: GDScript runtime mirror of `_band_weight` for
+Phase 6 multi-biome render unblock (pending in-flight Godot work).
 
 ## Per-tier state
 
@@ -165,6 +166,24 @@ sweep runs against the most-evolved spec set).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
+- 2026-05-17 (Phase 5.7.c closed — bake_page + cache + erosion-in-chain):
+  Spec 19 §"Pre-bake global pass" + spec 12 content addressing.
+  Added KernelComposer.bake_page(world_origin, extent, grid_n, seed,
+  store=None, biome_index=0) — runs the biome's full chain on a
+  WHOLE page (noise_stack base + erosion post-process). Erosion
+  stages, previously skipped at per-point sample_height, now execute
+  here. Optional store argument uses ContentAddressStore: cache key
+  is sha256(canonical_json(catalog_hash + biome + world_origin +
+  extent + grid + seed)); hit returns bytes; miss runs chain + puts.
+  Catalog edits invalidate downstream bakes via catalog_hash
+  inclusion. Cleanup: removed _DeferredStage placeholder (erosion
+  now returns a real instance from _instantiate_stage); __init__
+  validates chain ordering (first stage must be NoiseStackKernel).
+  9 TDD pytests green (shape+dtype + noise-only matches bare +
+  erosion changes output + determinism + cache miss-then-hit + miss
+  on seed change + miss on extent change + metadata records
+  provenance + no-store doesn't persist). pytest total 174.
+  Build note phase_5_7_c_bake_page_cache_2026_05_17.md.
 - 2026-05-17 (Phase 5.7.b closed — Python KernelComposer):
   Spec 19 §"KernelComposer" + spec 22 §"Catalog schema". Two
   responsibilities: (1) `biome_weights(x,z,elev,slope)` via softmax

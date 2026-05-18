@@ -28,10 +28,12 @@ runtime.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 
 import numpy as np
 
+from world5.kernels.erosion import ErosionKernel
 from world5.kernels.noise_stack import NoiseStackKernel
 
 
@@ -70,27 +72,36 @@ def _band_weight(elev: float, slope: float, rule: dict) -> float:
 # --- chain dispatch ---
 
 
+_EROSION_PARAM_KEYS = (
+    "iterations", "rain_rate", "evaporation", "sediment_capacity",
+    "dissolve_rate", "deposit_rate", "min_slope", "gravity",
+    "thermal_iterations", "talus_angle_deg", "talus_rate", "seed",
+)
+_NOISE_PARAM_KEYS = ("octaves", "frequency", "lacunarity", "gain", "amplitude")
+
+
 def _instantiate_stage(stage: dict):
     """Build a kernel instance from a single-stage spec.
-    Supported: noise_stack (returns NoiseStackKernel).
-    erosion is recognized but deferred — needs height-IN, so it
-    can't be a base generator. Composer rejects an erosion-first
-    chain at parse time."""
+    Supported: noise_stack (base generator), erosion (post-process).
+
+    Per spec 19, the first stage of a chain MUST be a base generator
+    (noise_stack); subsequent stages MAY be post-processes (erosion).
+    KernelComposer.__init__ validates chain ordering; this function
+    just builds the instance for whichever stage type is asked.
+
+    Phase 5.7.c: erosion was previously deferred (NotImplementedError)
+    pending bake_page. Now bake_page runs erosion stages on whole
+    pages; this function returns a usable ErosionKernel instance.
+    Per-POINT sample_height still skips erosion (correctly — erosion
+    is not a per-point function)."""
     stype = stage.get("type", "")
     params = stage.get("params", {}) or {}
     if stype == "noise_stack":
-        return NoiseStackKernel(**{k: params[k] for k in
-            ("octaves", "frequency", "lacunarity", "gain", "amplitude")
-            if k in params})
+        return NoiseStackKernel(**{k: params[k] for k in _NOISE_PARAM_KEYS
+                                   if k in params})
     if stype == "erosion":
-        # Deferred: erosion in chains lands when 5.7.c content-
-        # addresses the bake output. Recognized but not runnable
-        # via the Python composer's sample_height (which is per-XZ;
-        # erosion is per-page). KernelComposer.bake_page (5.7.c) will
-        # run erosion stages on whole pages.
-        raise NotImplementedError(
-            "erosion stages in kernel chains land in 5.7.c "
-            "(needs content-addressed cache + page-scope dispatch)")
+        return ErosionKernel(**{k: params[k] for k in _EROSION_PARAM_KEYS
+                                if k in params})
     raise ValueError(f"unknown kernel stage type: {stype!r}")
 
 
@@ -129,6 +140,7 @@ class KernelComposer:
         if not isinstance(biomes_field, list) or len(biomes_field) == 0:
             raise ValueError("catalog must have at least one biome in `biomes`")
 
+        self._catalog_hash = _hash_catalog(catalog)
         self._biomes: list[_BiomeEntry] = []
         for b in biomes_field:
             name = str(b.get("name", "")).strip()
@@ -141,6 +153,13 @@ class KernelComposer:
             # Instantiate stages eagerly so config errors surface at
             # construct time, not at first sample.
             stages = [_safe_instantiate(s, name) for s in chain]
+            # Spec 19 chain-ordering: first stage MUST be a base generator
+            # (NoiseStackKernel). Post-process stages (erosion) need
+            # height-IN, so they can't lead a chain.
+            if not isinstance(stages[0], NoiseStackKernel):
+                raise ValueError(
+                    f"biome {name!r}: first chain stage must be a base "
+                    f"generator (noise_stack); got {type(stages[0]).__name__}")
             # Default auto_rule to "always-on" if missing (back-compat
             # with single-biome catalogs that didn't bound their range).
             auto_rule = b.get("auto_biome_rules") or {
@@ -215,47 +234,176 @@ class KernelComposer:
 
     def _sample_chain(self, stages: list, x: float, z: float,
                       seed: int) -> float:
-        """Run the chain on a single point. Currently only noise_stack
-        (base generator) supported at per-point granularity. Erosion
-        stages need page-scope dispatch + cache; deferred to 5.7.c
-        bake_page method."""
+        """Run the chain on a single point. Only the base generator
+        contributes — erosion (post-process) needs page-scope context
+        + is dispatched via bake_page. sample_height callers get the
+        un-eroded value; for eroded heights at known XZ, bake the
+        relevant page + sample via local bilinear."""
         if not stages:
             return 0.0
         base = stages[0]
-        if not isinstance(base, NoiseStackKernel):
-            raise ValueError(
-                f"first stage of a chain must be a base generator, "
-                f"got {type(base).__name__}")
-        # Sample one point via the existing per-page API (1x1 grid).
+        # __init__ already validated base is a NoiseStackKernel.
         arr = base.sample_page((x, z), extent_m=1.0, grid_n=2, seed=seed)
-        h = float(arr[0, 0])
-        if len(stages) > 1:
-            # Future: run post-process stages here at per-point scale
-            # (erosion needs whole-page context; that's the 5.7.c
-            # bake_page entry point). For now, ignore subsequent stages
-            # at per-point sampling — caller gets the noise_stack value.
-            pass
-        return h
+        return float(arr[0, 0])
+
+    # --- bake_page (Phase 5.7.c, the erosion-in-chain unblocker) ---
+
+    def bake_page(
+        self,
+        world_origin_xz: tuple[float, float],
+        extent_m: float,
+        grid_n: int,
+        seed: int,
+        store=None,  # type: Optional[ContentAddressStore]
+        biome_index: int = 0,
+    ) -> np.ndarray:
+        """Run the full kernel chain on a whole page. Erosion stages
+        execute here (they need page-scope context).
+
+        Per spec 19 + spec 12: when `store` is provided, the output is
+        content-addressed by sha256(catalog_hash + world_origin +
+        extent + grid + seed + biome_index). Cache hit → bytes loaded
+        from disk, no recompute. Cache miss → chain runs, output
+        stored.
+
+        Returns (grid_n, grid_n) float32 array (row-major, [r,c] =
+        sample at world_origin + (c, r) * cell, matching the
+        NoiseStackKernel ordering).
+
+        biome_index selects which biome's chain to bake (default 0 =
+        first biome). Multi-biome blending across biomes is a
+        renderer concern (per-fragment via biome_weights), not a
+        bake concern."""
+        if biome_index < 0 or biome_index >= self.biome_count:
+            raise IndexError(
+                f"biome_index {biome_index} out of range [0, {self.biome_count})")
+        biome = self._biomes[biome_index]
+
+        # Cache key + provenance metadata (used both for cache lookup
+        # and for cache-miss `put`).
+        cache_key = self._page_cache_key(
+            world_origin_xz, extent_m, grid_n, seed, biome.name)
+        provenance = {
+            "catalog_hash": self._catalog_hash,
+            "biome": biome.name,
+            "biome_index": biome_index,
+            "world_origin_xz": list(world_origin_xz),
+            "extent_m": float(extent_m),
+            "grid_n": int(grid_n),
+            "seed": int(seed),
+            "chain_types": [type(s).__name__ for s in biome.instantiated_stages],
+        }
+
+        # Cache hit path.
+        if store is not None and store.has(cache_key):
+            artifact_path = store.get(cache_key)
+            return _load_page_bytes(artifact_path, grid_n)
+
+        # Cache miss path: run the chain.
+        page = self._run_chain_on_page(
+            biome.instantiated_stages,
+            world_origin_xz, extent_m, grid_n, seed,
+        )
+
+        # Persist if a store was provided.
+        if store is not None:
+            store.put(cache_key, page.tobytes(), metadata=provenance)
+
+        return page
+
+    def _run_chain_on_page(
+        self,
+        stages: list,
+        world_origin_xz: tuple[float, float],
+        extent_m: float,
+        grid_n: int,
+        seed: int,
+    ) -> np.ndarray:
+        """Execute a chain on a page. First stage produces the base
+        height; subsequent stages are post-processes that take the
+        prior stage's height-OUT as their input."""
+        if not stages:
+            raise ValueError("empty chain")
+        # Stage 0 must be a base generator (validated at __init__).
+        base = stages[0]
+        height = base.sample_page(world_origin_xz, extent_m=extent_m,
+                                  grid_n=grid_n, seed=seed)
+        # Stages 1..N are post-processes. Each takes height in, returns
+        # height out (plus auxiliary outputs we don't currently expose
+        # via bake_page — those will land when spec 35 water consumes
+        # drainage_map directly through a separate API).
+        for stage in stages[1:]:
+            if isinstance(stage, ErosionKernel):
+                result = stage.erode(height)
+                height = result.eroded
+            else:
+                raise ValueError(
+                    f"unsupported post-process stage type: "
+                    f"{type(stage).__name__}")
+        return height.astype(np.float32)
+
+    def _page_cache_key(
+        self,
+        world_origin_xz: tuple[float, float],
+        extent_m: float,
+        grid_n: int,
+        seed: int,
+        biome_name: str,
+    ) -> str:
+        """Compute the cache key for a page bake. Includes the catalog
+        hash so a catalog edit invalidates all baked pages."""
+        from world5.content_address import ContentAddressStore
+        # Use a transient store just for its hash_inputs method —
+        # hashing doesn't touch the filesystem.
+        return ContentAddressStore.hash_inputs.__call__(
+            _DummyHasher(),
+            {
+                "kind": "kernel_composer.bake_page",
+                "catalog_hash": self._catalog_hash,
+                "biome": biome_name,
+                "world_origin_x": float(world_origin_xz[0]),
+                "world_origin_z": float(world_origin_xz[1]),
+                "extent_m": float(extent_m),
+                "grid_n": int(grid_n),
+                "seed": int(seed),
+            },
+        )
+
+
+# --- cache helpers ---
+
+
+def _hash_catalog(catalog: dict) -> str:
+    """Stable hash of the catalog so kernel/auto_rule edits invalidate
+    cached bakes. JSON-canonicalized to ignore key-order differences."""
+    import hashlib
+    canonical = json.dumps(catalog, sort_keys=True, separators=(",", ":"),
+                           default=str)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _load_page_bytes(artifact_path, grid_n: int) -> np.ndarray:
+    """Reverse of `page.tobytes()` — load a baked float32 page from
+    the content-addressed store back into an (grid_n, grid_n) array."""
+    raw = artifact_path.read_bytes()
+    arr = np.frombuffer(raw, dtype=np.float32)
+    return arr.reshape(grid_n, grid_n).copy()  # copy: arr is read-only
+
+
+class _DummyHasher:
+    """Borrows ContentAddressStore.hash_inputs's canonical-JSON-then-
+    sha256 logic without instantiating a real store (no filesystem
+    touch). Only `_file_hash_cache` would be used by hash_inputs if
+    FileInput entries were passed; we never pass them, so the empty
+    dict suffices."""
+    def __init__(self):
+        self._file_hash_cache: dict = {}
 
 
 def _safe_instantiate(stage: dict, biome_name: str):
     """Wrap _instantiate_stage to surface biome context in error msgs."""
     try:
         return _instantiate_stage(stage)
-    except NotImplementedError:
-        # Erosion in chains is recognized but per-point dispatch is
-        # deferred. Don't fail construction — let sample_height raise
-        # if the user tries to evaluate it.
-        return _DeferredStage(stage.get("type", "?"), biome_name)
     except Exception as e:
         raise ValueError(
             f"biome {biome_name!r} kernel stage invalid: {e}") from e
-
-
-@dataclass(frozen=True)
-class _DeferredStage:
-    """Placeholder for stage types recognized but not runnable at
-    per-point scale (e.g. erosion needs page context). sample_height
-    skips these; bake_page (5.7.c) will dispatch them."""
-    type: str
-    biome_name: str
