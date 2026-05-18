@@ -532,19 +532,52 @@ func _load_world_bundle(bundle_path: String) -> void:
 					entry = d.get_next()
 				d.list_dir_end()
 
-	# Kernel config (TR-SPEC-S5 fix — was hard-coded defaults)
+	# Kernel config. Two-tier precedence (Phase 6 follow-up):
+	#   1. Catalog kernel chain (per biome `kernel` field, parsed by
+	#      KernelComposer). This is the modern path — enables erosion
+	#      stages, future DEM features, per-biome divergent chains.
+	#      Walking demo's alpine biome ships a noise+erosion chain.
+	#   2. Legacy single-noise kernels/noise_stack.json. Pre-catalog
+	#      bundles still work; bundle authors can omit it once their
+	#      catalog declares a kernel chain.
+	var composer: KernelComposer = null
+	if catalog != null and catalog.biomes.size() > 0:
+		# First biome's chain wins for the demo's single-page-set
+		# generation. Per-biome divergent chains land alongside the
+		# Composer's per-biome blending (spec 19 §"KernelComposer"
+		# multi-biome height blend, not yet wired runtime-side).
+		var first_biome: Dictionary = catalog.biomes[0]
+		var kernel_spec: Variant = first_biome.get("kernel", null)
+		if kernel_spec is Dictionary:
+			composer = KernelComposer.from_dict(kernel_spec)
+			var cerrs: Array = composer.validate()
+			if cerrs.size() > 0:
+				Log.warn("terrain_world", "kernel chain validation",
+					{"biome": first_biome.get("name", ""), "errors": cerrs})
+			else:
+				Log.info("terrain_world", "kernel chain loaded", {
+					"biome": first_biome.get("name", ""),
+					"stages": composer.stages.size(),
+					"chain_hash": composer.chain_hash().substr(0, 12),
+				})
+				# Keep _kernel for back-compat introspection (tests +
+				# diagnostics still read it).
+				_kernel = composer.base_noise_kernel()
+
 	var kernel_cfg: String = bundle_path + "kernels/noise_stack.json"
-	if FileAccess.file_exists(kernel_cfg):
+	if composer == null and FileAccess.file_exists(kernel_cfg):
+		# Legacy path — no catalog chain, fall back to standalone JSON.
 		var f: FileAccess = FileAccess.open(kernel_cfg, FileAccess.READ)
 		if f != null:
 			var parsed: Variant = JSON.parse_string(f.get_as_text())
 			f.close()
 			if parsed is Dictionary:
 				_kernel = NoiseStackKernel.from_dict(parsed)
-				# Re-configure streaming with the loaded kernel
-				if _streaming != null:
-					_streaming.configure(_adapter, _cache, page_extent_m,
-						ring_vertex_grid, 0, "high", _kernel, ["height_cpu"])
+
+	# Re-configure streaming with whichever kernel source won.
+	if _streaming != null and (composer != null or _kernel != null):
+		_streaming.configure(_adapter, _cache, page_extent_m,
+			ring_vertex_grid, 0, "high", _kernel, ["height_cpu"], composer)
 
 	_loaded = true
 	world_loaded.emit()

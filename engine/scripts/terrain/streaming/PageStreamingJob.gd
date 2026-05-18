@@ -36,6 +36,7 @@ var _grid_n: int = 256
 var _seed: int = 0
 var _tier: String = "high"
 var _kernel: NoiseStackKernel = null
+var _composer: KernelComposer = null  # Phase 6 follow-up: chain dispatch
 var _capabilities: Array = ["height_cpu"]   # default — TR-SPEC-S3: callers can extend
 
 
@@ -43,7 +44,8 @@ func configure(adapter: TerrainBackendAdapter, cache: TerrainPageCache,
 		page_extent_m: float = 256.0, grid_n: int = 256,
 		seed: int = 0, tier: String = "high",
 		kernel: NoiseStackKernel = null,
-		capabilities: Array = ["height_cpu"]) -> void:
+		capabilities: Array = ["height_cpu"],
+		composer: KernelComposer = null) -> void:
 	_adapter = adapter
 	_cache = cache
 	_page_extent_m = page_extent_m
@@ -51,6 +53,7 @@ func configure(adapter: TerrainBackendAdapter, cache: TerrainPageCache,
 	_seed = seed
 	_tier = tier
 	_kernel = kernel
+	_composer = composer
 	_capabilities = capabilities
 
 
@@ -80,6 +83,8 @@ func on_load_requested(ring: int, page_xz: Vector2) -> void:
 	}
 	if _kernel != null:
 		req_dict["kernel"] = _kernel
+	if _composer != null:
+		req_dict["composer"] = _composer
 	var req: TerrainPageRequest = TerrainPageRequest.from_dict(req_dict)
 	var jid: int = _adapter.request_page(req)
 	if jid <= 0:
