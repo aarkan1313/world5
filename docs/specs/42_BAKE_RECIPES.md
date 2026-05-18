@@ -9,18 +9,34 @@
 
 ## Purpose
 
-Offline rendering tools that produce static or low-frequency-updated
-images from a W5 world bundle. Each recipe:
-- Loads a baked world bundle
-- Runs Godot headless with a specific camera + lighting + post-process
-  configuration
-- Writes images + a manifest
+Offline tools that transform a W5 procedural world into a baked,
+inspectable output. Each recipe consumes a world bundle + writes a
+manifest + output assets. Two RECIPE FAMILIES:
 
-V1 ships **the contract + runner skeleton, NOT specific recipes.**
-Three known-needed recipes (2.5D, topdown, world-map) defer to
-per-need sprints. By the time those sprints run, we'll know the
-renderer + atmosphere + lighting in detail — current guess would be
-premature.
+**Image recipes** (the original v1 scope) — render-once static or
+low-frequency-updated images from a world bundle:
+- 2.5D painterly, topdown cartographic, world-map strategic
+- Output: PNGs + manifest
+
+**World recipes** (added 2026-05-17 per user direction) — transform
+the procedural world into a STATIC RUNTIME-LOADABLE world:
+- `static_world`: pre-bakes terrain meshes + bakes biome materials
+  to fixed textures + freezes decoration placement → produces a
+  world bundle a low-spec device can stream without running the
+  procedural pipeline at runtime
+- Output: a parallel world bundle (`worlds/<name>_static/`) plus
+  manifest
+- Use cases: (a) low-spec hardware (integrated GPU, mobile) where
+  runtime procedural can't hit frame budget; (b) consumer modding
+  workflows (a Skyrim-style hand-edited world starts as a baked
+  procedural one + gets author overrides); (c) forkability validation
+  (spec 44) — proving the engine's procedural output is inspectable
+  + diffable
+
+V1 ships **the contract + runner skeleton + the static_world recipe
+stub.** Image recipes (2.5D, topdown, world-map) defer to per-need
+sprints. By the time those sprints run, we'll know the renderer +
+atmosphere + lighting in detail — current guess would be premature.
 
 ## Non-goals
 
@@ -82,6 +98,110 @@ V1 does NOT ship:
 - World-map strategic-scale recipe (deferred)
 
 These recipes get specs when their consumers need them.
+
+## `static_world` recipe (world recipe family)
+
+A world recipe transforms a procedural world bundle into a static
+one — same engine, same scene graph at runtime, but everything that
+WAS computed procedurally at runtime is now pre-baked and loaded
+from disk. The output is a parallel world bundle that loads through
+the same TerrainWorld + decoration systems but bypasses the kernel
+chain, the texture variety pipeline, and the foliage placer.
+
+### What gets baked
+
+- **Terrain meshes**: every page in a bounded region pre-meshed at
+  every LOD tier (using KernelComposer.bake_page already shipped in
+  Phase 5.7.c — same content-addressed cache, just iterated over
+  all required pages). Meshes saved as `.tres` per page.
+- **Heightmaps**: cached float32 page bytes (already done by
+  bake_page). Static world loads these instead of running
+  ErosionKernel at startup.
+- **Per-fragment biome weights**: baked into a world-spanning
+  texture (low-res, e.g. 256×256 covering ±world_half_extent) so
+  the renderer skips per-fragment softmax. The texture stores
+  one channel per biome.
+- **Decoration placements**: every spec 28 decoration's final
+  (position, rotation, scale, palette_id) frozen into a flat blob
+  per decoration page. Loader reads + instances; no placement
+  computation at runtime.
+- **Foliage placements**: same — flat blob of instance transforms;
+  no foliage placement at runtime.
+- **Atmosphere/lighting capture**: per spec 30/31, capture the
+  GI probes + lightmaps once → load them. Static world ships with
+  no SDFGI cost.
+
+### What stays procedural in a static world
+
+- Player movement + collision (CPU-side gameplay)
+- Animation, AI, sound, UI (consumer-owned, not engine concern)
+- Weather effects (spec 32 if real-time; could also be baked but
+  weather is per-session by design)
+- Atmosphere time-of-day if the static world wants it (lighting
+  becomes day-night blendable from a small atmosphere LUT)
+
+### Bake-time budget
+
+A `static_world` recipe IS expensive — that's the whole point. The
+heavy work happens once at bake. Realistic targets:
+- 1km² world, 5 biomes, modest decoration density: 10-30 min on
+  dev hardware
+- 10km² world (the kernel-system hard cap, spec 19 §"World-size
+  bound"): hours; chunked + resumable
+
+The runner exposes `--resume` so a multi-hour bake can survive
+interruptions; spec 12 content addressing makes "unchanged-input
+pages skip" automatic.
+
+### Output bundle shape
+
+```
+worlds/<name>_static/
+├── _static_manifest.json     // recipe version, source world, bake date
+├── biome_weights.exr          // world-spanning per-biome weight texture
+├── lighting/
+│   ├── gi_probes.bin
+│   └── lightmap_*.exr
+├── terrain_pages/
+│   └── <ring>_<x>_<z>.tres    // pre-meshed per LOD ring × page
+├── decoration_blobs/
+│   └── <page>.bin             // flat instance transforms
+├── foliage_blobs/
+│   └── <page>.bin
+├── materials/                 // unchanged from procedural source
+└── (no kernels/, no diversity catalogs needed at runtime)
+```
+
+The runtime loader checks for `_static_manifest.json` first; if
+present, takes the static path. If absent, falls back to procedural.
+Consumer's `world_bundle_path` doesn't change — they point at the
+same dir; the loader picks the right path.
+
+### Versioning + invalidation
+
+The static bundle's manifest records the source world's content
+hash. If the source's `biome_catalog.json` (or any kernel config)
+changes, the static bundle is INVALID — runtime warns + falls back
+to procedural until re-baked. Per spec 12 (same model as kernel
+output caching).
+
+### What this enables
+
+- **Perf-floor fallback** (the original motivation): when calibration
+  + tier extrapolation suggests we won't hit frame budget on the
+  target hardware (spec 13 §extrapolation), the static recipe is
+  the escape hatch. Same world, much lower runtime cost.
+- **Author overrides + modding** (spec 14 future): a static world
+  is editable in the Godot editor like any other scene. Authors
+  can move trees, retexture cliffs, add custom geometry. This is
+  HOW consumer projects ship a hand-edited world that started as
+  procedural.
+- **Forkability validation** (spec 44): if the engine's procedural
+  output can be baked → loaded → rendered identically, the engine
+  is forkable. Static bake IS the forkability proof.
+- **CI / regression captures**: static worlds are deterministic at
+  runtime by construction. Capture-based perf tests (spec 06) get
+  stable baselines.
 
 ## When recipes get added
 

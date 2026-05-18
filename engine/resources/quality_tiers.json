@@ -1,6 +1,16 @@
 {
   "_schema_version": 1,
-  "_note": "Phase 4.5 calibration (2026-05-17): terrain_rings adjusted per RTX 5090 Laptop measurement + 3060 F2 conservative extrapolation (see docs/build-notes/phase_4_5_calibration_2026_05_17.md). Phase 5.4.b (2026-05-17): added terrain_sibling_blend_freq per-tier knob (audit C3 fix; spec 24 §Layer 1 stochastic-UV noise wavelength; higher tiers afford finer-frequency variation). Other values still placeholder pending per-system Phase 5+ measurement. Per-system specs cite via QualityTiers.get_current().",
+  "_note": "Phase 4.5 calibration (2026-05-17): terrain_rings adjusted per RTX 5090 Laptop measurement + 3060 F2 conservative extrapolation (see docs/build-notes/phase_4_5_calibration_2026_05_17.md). Phase 5.6 budget pass (2026-05-17): terrain step/budget values aligned with the current multi-page clipmap renderer: step0 is 0.5m until the far-field/coarse-terrain pass lands, stepN is the current outer-ring cell size, and cpu_pages covers the visible height-array working set. Phase 5.4.b: added terrain_sibling_blend_freq per-tier knob.",
+  "_calibration_hw": "rtx_5090_laptop",
+  "_calibration_hw_note": "The dev rig perf tests actually run on. All raw frame-time + budget values in this file are measured here. See spec 13 §Calibration hardware + cross-hardware extrapolation. To translate measured-on-5090 numbers to a target-tier's hardware, apply the per-tier _perf_extrapolation_ratios via the perf-test assertion layer (tests/perf/README.md).",
+  "_perf_extrapolation_ratios": {
+    "_note": "Per-tier scalar multipliers: divide a calibration-HW measured frame time by the ratio to get the expected frame time on the tier's TARGET hardware. Conservative — better to ship slightly under target than to underestimate overhead. Re-measure when calibration HW changes. Source: synthetic-bench tables + Godot 4.6 mesh+texture workload measurements at 1080p.",
+    "low":       { "geometry": 8.0, "fillrate": 5.0 },
+    "medium":    { "geometry": 5.0, "fillrate": 3.5 },
+    "high":      { "geometry": 3.5, "fillrate": 2.5 },
+    "ultra":     { "geometry": 2.0, "fillrate": 1.6 },
+    "cinematic": { "geometry": 1.0, "fillrate": 1.0 }
+  },
   "tiers": {
     "low": {
       "tier_name": "low",
@@ -20,8 +30,8 @@
 
       "terrain_rings": 3,
       "terrain_grid_n": 128,
-      "terrain_step0_m": 4.0,
-      "terrain_stepN_m": 128.0,
+      "terrain_step0_m": 0.5,
+      "terrain_stepN_m": 2.0,
       "terrain_collision_rings": 1,
       "terrain_pbr_tile_size_m": 8.0,
       "terrain_macro_tile_size_m": 256.0,
@@ -64,8 +74,8 @@
 
       "terrain_rings": 4,
       "terrain_grid_n": 192,
-      "terrain_step0_m": 3.0,
-      "terrain_stepN_m": 96.0,
+      "terrain_step0_m": 0.5,
+      "terrain_stepN_m": 4.0,
       "terrain_collision_rings": 2,
       "terrain_pbr_tile_size_m": 8.0,
       "terrain_macro_tile_size_m": 256.0,
@@ -97,7 +107,7 @@
       "streaming_budget_resident_texture_mb": 1500,
       "streaming_budget_draw_calls": 800,
       "streaming_budget_active_jobs": 16,
-      "streaming_budget_cpu_pages": 64,
+      "streaming_budget_cpu_pages": 128,
       "streaming_budget_gpu_pages": 32,
       "streaming_budget_asset_cache_mb": 800,
 
@@ -108,8 +118,8 @@
 
       "terrain_rings": 5,
       "terrain_grid_n": 256,
-      "terrain_step0_m": 2.0,
-      "terrain_stepN_m": 64.0,
+      "terrain_step0_m": 0.5,
+      "terrain_stepN_m": 8.0,
       "terrain_collision_rings": 2,
       "terrain_pbr_tile_size_m": 8.0,
       "terrain_macro_tile_size_m": 256.0,
@@ -141,7 +151,7 @@
       "streaming_budget_resident_texture_mb": 2500,
       "streaming_budget_draw_calls": 1200,
       "streaming_budget_active_jobs": 24,
-      "streaming_budget_cpu_pages": 96,
+      "streaming_budget_cpu_pages": 512,
       "streaming_budget_gpu_pages": 48,
       "streaming_budget_asset_cache_mb": 1500,
 
@@ -152,8 +162,8 @@
 
       "terrain_rings": 6,
       "terrain_grid_n": 256,
-      "terrain_step0_m": 1.5,
-      "terrain_stepN_m": 48.0,
+      "terrain_step0_m": 0.5,
+      "terrain_stepN_m": 16.0,
       "terrain_collision_rings": 3,
       "terrain_pbr_tile_size_m": 8.0,
       "terrain_macro_tile_size_m": 256.0,
@@ -185,7 +195,7 @@
       "streaming_budget_resident_texture_mb": 4500,
       "streaming_budget_draw_calls": 2000,
       "streaming_budget_active_jobs": 32,
-      "streaming_budget_cpu_pages": 128,
+      "streaming_budget_cpu_pages": 2048,
       "streaming_budget_gpu_pages": 64,
       "streaming_budget_asset_cache_mb": 2500,
 
@@ -196,7 +206,7 @@
 
       "terrain_rings": 7,
       "terrain_grid_n": 256,
-      "terrain_step0_m": 1.0,
+      "terrain_step0_m": 0.5,
       "terrain_stepN_m": 32.0,
       "terrain_collision_rings": 4,
       "terrain_pbr_tile_size_m": 8.0,

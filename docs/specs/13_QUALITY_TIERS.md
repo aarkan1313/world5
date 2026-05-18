@@ -42,6 +42,63 @@ handles extreme distance + runs the heaviest visual stack
 "ship this for players" tier; the 30fps target reflects that. Audit
 S7 renamed from `ultra_far` to `cinematic` (final).
 
+## Calibration hardware + cross-hardware extrapolation
+
+W5 perf calibration is run on whatever hardware the dev rig has;
+target hardware may differ. To avoid "ungrounded perf claim" status
+(Phase 4.5 audit S1), spec 13 declares:
+
+**Calibration hardware**: the rig perf tests actually run on. Recorded
+in `quality_tiers.json` as `_calibration_hw: "rtx_5090_laptop"`.
+Drives the raw frame-time + budget measurements that ship in the
+config.
+
+**Target hardware per tier**: declared in the Tiers table above
+(`high` targets 3060/4060, etc.). Perf assertions for a tier
+must hold on its TARGET hardware, not on the calibration hardware.
+
+**Extrapolation ratio**: per-tier scalar multiplier the assertion
+layer applies to translate "measured on calibration HW" to "expected
+on target HW". Stored in `quality_tiers.json` under a tier as
+`_perf_extrapolation_ratio_vs_calibration_hw` (geometry-bound) +
+`_perf_extrapolation_ratio_fillrate` (fillrate-bound; cheaper than
+geometry on most modern GPUs). Default 1.0 (target == calibration).
+
+For 5090 calibration + 3060 target (the current W5 dev rig case):
+- geometry-bound: 3.5× (raw shader / draw-call counts; the 5090's
+  shader-core advantage dominates here)
+- fillrate-bound: 2.5× (texture sampling + ROP work; 3060 closes
+  the gap somewhat at typical 1080p)
+
+Sources: synthetic-bench comparison tables (e.g. TechPowerUp's
+GPU database) + Godot 4.6 mesh+texture workload measurements. NOT
+production game-bench numbers (those depend on the specific game's
+shader mix); the per-tier ratios are CONSERVATIVE — better to ship
+slightly under target on actual hardware than to underestimate
+overhead.
+
+**How perf tests use this**: a test asserting "frame time < 16ms on
+3060" reads `frame_budget_target_ms * _perf_extrapolation_ratio_vs_calibration_hw`
+= 16 / 3.5 ≈ 4.6 ms as the assertion threshold on 5090. If the
+test runs on the target hardware, the ratio is 1.0 and the
+assertion uses the raw budget. Documented in `tests/perf/README.md`.
+
+**When the ratio changes**: re-measured whenever a new GPU class
+enters the calibration loop (e.g. lab gets a 6090). Bump the
+`_calibration_hw` field + recompute all ratios. Old commits remain
+historically valid against their `_calibration_hw` value.
+
+**Limits of this model**: the extrapolation is a single scalar per
+tier per workload class; it doesn't capture e.g. async-compute
+mismatches, driver overhead deltas, or shader-recompile cliffs.
+For the ~30% perf cases where extrapolation is misleading, the
+fallback is **the `static_world` bake recipe** (spec 42 §`static_world`
+recipe + Phase 15) — pre-bake the procedural world into a static
+runtime-loadable form that any device renders at native speed,
+trading procedural flexibility for ironclad perf. This is not just
+a perf escape; it's also the modding / hand-edit / forkability
+path (spec 44).
+
 ## Per-tier knob keys (schema)
 
 The values below are illustrative — actual numbers calibrated per

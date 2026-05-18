@@ -38,7 +38,7 @@ the in-flight Phase 5.6 budget pass settling on the GDScript side
 | Phase 2 audit + fix | ✅ done | SELF_AUDIT_PHASE_2_FINDINGS | 1 (commits `17fce3d` → `d6d6c94`) |
 | Phase 3 — Renderer research sprint | ✅ done | [phase_3_renderer_research.md](roadmap/phase_3_renderer_research.md) + spec 15a | 1 (came in under 3-5 estimate) |
 | Phase 4 — Terrain MVP (one biome) | ✅ done (4.9 closed remaining gaps) | [phase_4_terrain_mvp.md](roadmap/phase_4_terrain_mvp.md) | 6 sessions (4.1-4.6) |
-| Phase 4.5 — Calibration sprint | ⚠️ shipped; 3060 perf claim still TBD (S1) — Phase 5.6 needs real hardware | [phase_4_5_calibration.md](roadmap/phase_4_5_calibration.md) | 1 session |
+| Phase 4.5 — Calibration sprint | ✅ shipped; audit S1 (3060 perf ungrounded) reframed 2026-05-17 — spec 13 now declares calibration HW + per-tier extrapolation ratios (`quality_tiers.json._perf_extrapolation_ratios`), so perf assertions auto-translate 5090-measured numbers to 3060-target expectations. Cases where extrapolation is insufficient fall through to spec 42 `static_world` bake recipe (perf-floor escape) | [phase_4_5_calibration.md](roadmap/phase_4_5_calibration.md) | 1 session |
 | Phase 4.6 — Walking demo | ✅ done (4.9 closed multi-page binding + slot selection gaps) | [phase_4_6_walking_demo.md](roadmap/phase_4_6_walking_demo.md) | 1 session |
 | Phase 4.7 — Autoload rename refactor | ✅ done | [phase_4_7_autoload_rename.md](roadmap/phase_4_7_autoload_rename.md) | 1 session |
 | Phase 4.8 — Local RD refactor | ✅ done | [phase_4_8_local_rd_refactor.md](roadmap/phase_4_8_local_rd_refactor.md) | 1 session |
@@ -61,7 +61,7 @@ the in-flight Phase 5.6 budget pass settling on the GDScript side
 | Phase 12 — Caves | pending | (write when starting) | 10-15 |
 | Phase 13 — Runtime deformation | pending | (write when starting) | 5-8 |
 | Phase 14 — Persistence + author overrides | pending | (write when starting) | 5-10 |
-| Phase 15 — Bake recipes | pending | (write when starting) | 3-5 + per-recipe |
+| Phase 15 — Bake recipes | pending | (write when starting); spec 42 amended 2026-05-17 to add `static_world` recipe (procedural-to-static world transform — perf-floor fallback per spec 13 extrapolation + modding/forkability path per spec 44). `static_world` is the v1 priority recipe; image recipes (2.5D, topdown, world-map) defer to per-need sprints | 3-5 + per-recipe (static_world likely 5-10 alone) |
 | Phase 16 — Forkability validation | pending | (write when starting) | 3-5 |
 | Phase 17 — Done bar | future | (success metric review) | — |
 

@@ -8,16 +8,18 @@
 
 ## One-sentence summary
 
-**Phase 5.7.c closed — bake_page + content-addressed cache + erosion-
-in-chain dispatch shipped** (9 TDD pytests green; pytest total now
-174). Catalogs can declare `kernel: {type: chain, stages: [noise_stack,
-erosion]}` and the Composer bakes whole pages through the chain,
-caching by sha256 of (catalog_hash + world_origin + extent + grid +
-seed). Catalog edits invalidate downstream bakes. Auxiliary outputs
-(drainage_map etc.) still emitted by ErosionKernel but only the
-eroded height is cached — secondary outputs wait for spec 35 water
-consumer. **Next**: GDScript runtime mirror of `_band_weight` for
-Phase 6 multi-biome render unblock (pending in-flight Godot work).
+**Roadmap-alignment pass 2026-05-17: spec 13 + spec 42 amended for
+v1 product modes.** Per user direction, W5 ships TWO runtime modes:
+procedural (default) + spec 42 `static_world` bake recipe (perf-floor
+escape + modding/forkability path). Spec 13 §Calibration HW +
+extrapolation declares per-tier ratios (`quality_tiers.json._perf_extrapolation_ratios`)
+so perf assertions auto-translate dev-rig 5090 measurements to
+target HW (e.g. 3060 for `high`). Audit S1 (3060 perf ungrounded)
+reframed via the extrapolation model rather than blocked on
+physical 3060 access. Phase 5.7.a/b/c still ship-status (174
+pytest green). **Next**: erosion-in-walking_demo demo to close
+Phase 5.7 demonstration gap, then GDScript biome_weights mirror
+for Phase 6 unblock when in-flight Godot work settles.
 
 ## Per-tier state
 
@@ -166,6 +168,26 @@ sweep runs against the most-evolved spec set).
 This is a CURRENT STATE index; the narrative log lives in build-notes.
 Per spec 02 R7: STATE matches reality, not plans.
 
+- 2026-05-17 (Roadmap-alignment pass — spec 13 + spec 42 amendments):
+  Per user direction "we will just have to guess on the 3060,
+  probably figure out a thing like 5090 is x amount of performance
+  of 3060 ... if we cant hit performance targets we could do some
+  kind of baking / just use it to make a set non procedural world."
+  Spec 13 amended: new §Calibration HW + cross-hardware extrapolation
+  formalizes the dev-rig-to-target translation. quality_tiers.json
+  gains _calibration_hw + per-tier _perf_extrapolation_ratios
+  (geometry + fillrate scalars). Audit S1 reframed from "ungrounded
+  perf claim, blocked on 3060" to "extrapolation-grounded, refined
+  when real HW joins the loop." Spec 42 amended: new `static_world`
+  recipe family (procedural → static world transform). Output: a
+  parallel world bundle with pre-baked meshes + biome_weights texture
+  + decoration/foliage blobs + lighting capture; loader picks static
+  path if _static_manifest.json present, procedural otherwise. Three
+  use cases documented: perf-floor fallback, modding/hand-edit
+  workflow, forkability proof (spec 44). ROADMAP Phase 15 row
+  updated: static_world is the v1 priority recipe. Memory saved at
+  w5-perf-tier-and-bake-fallback so the two-modes architecture is
+  durable across sessions.
 - 2026-05-17 (Phase 5.7.c closed — bake_page + cache + erosion-in-chain):
   Spec 19 §"Pre-bake global pass" + spec 12 content addressing.
   Added KernelComposer.bake_page(world_origin, extent, grid_n, seed,
