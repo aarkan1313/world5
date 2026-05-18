@@ -191,3 +191,86 @@ func test_erosion_stages_returns_each_erosion_stage() -> void:
 	var es: Array = c.erosion_stages()
 	assert_eq(es.size(), 1)
 	assert_eq((es[0] as ErosionKernel).iterations, 30)
+
+
+# --- dem_feature stage support (Sprint 3) ---
+
+func test_chain_with_dem_feature_stage_parses() -> void:
+	var c: KernelComposer = KernelComposer.from_dict({
+		"type": "chain",
+		"stages": [
+			{"type": "noise_stack", "params": {}},
+			{"type": "dem_feature", "params": {"source": "cascades", "strength": 0.6}},
+			{"type": "erosion", "params": {}},
+		],
+	})
+	assert_eq(c.stages.size(), 3)
+	assert_eq(c.stages[1]["kind"], "dem_feature")
+	var dk: DemFeatureKernel = c.stages[1]["config"] as DemFeatureKernel
+	assert_not_null(dk)
+	assert_eq(dk.source, "cascades")
+	assert_almost_eq(dk.strength, 0.6, 1e-9)
+
+
+func test_has_dem_feature_true_for_dem_chain() -> void:
+	var c: KernelComposer = KernelComposer.from_dict({
+		"type": "chain",
+		"stages": [
+			{"type": "noise_stack", "params": {}},
+			{"type": "dem_feature", "params": {"source": "x"}},
+		],
+	})
+	assert_true(c.has_dem_feature())
+
+
+func test_has_dem_feature_false_for_noise_only() -> void:
+	var c: KernelComposer = KernelComposer.from_dict({
+		"type": "noise_stack", "params": {},
+	})
+	assert_false(c.has_dem_feature())
+
+
+func test_dem_feature_stages_returns_each_stage() -> void:
+	var c: KernelComposer = KernelComposer.from_dict({
+		"type": "chain",
+		"stages": [
+			{"type": "noise_stack", "params": {}},
+			{"type": "dem_feature", "params": {"source": "a", "mode": "ridge_emphasis"}},
+			{"type": "dem_feature", "params": {"source": "a", "mode": "drainage_accumulation"}},
+		],
+	})
+	var ds: Array = c.dem_feature_stages()
+	assert_eq(ds.size(), 2)
+	assert_eq((ds[0] as DemFeatureKernel).mode, "ridge_emphasis")
+	assert_eq((ds[1] as DemFeatureKernel).mode, "drainage_accumulation")
+
+
+func test_dem_feature_with_invalid_source_surfaces_error() -> void:
+	# DemFeatureKernel.validate() rejects empty source — composer
+	# should surface it through its own validate.
+	var c: KernelComposer = KernelComposer.from_dict({
+		"type": "chain",
+		"stages": [
+			{"type": "noise_stack", "params": {}},
+			{"type": "dem_feature", "params": {}},  # missing source
+		],
+	})
+	assert_gt(c.validate().size(), 0)
+
+
+func test_chain_hash_differs_on_dem_source() -> void:
+	var a: KernelComposer = KernelComposer.from_dict({
+		"type": "chain",
+		"stages": [
+			{"type": "noise_stack", "params": {}},
+			{"type": "dem_feature", "params": {"source": "cascades"}},
+		],
+	})
+	var b: KernelComposer = KernelComposer.from_dict({
+		"type": "chain",
+		"stages": [
+			{"type": "noise_stack", "params": {}},
+			{"type": "dem_feature", "params": {"source": "yosemite"}},
+		],
+	})
+	assert_ne(a.chain_hash(), b.chain_hash())

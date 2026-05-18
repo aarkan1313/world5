@@ -25,6 +25,15 @@
 						}
 					},
 					{
+						"_note": "Sprint 3 of DEM/runtime-kernels epic \u2014 Cascades-anchored ridges blended into the noise base before erosion carves them. Cascades excerpt = Mount Hood foothills (Copernicus GLO-30, CC BY 4.0).",
+						"type": "dem_feature",
+						"params": {
+							"source": "cascades",
+							"mode": "ridge_emphasis",
+							"strength": 1.0
+						}
+					},
+					{
 						"_note": "iterations + rain_rate tuned 2026-05-17 for visibly-eroded demo terrain. Production tuning lands in Phase 5.7.e or a dedicated terrain-art sprint.",
 						"type": "erosion",
 						"params": {

@@ -15,8 +15,8 @@
         "_note": {"type": "string"},
         "type": {
           "type": "string",
-          "enum": ["noise_stack", "erosion"],
-          "description": "Stage kernel type. `noise_stack` is a base generator (produces height from x,z); `erosion` is a post-process (takes height in, returns eroded height + auxiliary fields)."
+          "enum": ["noise_stack", "erosion", "dem_feature"],
+          "description": "Stage kernel type. `noise_stack` = base generator (produces height from x,z); `erosion` = post-process (takes height in, returns eroded height + auxiliary fields); `dem_feature` = extracts a feature field (ridge_emphasis / drainage_accumulation / slope_deg / aspect_deg) from a bundle DEM source and blends it into the height stream per its strength param. Sprint 3 of the DEM/runtime-kernels epic."
         },
         "params": {
           "type": "object",

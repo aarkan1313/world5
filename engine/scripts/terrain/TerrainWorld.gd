@@ -540,6 +540,27 @@ func _load_world_bundle(bundle_path: String) -> void:
 	#   2. Legacy single-noise kernels/noise_stack.json. Pre-catalog
 	#      bundles still work; bundle authors can omit it once their
 	#      catalog declares a kernel chain.
+	# DEM sources (Sprint 3 of DEM/runtime-kernels epic). Scan
+	# <bundle>/dem/ for *.json sidecars; each one declares a DEM source
+	# the catalog's dem_feature chain stages can reference by ID.
+	# Register on the backend so chain dispatch can look up the
+	# pre-baked feature grids at page generation time.
+	var dem_dir_path: String = bundle_path + "dem/"
+	if DirAccess.dir_exists_absolute(dem_dir_path):
+		var dem_dir := DirAccess.open(dem_dir_path)
+		if dem_dir != null:
+			dem_dir.list_dir_begin()
+			var entry: String = dem_dir.get_next()
+			while entry != "":
+				if entry.ends_with(".json") and not dem_dir.current_is_dir():
+					var source_id: String = entry.substr(0, entry.length() - 5)
+					var src: DemSource = DemSource.from_bundle(
+						bundle_path, source_id)
+					if src != null and _adapter != null:
+						_adapter.register_dem_source(source_id, src)
+				entry = dem_dir.get_next()
+			dem_dir.list_dir_end()
+
 	var composer: KernelComposer = null
 	if catalog != null and catalog.biomes.size() > 0:
 		# First biome's chain wins for the demo's single-page-set

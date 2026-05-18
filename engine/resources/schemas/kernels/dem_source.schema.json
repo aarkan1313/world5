@@ -52,6 +52,27 @@
     "attribution": {
       "type": "string",
       "description": "License + attribution string for downstream display (e.g. 'USGS 10m National Elevation Dataset, public domain'). The world contract REQUIRES this for non-public-domain sources."
+    },
+    "features": {
+      "type": "object",
+      "description": "Pre-baked DEM feature PNGs (Sprint 3 bake-route). The pipeline tool tx_dem_prepare computes ridge_emphasis / drainage_accumulation / slope_deg / aspect_deg via the Python DemFeatureKernel reference and writes each as a 16-bit single-channel PNG companion. The runtime loads these directly so Python isn't on the runtime path. Sprint 4 may replace this with on-the-fly GPU compute.",
+      "properties": {
+        "paths": {
+          "type": "object",
+          "description": "Mode name → PNG path relative to bundle root (e.g. 'ridge_emphasis' → 'dem/cascades_ridge_emphasis.png').",
+          "additionalProperties": {"type": "string"}
+        },
+        "ranges": {
+          "type": "object",
+          "description": "Mode name → [min, max] feature values. PNG pixels are normalized [0,1] over this range; runtime decodes via `min + pixel * (max - min)`.",
+          "additionalProperties": {
+            "type": "array",
+            "items": {"type": "number"},
+            "minItems": 2,
+            "maxItems": 2
+          }
+        }
+      }
     }
   }
 }

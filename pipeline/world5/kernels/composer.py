@@ -78,14 +78,18 @@ _EROSION_PARAM_KEYS = (
     "thermal_iterations", "talus_angle_deg", "talus_rate", "seed",
 )
 _NOISE_PARAM_KEYS = ("octaves", "frequency", "lacunarity", "gain", "amplitude")
+_DEM_FEATURE_PARAM_KEYS = (
+    "dem_path", "modes", "ridge_smooth_sigma_cells", "seed",
+)
 
 
 def _instantiate_stage(stage: dict):
     """Build a kernel instance from a single-stage spec.
-    Supported: noise_stack (base generator), erosion (post-process).
+    Supported: noise_stack (base generator), erosion (post-process),
+    dem_feature (post-process, Sprint 3 of the DEM/runtime-kernels epic).
 
     Per spec 19, the first stage of a chain MUST be a base generator
-    (noise_stack); subsequent stages MAY be post-processes (erosion).
+    (noise_stack); subsequent stages MAY be post-processes.
     KernelComposer.__init__ validates chain ordering; this function
     just builds the instance for whichever stage type is asked.
 
@@ -93,7 +97,14 @@ def _instantiate_stage(stage: dict):
     pending bake_page. Now bake_page runs erosion stages on whole
     pages; this function returns a usable ErosionKernel instance.
     Per-POINT sample_height still skips erosion (correctly — erosion
-    is not a per-point function)."""
+    is not a per-point function).
+
+    Sprint 3: dem_feature stages are bundle-side concerns (the GDScript
+    runtime resolves the source ID to a DemSource at page generation
+    time). The Python composer returns a *placeholder* DemFeatureKernel
+    so chain parsing succeeds end-to-end; per-POINT sample_height
+    treats dem_feature as a no-op (the feature blend is bake-time + GPU
+    only in v1)."""
     stype = stage.get("type", "")
     params = stage.get("params", {}) or {}
     if stype == "noise_stack":
@@ -102,6 +113,19 @@ def _instantiate_stage(stage: dict):
     if stype == "erosion":
         return ErosionKernel(**{k: params[k] for k in _EROSION_PARAM_KEYS
                                 if k in params})
+    if stype == "dem_feature":
+        # Map catalog params (source, mode, strength) onto the Python
+        # ref DemFeatureKernel (dem_path, modes). The Python ref isn't
+        # consumed at runtime; this just makes chain parsing succeed.
+        from world5.kernels import DemFeatureKernel
+        mode = params.get("mode", "ridge_emphasis")
+        return DemFeatureKernel(
+            dem_path=params.get("source", ""),
+            modes=(mode,),
+            ridge_smooth_sigma_cells=float(
+                params.get("ridge_smooth_sigma_cells", 2.0)),
+            seed=int(params.get("seed", 42)),
+        )
     raise ValueError(f"unknown kernel stage type: {stype!r}")
 
 

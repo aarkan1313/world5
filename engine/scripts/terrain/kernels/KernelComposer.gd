@@ -23,8 +23,9 @@ class_name KernelComposer extends RefCounted
 
 const STAGE_NOISE_STACK := "noise_stack"
 const STAGE_EROSION := "erosion"
+const STAGE_DEM_FEATURE := "dem_feature"
 
-const VALID_STAGE_TYPES := [STAGE_NOISE_STACK, STAGE_EROSION]
+const VALID_STAGE_TYPES := [STAGE_NOISE_STACK, STAGE_EROSION, STAGE_DEM_FEATURE]
 
 
 ## Parsed chain — array of Dictionary{kind: String, config: RefCounted}.
@@ -67,6 +68,8 @@ static func _build_config(stage_type: String, params: Dictionary) -> RefCounted:
 			return NoiseStackKernel.from_dict(params)
 		STAGE_EROSION:
 			return ErosionKernel.from_dict(params)
+		STAGE_DEM_FEATURE:
+			return DemFeatureKernel.from_dict(params)
 		_:
 			return null  # unknown stage type; caller surfaces via validate()
 
@@ -123,6 +126,27 @@ func has_erosion() -> bool:
 		if String(s.get("kind", "")) == STAGE_EROSION:
 			return true
 	return false
+
+
+## True if this chain has at least one dem_feature stage (used by the
+## backend to decide whether to require a DemSource for the bundle).
+func has_dem_feature() -> bool:
+	for s in stages:
+		if String(s.get("kind", "")) == STAGE_DEM_FEATURE:
+			return true
+	return false
+
+
+## Returns Array of DemFeatureKernel configs in chain order. Used by
+## the backend to dispatch dem_feature stages with their per-stage
+## strength/mode params, and by TerrainWorld to look up which DEM
+## source IDs the bundle must provide.
+func dem_feature_stages() -> Array:
+	var out: Array = []
+	for s in stages:
+		if String(s.get("kind", "")) == STAGE_DEM_FEATURE:
+			out.append(s.get("config") as DemFeatureKernel)
+	return out
 
 
 ## Convenience accessors for the backend.

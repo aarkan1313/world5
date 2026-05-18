@@ -61,6 +61,22 @@ func _notification(what: int) -> void:
 			backend.shutdown()
 
 
+## Register a DemSource on the underlying backend so dem_feature
+## chain stages can look it up by ID. Owner (TerrainWorld) calls
+## this at bundle load for each DEM in `<bundle>/dem/`. Idempotent.
+func register_dem_source(source_id: String, source: Object) -> void:
+	if _backend == null:
+		return
+	_backend.register_dem_source(source_id, source)
+
+
+## Clear all registered DEM sources. Called on bundle unload.
+func clear_dem_sources() -> void:
+	if _backend == null:
+		return
+	_backend.clear_dem_sources()
+
+
 ## Submit a page-generation request. Returns the JobScheduler job id.
 ## Consumer awaits completion via JobScheduler.await_completion(id).
 ## Returns -1 if JobScheduler autoload is not available.

@@ -46,6 +46,12 @@ var _erosion_thermal_shader_rid: RID = RID()
 # shutdown(). DO NOT share across backend instances since each owns
 # its RIDs.
 var _rd: RenderingDevice = null
+# DEM source registry. Bundle loader (TerrainWorld) registers each
+# DemSource by ID; chain dispatch looks up by DemFeatureKernel.source.
+# Cleared in shutdown(). Sprint 3 bake-route: DemSource holds pre-
+# baked feature grids; we CPU-blend the appropriate feature into the
+# height after the chain completes. Sprint 4 may swap for GPU samplers.
+var _dem_sources: Dictionary = {}  # source_id: String -> DemSource
 
 # Residency-byte publishing moved to PageStreamingJob (TR-INTEG-C2 fix):
 # the cache is the source of truth, not the backend.
@@ -53,6 +59,22 @@ var _rd: RenderingDevice = null
 
 func name() -> String:
 	return "gpu"
+
+
+## Register a DemSource by ID. TerrainWorld calls this at bundle load
+## for each DEM declared in `<bundle>/dem/`. Idempotent — re-register
+## with the same ID replaces the prior entry (lets a bundle reload
+## refresh).
+func register_dem_source(source_id: String, source: Object) -> void:
+	if source_id == "" or source == null:
+		return
+	_dem_sources[source_id] = source
+
+
+## Clear all registered DEM sources. Called by TerrainWorld._exit_tree
+## as part of bundle teardown.
+func clear_dem_sources() -> void:
+	_dem_sources.clear()
 
 
 ## Main entry. Validates request, dispatches compute, packs result.
@@ -298,7 +320,11 @@ func _generate_chain(rd: RenderingDevice,
 	if not needs_erosion:
 		var raw_only: PackedByteArray = rd.buffer_get_data(height_a)
 		_free_chain_buffers(rd, buffers, tracker)
-		return raw_only.to_float32_array()
+		var heights_no_erosion: PackedFloat32Array = raw_only.to_float32_array()
+		# DEM feature stages still apply even without erosion.
+		for dk in request.composer.dem_feature_stages():
+			_apply_dem_feature_blend(heights_no_erosion, request, dk, base_kernel)
+		return heights_no_erosion
 
 	# Allocate erosion work buffers (water, sediment, velocity, drainage,
 	# height_b for thermal ping-pong). All initialized to zero by Godot.
@@ -354,7 +380,68 @@ func _generate_chain(rd: RenderingDevice,
 	var heights_out: PackedFloat32Array = raw.to_float32_array()
 
 	_free_chain_buffers(rd, buffers, tracker)
+
+	# Sprint 3 bake-route: apply DEM feature blends on CPU as a final
+	# post-process. Each dem_feature stage samples the pre-baked feature
+	# grid at every page cell and blends into the height per its
+	# `strength` param. v1 uses ridge_emphasis as a positive bias scaled
+	# by the noise stage's amplitude (so DEM ridges visibly emerge from
+	# noise without overpowering); other modes blend additively scaled
+	# by amplitude * 0.5. Sprint 4 may move this to GPU compute + apply
+	# DEM blends BEFORE erosion (correct ordering vs the v1 post-only).
+	for dk in request.composer.dem_feature_stages():
+		_apply_dem_feature_blend(heights_out, request, dk, base_kernel)
+
 	return heights_out
+
+
+func _apply_dem_feature_blend(heights: PackedFloat32Array,
+		request: TerrainPageRequest,
+		kernel: DemFeatureKernel,
+		base_kernel: NoiseStackKernel) -> void:
+	# Look up the source. Missing source = noop + log (the world
+	# contract validator should have caught this at bundle load).
+	if not _dem_sources.has(kernel.source):
+		Log.warn("terrain_backend", "dem_feature source not registered",
+			{"source": kernel.source, "mode": kernel.mode})
+		return
+	var src: Object = _dem_sources[kernel.source]
+	if not src.call("has_feature", kernel.mode):
+		Log.warn("terrain_backend", "dem_feature missing baked feature",
+			{"source": kernel.source, "mode": kernel.mode})
+		return
+	var n: int = request.grid_n
+	var cell: float = request.extent_m / max(float(n - 1), 1.0)
+	var origin_x: float = request.world_xz.x
+	var origin_z: float = request.world_xz.y
+	# Scale: bind the DEM feature's contribution to the noise stage's
+	# amplitude so it stays proportional to the height stream's range.
+	var amp: float = base_kernel.amplitude if base_kernel != null else 50.0
+	var strength: float = clamp(kernel.strength, 0.0, 1.0)
+	# Mode-specific blend rules. ridge_emphasis is the v1 hero: it
+	# adds positive bias proportional to (already-normalized) ridge
+	# strength × amp × stage_strength. Other modes use a centered
+	# (signed) blend to avoid uniformly raising the height field.
+	var center: float = 0.5
+	if kernel.mode == DemFeatureKernel.MODE_RIDGE_EMPHASIS:
+		# Ridge mode: pure additive (already normalized [0,1]).
+		for i in range(n):
+			for j in range(n):
+				var wx: float = origin_x + float(j) * cell
+				var wz: float = origin_z + float(i) * cell
+				var f: float = src.call("sample_feature_world_xz",
+					kernel.mode, wx, wz)
+				heights[i * n + j] += f * amp * strength
+	else:
+		# Other modes: centered around 0.5 so values < 0.5 shift down,
+		# > 0.5 shift up. Multiplied by amp * 0.5 * strength.
+		for i in range(n):
+			for j in range(n):
+				var wx: float = origin_x + float(j) * cell
+				var wz: float = origin_z + float(i) * cell
+				var f: float = src.call("sample_feature_world_xz",
+					kernel.mode, wx, wz)
+				heights[i * n + j] += (f - center) * amp * strength
 
 
 func _free_chain_buffers(rd: RenderingDevice, buffers: Array,
@@ -665,6 +752,8 @@ func shutdown() -> void:
 	_shader_rid = RID()
 	_erosion_shader_rid = RID()
 	_erosion_thermal_shader_rid = RID()
+	# DEM sources are RefCounted; clearing the registry drops our refs.
+	_dem_sources.clear()
 	# Local RD: free explicitly (Godot doesn't auto-cleanup since
 	# create_local_rendering_device returns an unowned ref).
 	_rd.free()
