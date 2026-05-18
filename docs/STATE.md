@@ -8,18 +8,16 @@
 
 ## One-sentence summary
 
-**Roadmap-alignment pass 2026-05-17: spec 13 + spec 42 amended for
-v1 product modes.** Per user direction, W5 ships TWO runtime modes:
-procedural (default) + spec 42 `static_world` bake recipe (perf-floor
-escape + modding/forkability path). Spec 13 §Calibration HW +
-extrapolation declares per-tier ratios (`quality_tiers.json._perf_extrapolation_ratios`)
-so perf assertions auto-translate dev-rig 5090 measurements to
-target HW (e.g. 3060 for `high`). Audit S1 (3060 perf ungrounded)
-reframed via the extrapolation model rather than blocked on
-physical 3060 access. Phase 5.7.a/b/c still ship-status (174
-pytest green). **Next**: erosion-in-walking_demo demo to close
-Phase 5.7 demonstration gap, then GDScript biome_weights mirror
-for Phase 6 unblock when in-flight Godot work settles.
+**Phase 5.7 demonstration shipped + perf tests fixed (full verify
+5/5 green in 19.5s).** End-to-end demo: walking_demo's alpine
+catalog declares noise_stack + erosion chain; bake script proves
+KernelComposer + ErosionKernel + spec-12 cache all assemble + run
+(766× cache speedup; visible terrain change). Perf test failures
+were Phase 4.5-era page_extent_m=32 mismatching the new cache
+auto-raise — fixed via production page_extent + per-tier 5090
+ceilings. pytest 174 green. **Next**: TerrainWorld loader switch
+(catalog-driven kernel + cached bake_page output) paired with
+GDScript biome_weights mirror for the Phase 6 multi-biome unblock.
 
 ## Per-tier state
 
@@ -188,6 +186,32 @@ Per spec 02 R7: STATE matches reality, not plans.
   updated: static_world is the v1 priority recipe. Memory saved at
   w5-perf-tier-and-bake-fallback so the two-modes architecture is
   durable across sessions.
+- 2026-05-17 (Phase 5.7 demonstration — walking_demo erosion bake):
+  Closes the Phase 5.7 demonstration gap. walking_demo's alpine
+  kernel field upgraded from flat noise_stack to explicit chain
+  (noise_stack + erosion, 400 hydraulic iter + 100 thermal, talus
+  35°). pipeline/world5/demo/bake_walking_demo_erosion.py runs
+  KernelComposer.bake_page on a 1km² alpine region + renders
+  hillshade comparison (noise-only vs eroded). Measured: 0.77s
+  first bake, 0.001s cache hit (766x speedup confirming spec 12
+  cache works end-to-end), 1.72m max delta + 2.9% of cells
+  changed (visible peak-softening + emerging gullies on hillshade).
+  Runtime loader switch to catalog-driven kernel still pending —
+  walking_demo render today still uses kernels/noise_stack.json
+  directly; the catalog chain is parsed-and-baked but not yet
+  consumed by the live renderer. That loader switch pairs with
+  the GDScript biome_weights mirror for the Phase 6 multi-biome
+  unblock. Build note phase_5_7_demo_walking_demo_erosion_2026_05_17.md.
+- 2026-05-17 (perf calibration + stationary tests fixed):
+  Both perf-test suites failed gut_real_gpu after Phase 5.6 budget
+  pass. Root cause: page_extent_m=32 from Phase 4.5 era was too
+  small for the new cache auto-raise — ultra/cinematic needed
+  5k-21k pages (vs 50-420 at production 256m). Frame time was
+  cache-iteration cost, not perf regression. Fix: use production
+  page_extent_m=256 + per-tier 5090-measured ceilings via
+  _assert_catastrophic_ceiling helpers. After fix: 5/5 calibration
+  in 13.7s (was 300+s failing); 4/4 stationary in same range.
+  Commits b93894a + 56a74a3.
 - 2026-05-17 (Phase 5.7.c closed — bake_page + cache + erosion-in-chain):
   Spec 19 §"Pre-bake global pass" + spec 12 content addressing.
   Added KernelComposer.bake_page(world_origin, extent, grid_n, seed,

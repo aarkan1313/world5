@@ -7,15 +7,36 @@
 	"biomes": [
 		{
 			"name": "alpine",
+			"_kernel_note": "2026-05-17 Phase 5.7 demonstration: declared as a chain (noise_stack base + erosion post-process) per spec 19. Phase 5.7.c KernelComposer.bake_page can consume this; the runtime loader still reads kernels/noise_stack.json today (separate refactor to switch loader to catalog-driven). See docs/build-notes/phase_5_7_d_walking_demo_erosion_demo_2026_05_17.md for the bake-script + visual comparison.",
 			"kernel": {
-				"type": "noise_stack",
-				"params": {
-					"octaves": 6,
-					"frequency": 0.001953125,
-					"lacunarity": 2.0,
-					"gain": 0.5,
-					"amplitude": 50.0
-				}
+				"type": "chain",
+				"stages": [
+					{
+						"type": "noise_stack",
+						"params": {
+							"octaves": 6,
+							"frequency": 0.001953125,
+							"lacunarity": 2.0,
+							"gain": 0.5,
+							"amplitude": 50.0
+						}
+					},
+					{
+						"_note": "iterations + rain_rate tuned 2026-05-17 for visibly-eroded demo terrain. Production tuning lands in Phase 5.7.e or a dedicated terrain-art sprint.",
+						"type": "erosion",
+						"params": {
+							"iterations": 400,
+							"thermal_iterations": 100,
+							"rain_rate": 0.025,
+							"evaporation": 0.015,
+							"sediment_capacity": 0.15,
+							"dissolve_rate": 0.40,
+							"deposit_rate": 0.30,
+							"talus_angle_deg": 35.0,
+							"talus_rate": 0.30
+						}
+					}
+				]
 			},
 			"material_kit": "materials/biome_alpine/",
 			"decoration_palette": null,
