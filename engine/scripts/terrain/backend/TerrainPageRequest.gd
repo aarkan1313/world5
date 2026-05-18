@@ -33,9 +33,17 @@ var grid_n: int = 256                  # samples per side
 var seed: int = 0
 var tier: String = "high"
 var capabilities: PackedStringArray = PackedStringArray()
-## NoiseStackKernel config (spec 19). If null, backend uses its default
-## kernel config. kernel_config_hash is computed from this when present.
+## NoiseStackKernel config (spec 19). Legacy single-stage path. If
+## null AND `composer` is also null, backend uses its default kernel
+## config. kernel_config_hash is computed from this when present.
 var kernel: NoiseStackKernel = null
+
+## Chain composer (spec 19 §"KernelComposer"). If present, takes
+## priority over `kernel` — backend dispatches each stage in order
+## (noise generator first, post-process stages e.g. erosion after).
+## chain_hash is incorporated into cache_key so chain edits invalidate
+## downstream bakes.
+var composer: KernelComposer = null
 
 
 ## Build from a plain Dictionary (test fixtures, JSON payloads).
@@ -59,6 +67,12 @@ static func from_dict(d: Dictionary) -> TerrainPageRequest:
 			req.kernel = kv
 		elif kv is Dictionary:
 			req.kernel = NoiseStackKernel.from_dict(kv)
+	if d.has("composer"):
+		var cv: Variant = d["composer"]
+		if cv is KernelComposer:
+			req.composer = cv
+		elif cv is Dictionary:
+			req.composer = KernelComposer.from_dict(cv)
 	return req
 
 
@@ -76,6 +90,11 @@ func validate() -> Array:
 			errors.append("unknown capability '%s' (see spec 20 vocabulary)" % cap)
 	if tier == "":
 		errors.append("tier cannot be empty")
+	# Composer (when present) validates its own chain.
+	if composer != null:
+		var cerrs: Array = composer.validate()
+		for e in cerrs:
+			errors.append("composer: " + String(e))
 	return errors
 
 
@@ -89,6 +108,9 @@ func cache_key() -> String:
 	var khash: String = ""
 	if kernel != null:
 		khash = kernel.config_hash()
+	var chash: String = ""
+	if composer != null:
+		chash = composer.chain_hash()
 	var inputs := {
 		"world_xz_x": world_xz.x,
 		"world_xz_y": world_xz.y,
@@ -98,5 +120,6 @@ func cache_key() -> String:
 		"tier": tier,
 		"capabilities": sorted_caps,
 		"kernel_config_hash": khash,
+		"chain_hash": chash,
 	}
 	return ContentAddress.compute_stamp(inputs)
